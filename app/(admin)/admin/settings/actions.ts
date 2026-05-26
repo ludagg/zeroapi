@@ -8,16 +8,12 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
   isProviderId,
-  PROVIDER_IDS,
-  PROVIDER_META,
   saveProviderConfig,
   toggleProviderEnabled,
   type ProviderId,
 } from "@/lib/ai-providers";
 import {
   isRoutingTask,
-  ROUTING_PLANS,
-  ROUTING_TASKS,
   saveRoutingMatrix,
   type RoutingTask,
 } from "@/lib/llm-routing-config";
@@ -120,5 +116,3 @@ export async function saveRouting(payload: {
 
   revalidatePath("/admin/settings/llm-routing");
 }
-
-export { PROVIDER_IDS, PROVIDER_META, ROUTING_PLANS, ROUTING_TASKS };
