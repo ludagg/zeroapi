@@ -12,6 +12,6 @@ jobs:
           node-version: 20
       - run: npm install -g pnpm
       - run: pnpm install
-      - run: npx trigger.dev@latest deploy
+      - run: npx trigger.dev@3.3.17 deploy
         env:
           TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
