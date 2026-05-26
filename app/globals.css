@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg: #FAFAF7;
+    --bg-2: #F2F1EC;
+    --bg-3: #ECEBE5;
+    --surface: #FFFFFF;
+    --ink: #0A0A0A;
+    --ink-2: #2A2A28;
+    --muted: #6E6E68;
+    --muted-2: #9A9A93;
+    --line: #E5E4DE;
+    --line-2: #D8D7D0;
+
+    --accent: #10F083;
+    --accent-ink: #002914;
+    --accent-soft: #E7FBEF;
+    --accent-glow: rgba(16, 240, 131, 0.35);
+
+    --warn: #F5A524;
+    --warn-soft: #FFF6E0;
+    --warn-ink: #6B4500;
+
+    --danger: #D8453A;
+    --danger-soft: #FCE9E7;
+
+    --shadow-sm: 0 1px 2px rgba(10, 10, 10, 0.04), 0 1px 1px rgba(10, 10, 10, 0.03);
+    --shadow-md: 0 2px 4px rgba(10, 10, 10, 0.04), 0 6px 18px rgba(10, 10, 10, 0.05);
+    --shadow-lg: 0 12px 40px rgba(10, 10, 10, 0.08), 0 2px 8px rgba(10, 10, 10, 0.04);
+  }
+
+  html[data-theme="dark"] {
+    --bg: #0B0C0B;
+    --bg-2: #131513;
+    --bg-3: #1A1D1A;
+    --surface: #161816;
+    --ink: #F5F6F2;
+    --ink-2: #D7D8D2;
+    --muted: #8C8F87;
+    --muted-2: #5C5F58;
+    --line: #1F221F;
+    --line-2: #2A2D2A;
+
+    --accent-soft: #0B2A1A;
+    --warn-soft: #2A1F08;
+    --warn-ink: #FFCC66;
+    --danger-soft: #2A0F0C;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 6px 18px rgba(0, 0, 0, 0.4);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.5);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-sans), "Space Grotesk", -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background-color 0.35s ease, color 0.35s ease;
+  }
+
+  ::selection {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+  }
+}
+
+@layer components {
+  .brand-mark {
+    @apply relative grid place-items-center overflow-hidden rounded-[7px] font-mono font-semibold text-bg;
+    background: var(--ink);
+  }
+  .brand-mark::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, var(--accent) 40%, var(--accent) 56%, transparent 56%);
+    opacity: 0.9;
+  }
+  .brand-mark > span {
+    position: relative;
+    z-index: 1;
+    mix-blend-mode: difference;
+    color: #fff;
+  }
+
+  .input-base {
+    @apply h-11 w-full rounded-[10px] border border-line bg-surface px-3.5 text-[15px] text-ink outline-none transition;
+  }
+  .input-base:hover {
+    border-color: var(--line-2);
+  }
+  .input-base:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+
+  .btn-primary {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-ink px-4 text-[15px] font-medium text-bg transition;
+  }
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px rgba(10, 10, 10, 0.18);
+  }
+  .btn-primary-accent {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-[10px] bg-accent px-4 text-[15px] font-medium text-accent-ink transition;
+  }
+  .btn-primary-accent:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 22px var(--accent-glow);
+  }
+
+  .eyebrow {
+    @apply inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.12em] text-muted;
+  }
+  .eyebrow .dot {
+    @apply h-1.5 w-1.5 rounded-full bg-accent;
+    box-shadow: 0 0 0 4px var(--accent-glow);
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--line-2);
+    border-radius: 8px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+}
