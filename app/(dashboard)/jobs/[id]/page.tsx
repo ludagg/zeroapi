@@ -8,6 +8,7 @@ import { deriveEndpoints, EndpointsList } from "@/components/api-detail/endpoint
 import { ModelsList } from "@/components/api-detail/models-list";
 import { AgentsProgress } from "@/components/api-detail/agents-progress";
 import { JobTabs } from "@/components/api-detail/job-tabs";
+import { JobStatusPoller } from "@/components/api-detail/job-status-poller";
 import { extractVersion, readSpec } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
 import type { JobStatus } from "@prisma/client";
@@ -42,6 +43,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
 
   return (
     <>
+      <JobStatusPoller status={job.status} />
       <DashboardHeader
         crumbs={[
           { label: "Workspace", href: "/dashboard" },
