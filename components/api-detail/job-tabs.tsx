@@ -15,7 +15,10 @@ export function JobTabs({
   const [active, setActive] = useState(tabs[0].id);
   return (
     <>
-      <div role="tablist" className="mb-5 flex gap-1 border-b border-line">
+      <div
+        role="tablist"
+        className="mb-5 flex gap-1 overflow-x-auto border-b border-line scrollbar-thin"
+      >
         {tabs.map((t) => {
           const isOn = t.id === active;
           return (
@@ -25,7 +28,7 @@ export function JobTabs({
               aria-selected={isOn}
               onClick={() => setActive(t.id)}
               className={cn(
-                "relative inline-flex items-center gap-1.5 px-3 py-2.5 text-[13.5px] transition",
+                "relative inline-flex flex-shrink-0 items-center gap-1.5 px-3 py-2.5 text-[13.5px] transition",
                 isOn ? "font-medium text-ink" : "text-muted hover:text-ink",
               )}
             >
