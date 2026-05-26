@@ -12,7 +12,10 @@ jobs:
           node-version: 20
       - run: npm install -g pnpm
       - run: pnpm install
+      # The deploy CLI needs a Personal Access Token (starts with `tr_pat_`),
+      # NOT the runtime project secret key (`tr_prod_…`). Generate one at
+      # https://cloud.trigger.dev/account/tokens and add it as the
+      # `TRIGGER_ACCESS_TOKEN` repo secret in Settings → Secrets and variables.
       - run: npx trigger.dev@3.3.17 deploy
         env:
-          TRIGGER_SECRET_KEY: ${{ secrets.TRIGGER_SECRET_KEY }}
-          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_SECRET_KEY }}
+          TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
