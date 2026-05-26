@@ -7,6 +7,7 @@ import { routeLLM } from "@/lib/llm-router";
 import {
   CONVERSATION_SYSTEM_PROMPT,
   SPEC_SYSTEM_PROMPT,
+  countEndpoints,
   estimateProgress,
   safeParseSpec,
   type ConversationMessage,
@@ -128,10 +129,10 @@ export async function POST(req: Request) {
       data: {
         userId: user.id,
         name: spec.name,
-        description: spec.description,
+        description: spec.description ?? "",
         status: "PENDING",
-        spec: spec as object,
-        endpoints: spec.endpoints.length,
+        spec: spec as unknown as object,
+        endpoints: countEndpoints(spec),
         estimatedTime: 120,
       },
     });

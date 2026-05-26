@@ -1,10 +1,11 @@
 import { Lock } from "lucide-react";
+import type { ResourceDefinition } from "@ludagg/zeroapi-runtime";
 
-type Endpoint = {
+type DerivedEndpoint = {
   method: string;
   path: string;
   description?: string;
-  auth?: boolean;
+  auth: boolean;
   roles?: string[];
 };
 
@@ -16,11 +17,49 @@ const METHOD_COLOR: Record<string, string> = {
   DELETE: "bg-danger-soft text-danger",
 };
 
-export function EndpointsList({ endpoints }: { endpoints: Endpoint[] }) {
+const CRUD: Record<string, { method: string; suffix: string; verb: string }> = {
+  list: { method: "GET", suffix: "", verb: "Liste" },
+  create: { method: "POST", suffix: "", verb: "Crée" },
+  read: { method: "GET", suffix: "/:id", verb: "Lit" },
+  update: { method: "PUT", suffix: "/:id", verb: "Met à jour" },
+  delete: { method: "DELETE", suffix: "/:id", verb: "Supprime" },
+};
+
+export function deriveEndpoints(resources: ResourceDefinition[]): DerivedEndpoint[] {
+  const out: DerivedEndpoint[] = [];
+  for (const r of resources) {
+    const slug = r.name.toLowerCase();
+    const ep = r.endpoints ?? ["list", "create", "read", "update", "delete"];
+    for (const action of ep) {
+      const cfg = CRUD[action];
+      if (!cfg) continue;
+      out.push({
+        method: cfg.method,
+        path: `/${slug}${cfg.suffix}`,
+        description: `${cfg.verb} ${r.name}`,
+        auth: r.auth?.required ?? false,
+        roles: r.auth?.roles,
+      });
+    }
+    for (const c of r.customEndpoints ?? []) {
+      out.push({
+        method: c.method,
+        path: `/${slug}${c.path}`,
+        description: c.handler,
+        auth: c.auth ?? false,
+        roles: c.roles,
+      });
+    }
+  }
+  return out;
+}
+
+export function EndpointsList({ resources }: { resources: ResourceDefinition[] }) {
+  const endpoints = deriveEndpoints(resources);
   if (!endpoints.length) {
     return (
       <div className="rounded-[14px] border border-dashed border-line-2 bg-surface p-10 text-center text-muted">
-        Aucun endpoint dans la spec.
+        Aucun endpoint dérivé de la spec.
       </div>
     );
   }
@@ -47,7 +86,7 @@ export function EndpointsList({ endpoints }: { endpoints: Endpoint[] }) {
             )}
           </div>
           <div className="flex items-center gap-2 font-mono text-[10.5px] text-muted">
-            {e.auth !== false && (
+            {e.auth && (
               <span className="inline-flex items-center gap-1 rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5">
                 <Lock className="h-2.5 w-2.5" />
                 {e.roles?.length ? e.roles.join(", ") : "auth"}

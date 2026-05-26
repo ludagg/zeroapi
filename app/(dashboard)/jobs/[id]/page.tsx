@@ -4,12 +4,11 @@ import { ArrowRight, Download, RefreshCw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
-import { EndpointsList } from "@/components/api-detail/endpoints-list";
+import { deriveEndpoints, EndpointsList } from "@/components/api-detail/endpoints-list";
 import { ModelsList } from "@/components/api-detail/models-list";
 import { AgentsProgress } from "@/components/api-detail/agents-progress";
 import { JobTabs } from "@/components/api-detail/job-tabs";
-import { ZeroAPISpecSchema } from "@/lib/spec";
-import { extractVersion } from "@/lib/job-helpers";
+import { extractVersion, readSpec } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
 import type { JobStatus } from "@prisma/client";
 
@@ -34,8 +33,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
   });
   if (!job) notFound();
 
-  const specParsed = ZeroAPISpecSchema.safeParse(job.spec);
-  const spec = specParsed.success ? specParsed.data : null;
+  const spec = readSpec(job.spec);
   const pill = STATUS_PILL[job.status];
   const testsPercent =
     job.testsTotal && job.testsPassed
@@ -125,9 +123,9 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               {
                 id: "endpoints",
                 label: "Endpoints",
-                n: spec?.endpoints.length ?? job.endpoints ?? 0,
+                n: spec ? deriveEndpoints(spec.resources).length : (job.endpoints ?? 0),
               },
-              { id: "models", label: "Modèles", n: spec?.models.length ?? 0 },
+              { id: "models", label: "Ressources", n: spec?.resources.length ?? 0 },
               { id: "agents", label: "Agents", n: job.agentLogs.length },
             ]}
             panels={{
@@ -138,34 +136,25 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                       Authentification
                     </h3>
                     <p className="text-[14px] text-ink-2">
-                      {spec?.auth.type.toUpperCase() ?? "JWT"} ·{" "}
-                      {spec?.auth.rbac ? "RBAC activé" : "Pas de RBAC"}
-                      {spec?.auth.roles?.length
-                        ? " · rôles : " + spec.auth.roles.join(", ")
-                        : ""}
+                      {spec?.auth?.strategy?.toUpperCase() ?? "—"}
+                      {spec?.roles?.length ? ` · rôles : ${spec.roles.map((r) => r.name).join(", ")}` : ""}
+                      {spec?.authFlows ? " · flux complets activés" : ""}
                     </p>
                   </div>
-                  {spec?.integrations?.length ? (
+                  {spec?.rateLimit && (
                     <div className="rounded-[14px] border border-line bg-surface p-5">
-                      <h3 className="mb-3 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                        Intégrations
+                      <h3 className="mb-2 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+                        Rate limit
                       </h3>
-                      <div className="flex flex-wrap gap-1.5">
-                        {spec.integrations.map((i) => (
-                          <span
-                            key={i}
-                            className="rounded-[5px] border border-line bg-bg-2 px-2 py-0.5 font-mono text-[11.5px] text-ink-2"
-                          >
-                            {i}
-                          </span>
-                        ))}
-                      </div>
+                      <p className="font-mono text-[13px] text-ink-2">
+                        {spec.rateLimit.max} req / {Math.round(spec.rateLimit.windowMs / 1000)}s
+                      </p>
                     </div>
-                  ) : null}
+                  )}
                 </section>
               ),
-              endpoints: <EndpointsList endpoints={spec?.endpoints ?? []} />,
-              models: <ModelsList models={spec?.models ?? []} />,
+              endpoints: <EndpointsList resources={spec?.resources ?? []} />,
+              models: <ModelsList resources={spec?.resources ?? []} />,
               agents: <AgentsProgress logs={job.agentLogs} />,
             }}
           />

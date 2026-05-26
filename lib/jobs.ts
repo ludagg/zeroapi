@@ -1,15 +1,23 @@
+import { tasks } from "@trigger.dev/sdk/v3";
 import { prisma } from "./prisma";
 import { runGenerationWorker } from "@/workers/runtime-worker";
-import type { ZeroAPISpec } from "./spec";
+import {
+  GENERATE_API_TASK_ID,
+  type GenerateApiPayload,
+  type GenerateApiTask,
+} from "@/triggers/generate-api";
 
-type TriggerPayload = { jobId: string; spec: ZeroAPISpec };
-
-export async function triggerGenerateJob(payload: TriggerPayload): Promise<void> {
-  if (process.env.TRIGGER_API_KEY && process.env.TRIGGER_API_URL) {
-    await sendToTriggerDev(payload);
-    return;
+export async function triggerGenerateJob(payload: GenerateApiPayload): Promise<void> {
+  if (process.env.TRIGGER_SECRET_KEY) {
+    try {
+      await tasks.trigger<GenerateApiTask>(GENERATE_API_TASK_ID, payload);
+      return;
+    } catch (err) {
+      // On retombe sur l'exécution locale en best-effort (utile en dev avec une clé invalide).
+      console.error("Trigger.dev a refusé le déclenchement, fallback local :", err);
+    }
   }
-  // Pas de Trigger.dev configuré → run inline en best-effort (dev).
+
   void runGenerationWorker(payload).catch(async (err) => {
     await prisma.job.update({
       where: { id: payload.jobId },
@@ -20,24 +28,6 @@ export async function triggerGenerateJob(payload: TriggerPayload): Promise<void>
       },
     });
   });
-}
-
-async function sendToTriggerDev(payload: TriggerPayload): Promise<void> {
-  const url = `${process.env.TRIGGER_API_URL}/api/v1/events`;
-  const res = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.TRIGGER_API_KEY}`,
-    },
-    body: JSON.stringify({
-      name: "api.generate",
-      payload,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Trigger.dev a refusé l'événement (${res.status}).`);
-  }
 }
 
 export async function logAgent(

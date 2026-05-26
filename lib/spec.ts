@@ -1,102 +1,71 @@
-import { z } from "zod";
+import { parseSpec, ParseError, type ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 
-export const ZeroAPISpecSchema = z.object({
-  name: z.string().min(1).max(80),
-  description: z.string().min(1).max(280),
-  version: z.string().default("v1.0"),
-  auth: z
-    .object({
-      type: z.enum(["jwt", "oauth", "magic_link"]).default("jwt"),
-      rbac: z.boolean().default(true),
-      roles: z.array(z.string()).default([]),
-    })
-    .default({ type: "jwt", rbac: true, roles: [] }),
-  models: z
-    .array(
-      z.object({
-        name: z.string().min(1),
-        fields: z
-          .array(
-            z.object({
-              name: z.string().min(1),
-              type: z.string().min(1),
-              required: z.boolean().default(false),
-              relation: z.string().optional(),
-            }),
-          )
-          .min(1),
-      }),
-    )
-    .min(1),
-  endpoints: z
-    .array(
-      z.object({
-        method: z.enum(["GET", "POST", "PUT", "PATCH", "DELETE"]),
-        path: z.string().regex(/^\//),
-        description: z.string().optional(),
-        auth: z.boolean().default(true),
-        roles: z.array(z.string()).optional(),
-      }),
-    )
-    .default([]),
-  integrations: z.array(z.string()).default([]),
-  features: z.array(z.string()).default([]),
-});
-
-export type ZeroAPISpec = z.infer<typeof ZeroAPISpecSchema>;
+export type { ZeroAPISpec };
+export { parseSpec, ParseError };
 
 export const CONVERSATION_SYSTEM_PROMPT = `Tu es l'assistant de génération de ZeroAPI.
 Tu aides l'utilisateur à définir son backend API en français.
 
 PHASE 1 — COMPRÉHENSION :
 Pose des questions ciblées pour comprendre :
-- Les ressources (entités) du projet
-- Les relations entre elles
-- Les rôles utilisateurs
-- Le type d'authentification
-- Les fonctionnalités spéciales
+- Les ressources (entités) du projet et leurs champs
+- Les relations entre ressources
+- Les rôles utilisateurs (RBAC)
+- Le type d'authentification (JWT, API key, bearer)
+- Les intégrations spéciales (paiements, SMS, uploads)
 
 PHASE 2 — PLAN :
-Quand tu as assez d'informations, génère un plan structuré et demande validation.
+Quand tu as assez d'informations, présente un plan structuré et demande validation.
 
 RÈGLES :
 - Toujours en français
 - Maximum 2 questions à la fois
-- Être concis et précis
-- Ne JAMAIS générer la Spec JSON dans la conversation, attendre que l'utilisateur lance la génération
+- Concis et précis
+- Ne JAMAIS produire de JSON dans la conversation — attendre que l'utilisateur lance la génération
 - Mettre en gras (**texte**) les éléments structurants détectés
-- Tu peux utiliser du code inline avec des backticks pour les noms techniques
+- Utiliser des backticks pour les noms techniques
 `;
 
 export const SPEC_SYSTEM_PROMPT = `Tu es le générateur de spec JSON pour ZeroAPI.
-À partir d'une conversation avec un utilisateur, tu retournes UNIQUEMENT un objet JSON
-conforme au schéma ZeroAPISpec, sans markdown ni explication.
+À partir d'une conversation, tu retournes UNIQUEMENT un objet JSON conforme à la DSL ZeroAPI,
+sans markdown ni explication.
 
-SCHÉMA :
+SHAPE EXACTE :
 {
-  "name": "kebab-case-court (ex: api-livreurs-realtime)",
+  "version": "1.0",
+  "name": "kebab-case (ex: api-livreurs-realtime)",
   "description": "résumé en une phrase",
-  "version": "v1.0",
-  "auth": { "type": "jwt", "rbac": true, "roles": ["..."] },
-  "models": [
-    { "name": "PascalCase", "fields": [
-      { "name": "camelCase", "type": "string|int|decimal|datetime|bool|json|relation",
-        "required": true, "relation": "OtherModel" }
-    ]}
+  "auth": { "strategy": "jwt", "secret": "JWT_SECRET" },
+  "roles": [{ "name": "admin" }, { "name": "user", "inherits": [] }],
+  "rateLimit": { "windowMs": 60000, "max": 120 },
+  "resources": [
+    {
+      "name": "PascalCase",
+      "description": "...",
+      "fields": {
+        "title":   { "type": "string", "required": true, "minLength": 1, "maxLength": 200 },
+        "priceCfa":{ "type": "integer", "required": true, "min": 0 },
+        "owner":   { "type": "uuid" }
+      },
+      "endpoints": ["list", "create", "read", "update", "delete"],
+      "auth": { "required": true, "roles": ["user", "admin"] },
+      "rbac": { "read": ["user","admin"], "write": ["admin"], "delete": ["admin"] },
+      "relations": [
+        { "type": "manyToOne", "resource": "Buyer", "field": "buyerId", "onDelete": "Cascade" }
+      ]
+    }
   ],
-  "endpoints": [
-    { "method": "GET|POST|PUT|PATCH|DELETE", "path": "/...",
-      "description": "...", "auth": true, "roles": ["..."] }
-  ],
-  "integrations": ["mtn_momo", "wave", "resend", "africastalking", ...],
-  "features": ["webhooks", "openapi", "rate_limit", ...]
+  "authFlows": { "passwordReset": true, "refreshTokens": true, "revocation": true }
 }
 
+TYPES DE CHAMPS AUTORISÉS : string, text, number, integer, boolean, date, datetime, email, url, uuid, file.
+TYPES DE RELATIONS : oneToOne, oneToMany, manyToOne, manyToMany (manyToMany exige "through": "JoinTable").
+
 RÈGLES :
-- Inférer les CRUD endpoints standards pour chaque modèle
-- Identifier les paiements mobile money africains explicitement (mtn_momo, wave, orange_money)
+- Identifier explicitement les paiements mobile money africains (mtn_momo, wave, orange_money) en custom endpoints + intégrations side-car
 - Toujours inclure auth/RBAC si plusieurs rôles
-- Réponse JSON pure, rien d'autre
+- Inférer les CRUD endpoints standards (["list","create","read","update","delete"]) sauf si l'utilisateur précise sinon
+- JSON pur, RIEN d'autre
 `;
 
 export type ConversationMessage = { role: "user" | "assistant"; content: string };
@@ -112,11 +81,30 @@ export function estimateProgress(messages: ConversationMessage[]): number {
   return Math.min(94, score);
 }
 
+/**
+ * Parses LLM output into a validated ZeroAPISpec.
+ * Strips markdown fences, runs through the runtime's parseSpec (Zod + semantic checks).
+ */
 export function safeParseSpec(jsonText: string): ZeroAPISpec {
   let cleaned = jsonText.trim();
   if (cleaned.startsWith("```")) {
     cleaned = cleaned.replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
   }
-  const parsed = JSON.parse(cleaned);
-  return ZeroAPISpecSchema.parse(parsed);
+  const raw = JSON.parse(cleaned);
+  return parseSpec(raw);
+}
+
+/** Counts the standard endpoints that would be generated for a spec. */
+export function countEndpoints(spec: ZeroAPISpec): number {
+  let n = 0;
+  for (const r of spec.resources) {
+    const ep = r.endpoints ?? ["list", "create", "read", "update", "delete"];
+    n += ep.length;
+    n += r.customEndpoints?.length ?? 0;
+  }
+  if (spec.authFlows?.passwordReset) n += 2;
+  if (spec.authFlows?.refreshTokens) n += 1;
+  if (spec.authFlows?.revocation) n += 1;
+  if (spec.authFlows?.emailVerification) n += 1;
+  return n;
 }

@@ -16,3 +16,8 @@ next-env.d.ts
 .vscode/
 *.log
 .turbo
+
+# Local bundles when R2 is not configured (fallback du worker)
+.bundles/
+# Trigger.dev local state
+.trigger/

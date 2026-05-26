@@ -1,4 +1,5 @@
 import type { Job } from "@prisma/client";
+import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 
 const EMOJI_BY_KEYWORD: Array<[RegExp, string]> = [
   [/livr|delivery|courier|transport/i, "🚛"],
@@ -26,10 +27,24 @@ export function extractVersion(job: Pick<Job, "createdAt" | "name">): string {
   return "v1.0";
 }
 
-export function extractAuthMode(spec: Job["spec"]): string | null {
+function asPartialSpec(spec: Job["spec"]): Partial<ZeroAPISpec> | null {
   if (!spec || typeof spec !== "object") return null;
-  const s = spec as { auth?: { type?: string; rbac?: boolean }; security?: { auth?: string } };
-  if (s.auth?.type) return s.auth.rbac ? "JWT+RBAC" : s.auth.type.toUpperCase();
-  if (s.security?.auth) return s.security.auth.toUpperCase();
+  return spec as Partial<ZeroAPISpec>;
+}
+
+export function extractAuthMode(spec: Job["spec"]): string | null {
+  const s = asPartialSpec(spec);
+  if (!s) return null;
+  if (s.auth?.strategy) {
+    const strat = s.auth.strategy.toUpperCase();
+    const hasRoles = (s.roles?.length ?? 0) > 0;
+    return hasRoles ? `${strat}+RBAC` : strat;
+  }
   return null;
+}
+
+export function readSpec(spec: Job["spec"]): ZeroAPISpec | null {
+  const s = asPartialSpec(spec);
+  if (!s || !s.name || !s.resources) return null;
+  return s as ZeroAPISpec;
 }

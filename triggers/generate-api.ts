@@ -1,24 +1,30 @@
-/**
- * Job Trigger.dev — déclenché par l'événement "api.generate".
- *
- * Le SDK Trigger.dev n'est volontairement pas installé : ce fichier décrit
- * la forme attendue du job et est repris tel quel quand on branche v3.
- *
- * En attendant, `lib/jobs.ts#triggerGenerateJob` :
- *   - envoie l'event à Trigger.dev si TRIGGER_API_KEY est défini
- *   - sinon délègue à `workers/runtime-worker.ts#runGenerationWorker` en local.
- */
+import { task } from "@trigger.dev/sdk/v3";
+import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
+import { runGenerationWorker } from "@/workers/runtime-worker";
 
-import type { ZeroAPISpec } from "@/lib/spec";
+export const GENERATE_API_TASK_ID = "generate-api" as const;
 
 export type GenerateApiPayload = {
   jobId: string;
   spec: ZeroAPISpec;
 };
 
-export const GENERATE_API_JOB = {
-  id: "generate-api",
-  name: "Generate API from Spec",
-  version: "1.0.0",
-  event: "api.generate",
-} as const;
+/**
+ * Trigger.dev v3 task — déclenchée par `tasks.trigger("generate-api", payload)`
+ * depuis `lib/jobs.ts#triggerGenerateJob`.
+ *
+ * Le task ID DOIT rester `generate-api` (même valeur que `GENERATE_API_TASK_ID`).
+ * Le worker écrit dans Prisma et upload sur R2 ; on lui fait confiance pour son
+ * propre retry interne, donc on désactive le retry par défaut de Trigger.dev.
+ */
+export const generateApiTask = task({
+  id: GENERATE_API_TASK_ID,
+  maxDuration: 600,
+  retry: { maxAttempts: 1 },
+  run: async (payload: GenerateApiPayload) => {
+    await runGenerationWorker(payload);
+    return { jobId: payload.jobId, status: "completed" as const };
+  },
+});
+
+export type GenerateApiTask = typeof generateApiTask;

@@ -1,40 +1,55 @@
-type Field = { name: string; type: string; required?: boolean; relation?: string };
-type Model = { name: string; fields: Field[] };
+import type { ResourceDefinition } from "@ludagg/zeroapi-runtime";
 
-export function ModelsList({ models }: { models: Model[] }) {
-  if (!models.length) {
+export function ModelsList({ resources }: { resources: ResourceDefinition[] }) {
+  if (!resources.length) {
     return (
       <div className="rounded-[14px] border border-dashed border-line-2 bg-surface p-10 text-center text-muted">
-        Aucun modèle dans la spec.
+        Aucune ressource dans la spec.
       </div>
     );
   }
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      {models.map((m) => (
-        <div key={m.name} className="overflow-hidden rounded-[14px] border border-line bg-surface">
-          <div className="border-b border-line bg-bg-2 px-4 py-2.5 font-mono text-[12px]">
-            <b className="font-semibold">{m.name}</b>
-            <span className="ml-2 text-[10.5px] text-muted">{m.fields.length} champs</span>
+      {resources.map((r) => {
+        const entries = Object.entries(r.fields);
+        return (
+          <div key={r.name} className="overflow-hidden rounded-[14px] border border-line bg-surface">
+            <div className="border-b border-line bg-bg-2 px-4 py-2.5 font-mono text-[12px]">
+              <b className="font-semibold">{r.name}</b>
+              <span className="ml-2 text-[10.5px] text-muted">{entries.length} champs</span>
+            </div>
+            <div className="px-4 py-2">
+              {entries.map(([name, field]) => (
+                <div
+                  key={name}
+                  className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-dashed border-line py-1.5 font-mono text-[12px] text-ink-2 last:border-b-0"
+                >
+                  <span>
+                    {name}
+                    {field.required && <span className="text-danger">*</span>}
+                  </span>
+                  <span className="text-[10.5px] text-muted">{field.type}</span>
+                </div>
+              ))}
+              {r.relations && r.relations.length > 0 && (
+                <div className="mt-2 border-t border-dashed border-line pt-2">
+                  <div className="mb-1 font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+                    Relations
+                  </div>
+                  {r.relations.map((rel, i) => (
+                    <div
+                      key={`${rel.type}-${rel.resource}-${i}`}
+                      className="font-mono text-[11.5px] text-ink-2"
+                    >
+                      <span className="text-muted">{rel.type}</span> → {rel.resource}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-          <div className="px-4 py-2">
-            {m.fields.map((f) => (
-              <div
-                key={f.name}
-                className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-dashed border-line py-1.5 font-mono text-[12px] text-ink-2 last:border-b-0"
-              >
-                <span>
-                  {f.name}
-                  {f.required && <span className="text-danger">*</span>}
-                </span>
-                <span className="text-[10.5px] text-muted">
-                  {f.relation ? `→ ${f.relation}` : f.type}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
