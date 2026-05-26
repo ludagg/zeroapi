@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowRight, Database as DatabaseIcon, ExternalLink, Lock } from "lucide-react";
+import { ArrowRight, Database as DatabaseIcon, Lock } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
+import { JobLinkChip } from "@/components/databases/job-link-chip";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -115,14 +116,7 @@ export default async function DatabasesPage() {
                       </div>
 
                       <div className="mt-3.5 flex items-center justify-between border-t border-dashed border-line pt-3 text-[12px] text-muted">
-                        <Link
-                          href={`/apis/${d.jobId}`}
-                          className="inline-flex items-center gap-1 transition hover:text-ink"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <ExternalLink className="h-3 w-3" />
-                          {d.job.name}
-                        </Link>
+                        <JobLinkChip jobId={d.jobId} jobName={d.job.name} />
                         <span className="font-mono text-[11px]">
                           créée {formatRelativeTime(d.createdAt)}
                         </span>
