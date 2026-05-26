@@ -11,6 +11,7 @@ import { logAgent } from "@/lib/jobs";
 import { sendJobReadyEmail } from "@/lib/resend";
 import { uploadJobBundle } from "@/lib/r2";
 import { countEndpoints } from "@/lib/spec";
+import { countTables, ensureDatabaseForJob } from "@/lib/databases";
 import { buildBundle } from "./zip-bundle";
 
 type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
@@ -83,17 +84,25 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
       }
     });
 
-    await prisma.job.update({
-      where: { id: jobId },
-      data: {
-        status: "READY",
-        completedAt: new Date(),
-        endpoints,
-        testsTotal,
-        testsPassed: testsTotal,
-        securityScore: "A",
-        zipUrl: zipUrl ?? undefined,
-      },
+    await prisma.$transaction(async (tx) => {
+      await tx.job.update({
+        where: { id: jobId },
+        data: {
+          status: "READY",
+          completedAt: new Date(),
+          endpoints,
+          testsTotal,
+          testsPassed: testsTotal,
+          securityScore: "A",
+          zipUrl: zipUrl ?? undefined,
+        },
+      });
+      await ensureDatabaseForJob(tx, {
+        jobId,
+        userId: job.userId,
+        specName: spec.name,
+        tables: countTables(spec),
+      });
     });
 
     await sendJobReadyEmail(jobId).catch(() => undefined);
