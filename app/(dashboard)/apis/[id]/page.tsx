@@ -77,7 +77,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
               </div>
               <p className="mt-2 max-w-2xl text-[14.5px] text-muted">{job.description}</p>
             </div>
-            <DownloadButton jobId={job.id} disabled={!isReady || !job.zipUrl} />
+            <DownloadButton jobId={job.id} disabled={!isReady} />
           </div>
 
           <ApiSubnav id={job.id} />
