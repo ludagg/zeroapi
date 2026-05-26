@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Activity, CheckCheck, MoreHorizontal, Network, Shield, AlertTriangle } from "lucide-react";
 import type { JobStatus } from "@prisma/client";
