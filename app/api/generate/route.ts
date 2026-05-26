@@ -158,7 +158,31 @@ export async function POST(req: Request) {
     return created;
   });
 
-  await triggerGenerateJob({ jobId: job.id, spec });
+  try {
+    await triggerGenerateJob({ jobId: job.id, spec });
+  } catch (err) {
+    // Trigger.dev dispatch failed — surface a 502 to the client and mark
+    // the job FAILED so it doesn't sit in PENDING forever.
+    await prisma.job
+      .update({
+        where: { id: job.id },
+        data: {
+          status: "FAILED",
+          errorMessage:
+            "Impossible de déclencher la génération (Trigger.dev): " +
+            (err instanceof Error ? err.message : String(err)),
+          completedAt: new Date(),
+        },
+      })
+      .catch(() => undefined);
+    return NextResponse.json(
+      {
+        error: "La génération n'a pas pu être déclenchée. Réessaie dans un instant.",
+        details: err instanceof Error ? err.message : null,
+      },
+      { status: 502 },
+    );
+  }
 
   return NextResponse.json({ jobId: job.id });
 }

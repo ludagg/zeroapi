@@ -1,33 +1,20 @@
 import { tasks } from "@trigger.dev/sdk/v3";
 import { prisma } from "./prisma";
-import { runGenerationWorker } from "@/workers/runtime-worker";
 import {
   GENERATE_API_TASK_ID,
   type GenerateApiPayload,
   type GenerateApiTask,
 } from "@/triggers/generate-api";
 
+/**
+ * Déclenche la pipeline de génération via Trigger.dev v3.
+ *
+ * Plus de fallback inline — Trigger.dev est désormais une dépendance dure.
+ * Si le déclenchement échoue (clé manquante, infra down…), l'erreur remonte
+ * à l'API route, qui marquera le job en FAILED côté caller.
+ */
 export async function triggerGenerateJob(payload: GenerateApiPayload): Promise<void> {
-  if (process.env.TRIGGER_SECRET_KEY) {
-    try {
-      await tasks.trigger<GenerateApiTask>(GENERATE_API_TASK_ID, payload);
-      return;
-    } catch (err) {
-      // On retombe sur l'exécution locale en best-effort (utile en dev avec une clé invalide).
-      console.error("Trigger.dev a refusé le déclenchement, fallback local :", err);
-    }
-  }
-
-  void runGenerationWorker(payload).catch(async (err) => {
-    await prisma.job.update({
-      where: { id: payload.jobId },
-      data: {
-        status: "FAILED",
-        errorMessage: err instanceof Error ? err.message : "Erreur inconnue",
-        completedAt: new Date(),
-      },
-    });
-  });
+  await tasks.trigger<GenerateApiTask>(GENERATE_API_TASK_ID, payload);
 }
 
 export async function logAgent(
