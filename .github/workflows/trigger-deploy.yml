@@ -16,6 +16,6 @@ jobs:
       # NOT the runtime project secret key (`tr_prod_…`). Generate one at
       # https://cloud.trigger.dev/account/tokens and add it as the
       # `TRIGGER_ACCESS_TOKEN` repo secret in Settings → Secrets and variables.
-      - run: npx trigger.dev@3.3.17 deploy
+      - run: npx trigger.dev@latest deploy
         env:
           TRIGGER_ACCESS_TOKEN: ${{ secrets.TRIGGER_ACCESS_TOKEN }}
