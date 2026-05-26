@@ -158,17 +158,20 @@ export default async function DashboardPage({
               },
               {
                 label: "Requêtes / 24 h",
-                value: "—",
+                value: "--",
                 hint: "métriques live arrivent au sprint 2",
                 icon: <BarChart3 />,
                 spark: "wave",
+                tooltip:
+                  "Les métriques temps réel des APIs déployées arrivent au prochain sprint.",
               },
               {
                 label: "Coût ce mois",
-                value: "—",
-                hint: "FCFA · facturation arrive bientôt",
+                value: costForPlan(user.plan),
+                hint: hintForPlan(user.plan),
                 icon: <DollarSign />,
                 spark: "flat",
+                tooltip: `Plan actuel : ${user.plan}`,
               },
             ]}
           />
@@ -210,4 +213,30 @@ function greetingFor(d: Date): string {
   if (h < 12) return "Bonjour,";
   if (h < 18) return "Bon après-midi,";
   return "Bonsoir,";
+}
+
+function costForPlan(plan: "FREE" | "STARTER" | "PRO" | "BUSINESS"): string {
+  switch (plan) {
+    case "FREE":
+      return "0 €";
+    case "STARTER":
+      return "19 €";
+    case "PRO":
+      return "49 €";
+    case "BUSINESS":
+      return "199 €";
+  }
+}
+
+function hintForPlan(plan: "FREE" | "STARTER" | "PRO" | "BUSINESS"): string {
+  switch (plan) {
+    case "FREE":
+      return "plan FREE · upgrade pour débloquer plus";
+    case "STARTER":
+      return "plan STARTER · mensuel";
+    case "PRO":
+      return "plan PRO · mensuel";
+    case "BUSINESS":
+      return "plan BUSINESS · mensuel";
+  }
 }

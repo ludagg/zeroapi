@@ -7,6 +7,7 @@ type Stat = {
   hint: string;
   icon: React.ReactNode;
   spark: "rise" | "step" | "wave" | "flat";
+  tooltip?: string;
 };
 
 export function StatsCards({ stats }: { stats: Stat[] }) {
@@ -15,6 +16,7 @@ export function StatsCards({ stats }: { stats: Stat[] }) {
       {stats.map((s) => (
         <div
           key={s.label}
+          title={s.tooltip}
           className="rounded-[12px] border border-line bg-surface p-4 transition hover:border-line-2"
         >
           <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">

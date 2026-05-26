@@ -1,12 +1,15 @@
 import {
   generateFlyConfig,
   generateOpenAPISpec,
+  generatePrismaSchema,
   generateRailwayConfig,
   generateRenderConfig,
+  generateTests,
   generateVercelConfig,
   type OpenAPISpec,
   type ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
+import type { CodeFile } from "@/components/api-detail/code-viewer";
 
 export type OpenApiEndpoint = {
   method: string;
@@ -53,6 +56,42 @@ export type DeployTarget = {
   config: string;
   docs: string;
 };
+
+const SERVER_TS = `import { serve } from "@hono/node-server";
+import { createRuntime } from "@ludagg/zeroapi-runtime";
+import spec from "./spec.json";
+
+const { app } = createRuntime(spec, {
+  enableLogging: true,
+  enableCors: true,
+  enableHelmet: true,
+  enableSanitize: true,
+  enableDocs: true,
+  validateEnv: true,
+});
+
+const port = Number(process.env.PORT ?? 3000);
+serve({ fetch: app.fetch, port });
+console.log(\`API listening on http://localhost:\${port}\`);
+`;
+
+/**
+ * Builds the set of source files shown in the Code source tab.
+ * All generators are pure — safe to call at render time.
+ */
+export function buildSourceFiles(spec: ZeroAPISpec): CodeFile[] {
+  return [
+    { name: "prisma/schema.prisma", content: generatePrismaSchema(spec), language: "prisma" },
+    { name: "src/server.ts", content: SERVER_TS, language: "ts" },
+    { name: "tests/api.test.ts", content: generateTests(spec), language: "ts" },
+    {
+      name: "openapi.json",
+      content: JSON.stringify(generateOpenAPISpec(spec), null, 2),
+      language: "json",
+    },
+    { name: "spec.json", content: JSON.stringify(spec, null, 2), language: "json" },
+  ];
+}
 
 export function buildDeployConfigs(spec: ZeroAPISpec): DeployTarget[] {
   return [
