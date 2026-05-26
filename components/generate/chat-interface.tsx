@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,8 +12,8 @@ import {
   Mic,
   Paperclip,
   PenLine,
-  Plus,
   Send,
+  Sparkles,
   ShieldCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -26,6 +26,32 @@ type ChatMessage = {
   meta?: string;
   ts: number;
 };
+
+type ValidatedPlan = {
+  spec: unknown;
+  summary: {
+    resourceCount: number;
+    authStrategy: string | null;
+    rolesCount: number;
+    endpointCount: number;
+    name: string;
+  };
+};
+
+/**
+ * Defense-in-depth: even though the system prompt forbids JSON, LLMs can
+ * still leak a spec dump. Strip any fenced code block and any large
+ * `{...}` blob that smells like a spec.
+ */
+function sanitizeAssistant(content: string): string {
+  if (!content) return content;
+  let out = content;
+  out = out.replace(/```[^\n]*\n[\s\S]*?```/g, "");
+  out = out.replace(/\{[\s\S]{120,}\}/g, (match) =>
+    /"(resources|version|auth|fields)"\s*:/.test(match) ? "" : match,
+  );
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
 
 const INITIAL_MESSAGES: ChatMessage[] = [
   {
@@ -54,7 +80,9 @@ export function ChatInterface({
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const [validating, setValidating] = useState(false);
   const [progress, setProgress] = useState(12);
+  const [plan, setPlan] = useState<ValidatedPlan | null>(null);
   const threadRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -62,7 +90,7 @@ export function ChatInterface({
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  const canSend = draft.trim().length > 0 && !pending;
+  const canSend = draft.trim().length > 0 && !pending && !validating;
 
   async function send(content: string) {
     const text = content.trim();
@@ -76,6 +104,8 @@ export function ChatInterface({
     setMessages((m) => [...m, userMsg]);
     setDraft("");
     setPending(true);
+    // User refined the description — any previously validated plan is stale.
+    if (plan) setPlan(null);
 
     try {
       const res = await fetch("/api/generate", {
@@ -101,12 +131,12 @@ export function ChatInterface({
         {
           id: `a-${Date.now()}`,
           role: "assistant",
-          content: data.reply,
+          content: sanitizeAssistant(data.reply),
           meta: `${data.provider} · ${data.model}`,
           ts: Date.now(),
         },
       ]);
-      setProgress(Math.min(100, Math.max(progress, data.progress)));
+      setProgress((p) => Math.min(100, Math.max(p, data.progress)));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
     } finally {
@@ -114,9 +144,56 @@ export function ChatInterface({
     }
   }
 
-  async function launchGeneration() {
+  async function validatePlan() {
     if (messages.length < 2) {
       toast.error("Décris d'abord ton API.");
+      return;
+    }
+    setValidating(true);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode: "validate",
+          messages: messages.map((m) => ({ role: m.role, content: m.content })),
+        }),
+      });
+      const data = (await res.json()) as
+        | { ok: true; spec: unknown; summary: ValidatedPlan["summary"] }
+        | { ok: false; error: string };
+      if (!res.ok || !("ok" in data) || !data.ok) {
+        throw new Error(("error" in data && data.error) || "Validation impossible.");
+      }
+      setPlan({ spec: data.spec, summary: data.summary });
+      setProgress(100);
+      const s = data.summary;
+      const authLabel = s.authStrategy ?? "pas d'auth";
+      const rolesPart = s.rolesCount > 0 ? `, ${s.rolesCount} rôle${s.rolesCount > 1 ? "s" : ""}` : "";
+      const summaryText =
+        `✅ **Plan validé** — ${s.resourceCount} ressource${s.resourceCount > 1 ? "s" : ""}, ` +
+        `${authLabel}${rolesPart}, ${s.endpointCount} endpoint${s.endpointCount > 1 ? "s" : ""} prévu${s.endpointCount > 1 ? "s" : ""}.` +
+        `\n\nClique **Générer le backend** quand tu es prêt.`;
+      setMessages((m) => [
+        ...m,
+        {
+          id: `a-validated-${Date.now()}`,
+          role: "assistant",
+          content: summaryText,
+          meta: "plan validé",
+          ts: Date.now(),
+        },
+      ]);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+    } finally {
+      setValidating(false);
+    }
+  }
+
+  async function launchGeneration() {
+    if (!plan) {
+      toast.error("Valide d'abord le plan.");
       return;
     }
     setPending(true);
@@ -124,10 +201,7 @@ export function ChatInterface({
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          mode: "launch",
-          messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        }),
+        body: JSON.stringify({ mode: "launch", spec: plan.spec }),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Lancement impossible.");
       const data = (await res.json()) as { jobId: string };
@@ -272,8 +346,11 @@ export function ChatInterface({
 
       <SpecSide
         progress={progress}
-        canLaunch={messages.length >= 3 && progress >= 50}
+        canValidate={messages.length >= 3 && !validating && !pending && !plan}
+        validating={validating}
+        plan={plan}
         pending={pending}
+        onValidate={validatePlan}
         onLaunch={launchGeneration}
       />
     </div>
@@ -305,6 +382,7 @@ function Bubble({
     );
   }
 
+  const safe = sanitizeAssistant(message.content);
   return (
     <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
       <span className="brand-mark mt-0.5 h-8 w-8 text-[12px]">
@@ -320,7 +398,7 @@ function Bubble({
           )}
         </div>
         <div className="space-y-3.5 text-[15px] leading-relaxed text-ink-2">
-          {message.content.split("\n\n").map((p, i) => (
+          {safe.split("\n\n").map((p, i) => (
             <p key={i} dangerouslySetInnerHTML={{ __html: applyMarkdown(p) }} />
           ))}
         </div>
@@ -389,15 +467,22 @@ function ToolBtn({
 
 function SpecSide({
   progress,
-  canLaunch,
+  canValidate,
+  validating,
+  plan,
   pending,
+  onValidate,
   onLaunch,
 }: {
   progress: number;
-  canLaunch: boolean;
+  canValidate: boolean;
+  validating: boolean;
+  plan: ValidatedPlan | null;
   pending: boolean;
+  onValidate: () => void;
   onLaunch: () => void;
 }) {
+  const launchEnabled = plan !== null && !pending;
   return (
     <aside className="hidden flex-col overflow-hidden border-l border-line bg-bg-2 lg:flex">
       <div className="flex items-center justify-between border-b border-line px-4.5 py-4">
@@ -406,7 +491,7 @@ function SpecSide({
             className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
             style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
           />
-          Spec en cours
+          {plan ? "Plan validé" : "Spec en cours"}
         </div>
         <span className="rounded-full border border-line bg-surface px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-ink-2">
           {progress}% prête
@@ -428,17 +513,28 @@ function SpecSide({
             />
           </div>
           <p className="mt-2.5 text-[12px] leading-snug text-muted">
-            {progress < 100
-              ? "Continue à préciser ton API. Plus c'est détaillé, mieux on génère."
-              : "Spec complète ✓ Tu peux lancer la génération."}
+            {plan
+              ? "Spec complète ✓ Tu peux lancer la génération."
+              : "Continue à préciser ton API. Plus c'est détaillé, mieux on génère."}
           </p>
         </div>
 
-        <SpecSection label="Sécurité" count="auto">
-          <SpecRow label="JWT + refresh tokens" meta="auto" />
-          <SpecRow label="RBAC + 3 rôles" meta="auto" />
-          <SpecRow label="Rate limit 120/min" meta="auto" />
-        </SpecSection>
+        {plan ? (
+          <SpecSection label="Plan détecté" count={`${plan.summary.resourceCount} ressources`}>
+            <SpecRow label="Endpoints prévus" meta={String(plan.summary.endpointCount)} />
+            <SpecRow
+              label="Authentification"
+              meta={plan.summary.authStrategy ?? "—"}
+            />
+            <SpecRow label="Rôles RBAC" meta={String(plan.summary.rolesCount)} />
+          </SpecSection>
+        ) : (
+          <SpecSection label="Sécurité" count="auto">
+            <SpecRow label="JWT + refresh tokens" meta="auto" />
+            <SpecRow label="RBAC + 3 rôles" meta="auto" />
+            <SpecRow label="Rate limit 120/min" meta="auto" />
+          </SpecSection>
+        )}
 
         <SpecSection label="Extras inclus">
           <SpecRow label="Tests Vitest" meta="✓" />
@@ -446,20 +542,48 @@ function SpecSide({
           <SpecRow label="Logs structurés" meta="✓" />
         </SpecSection>
 
-        <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-4 text-center text-[12px] text-muted">
-          <FileText className="mx-auto mb-2 h-4 w-4" />
-          Les modèles détectés s&apos;affichent ici dès que ta description est assez précise.
-        </div>
+        {!plan && (
+          <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-4 text-center text-[12px] text-muted">
+            <FileText className="mx-auto mb-2 h-4 w-4" />
+            Les modèles détectés s&apos;affichent ici dès que ta description est assez précise.
+          </div>
+        )}
       </div>
 
       <div className="flex flex-col gap-2.5 border-t border-line bg-surface px-4.5 py-4">
+        {!plan ? (
+          <button
+            type="button"
+            onClick={onValidate}
+            disabled={!canValidate}
+            className={
+              "group inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] text-[14px] font-medium transition " +
+              (canValidate
+                ? "border border-line bg-surface text-ink hover:-translate-y-px hover:border-ink"
+                : "cursor-not-allowed border border-line bg-bg-3 text-muted-2")
+            }
+          >
+            {validating ? (
+              <>
+                <span className="block h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                Validation…
+              </>
+            ) : (
+              <>
+                <Sparkles className="h-3.5 w-3.5" />
+                Valider le plan
+              </>
+            )}
+          </button>
+        ) : null}
         <button
           type="button"
           onClick={onLaunch}
-          disabled={!canLaunch || pending}
+          disabled={!launchEnabled}
+          title={!plan ? "Valide le plan pour activer" : undefined}
           className={
             "group inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] text-[14px] font-medium transition " +
-            (canLaunch && !pending
+            (launchEnabled
               ? "bg-accent text-accent-ink shadow-[0_6px_18px_var(--accent-glow)] hover:-translate-y-px hover:shadow-[0_10px_26px_var(--accent-glow)]"
               : "cursor-not-allowed bg-bg-3 text-muted-2")
           }

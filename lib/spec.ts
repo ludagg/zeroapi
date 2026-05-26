@@ -99,6 +99,28 @@ RÈGLES DE SORTIE :
 
 export type ConversationMessage = { role: "user" | "assistant"; content: string };
 
+/**
+ * Removes raw JSON blocks from assistant chat output so the conversation
+ * stays readable for non-technical users.
+ *
+ * Strips:
+ *   - fenced ```json ... ``` blocks
+ *   - any other fenced ``` ... ``` block
+ *   - top-level `{ ... }` blobs that look like spec dumps (>=120 chars and
+ *     containing typical spec keys like "resources", "version", "auth", or
+ *     "fields"). Short inline objects are kept untouched.
+ */
+export function stripJsonBlocks(content: string): string {
+  if (!content) return content;
+  let out = content;
+  out = out.replace(/```[^\n]*\n[\s\S]*?```/g, "");
+  out = out.replace(/\{[\s\S]{120,}\}/g, (match) => {
+    if (/"(resources|version|auth|fields)"\s*:/.test(match)) return "";
+    return match;
+  });
+  return out.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 export function estimateProgress(messages: ConversationMessage[]): number {
   const userMessages = messages.filter((m) => m.role === "user");
   if (userMessages.length === 0) return 12;

@@ -10,34 +10,28 @@ import {
   countEndpoints,
   estimateProgress,
   safeParseSpec,
+  stripJsonBlocks,
   type ConversationMessage,
 } from "@/lib/spec";
 import { triggerGenerateJob } from "@/lib/jobs";
 
+const MessageArray = z
+  .array(
+    z.object({
+      role: z.enum(["assistant", "user"]),
+      content: z.string().max(8000),
+    }),
+  )
+  .min(1)
+  .max(40);
+
 const RequestSchema = z.discriminatedUnion("mode", [
-  z.object({
-    mode: z.literal("conversation"),
-    messages: z
-      .array(
-        z.object({
-          role: z.enum(["assistant", "user"]),
-          content: z.string().max(8000),
-        }),
-      )
-      .min(1)
-      .max(40),
-  }),
+  z.object({ mode: z.literal("conversation"), messages: MessageArray }),
+  z.object({ mode: z.literal("validate"), messages: MessageArray }),
   z.object({
     mode: z.literal("launch"),
-    messages: z
-      .array(
-        z.object({
-          role: z.enum(["assistant", "user"]),
-          content: z.string().max(8000),
-        }),
-      )
-      .min(2)
-      .max(40),
+    messages: MessageArray.optional(),
+    spec: z.unknown().optional(),
   }),
 ]);
 
@@ -75,7 +69,7 @@ export async function POST(req: Request) {
         temperature: 0.7,
       });
       return NextResponse.json({
-        reply: res.content,
+        reply: stripJsonBlocks(res.content),
         provider: res.provider,
         model: res.model,
         progress: estimateProgress(payload.messages as ConversationMessage[]),
@@ -83,6 +77,52 @@ export async function POST(req: Request) {
     } catch (err) {
       return NextResponse.json(
         { error: err instanceof Error ? err.message : "Erreur LLM." },
+        { status: 502 },
+      );
+    }
+  }
+
+  // ============ VALIDATE ============
+  // Generates the spec from the conversation and returns a short, human
+  // readable summary. The full spec is sent back too, but the client is
+  // expected to keep it hidden — only the summary is rendered in chat.
+  if (payload.mode === "validate") {
+    try {
+      const res = await routeLLM("spec_generation", user.plan, {
+        messages: [
+          { role: "system", content: SPEC_SYSTEM_PROMPT },
+          ...payload.messages,
+          {
+            role: "user",
+            content:
+              "Génère maintenant la spec JSON finale conforme au schéma. Réponds en JSON pur, sans markdown.",
+          },
+        ],
+        maxTokens: 4096,
+        temperature: 0.1,
+        json: true,
+      });
+      const spec = safeParseSpec(res.content);
+      return NextResponse.json({
+        ok: true,
+        spec,
+        summary: {
+          resourceCount: spec.resources.length,
+          authStrategy: spec.auth?.strategy?.toUpperCase() ?? null,
+          rolesCount: spec.roles?.length ?? 0,
+          endpointCount: countEndpoints(spec),
+          name: spec.name,
+        },
+      });
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : null;
+      return NextResponse.json(
+        {
+          ok: false,
+          error: detail
+            ? `Impossible de valider le plan — ${detail}`
+            : "Impossible de valider le plan. Précise ta description.",
+        },
         { status: 502 },
       );
     }
@@ -98,33 +138,57 @@ export async function POST(req: Request) {
 
   let spec;
   let specGenInfo: { provider: string; model: string; latencyMs: number } | null = null;
-  try {
-    const res = await routeLLM("spec_generation", user.plan, {
-      messages: [
-        { role: "system", content: SPEC_SYSTEM_PROMPT },
-        ...payload.messages,
+  // If the client already validated the plan, accept the spec directly to
+  // avoid paying for the LLM call twice.
+  if (payload.spec !== undefined) {
+    try {
+      spec = safeParseSpec(
+        typeof payload.spec === "string" ? payload.spec : JSON.stringify(payload.spec),
+      );
+    } catch (err) {
+      return NextResponse.json(
         {
-          role: "user",
-          content:
-            "Génère maintenant la spec JSON finale conforme au schéma. Réponds en JSON pur, sans markdown.",
+          error:
+            "La spec fournie n'est plus valide — relance la validation du plan.",
+          details: err instanceof Error ? err.message : null,
         },
-      ],
-      maxTokens: 4096,
-      temperature: 0.1,
-      json: true,
-    });
-    spec = safeParseSpec(res.content);
-    specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : null;
+        { status: 400 },
+      );
+    }
+  } else if (payload.messages) {
+    try {
+      const res = await routeLLM("spec_generation", user.plan, {
+        messages: [
+          { role: "system", content: SPEC_SYSTEM_PROMPT },
+          ...payload.messages,
+          {
+            role: "user",
+            content:
+              "Génère maintenant la spec JSON finale conforme au schéma. Réponds en JSON pur, sans markdown.",
+          },
+        ],
+        maxTokens: 4096,
+        temperature: 0.1,
+        json: true,
+      });
+      spec = safeParseSpec(res.content);
+      specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : null;
+      return NextResponse.json(
+        {
+          error: detail
+            ? `Impossible de générer une spec valide — ${detail}`
+            : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
+          details: detail,
+        },
+        { status: 502 },
+      );
+    }
+  } else {
     return NextResponse.json(
-      {
-        error: detail
-          ? `Impossible de générer une spec valide — ${detail}`
-          : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
-        details: detail,
-      },
-      { status: 502 },
+      { error: "Aucune spec ni conversation fournie pour le lancement." },
+      { status: 400 },
     );
   }
 

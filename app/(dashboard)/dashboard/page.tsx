@@ -9,6 +9,7 @@ import { DeploymentsPanel } from "@/components/dashboard/deployments-panel";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { extractAuthMode, extractVersion, pickEmoji } from "@/lib/job-helpers";
+import { formatFcfa, monthlyCostFcfa } from "@/lib/billing";
 import type { JobStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -101,6 +102,7 @@ export default async function DashboardPage({
 
   const greeting = greetingFor(new Date());
   const firstName = (user.name ?? user.email).split(/\s+/)[0];
+  const monthlyCost = monthlyCostFcfa(user.plan);
 
   return (
     <>
@@ -159,14 +161,19 @@ export default async function DashboardPage({
               {
                 label: "Requêtes / 24 h",
                 value: "—",
-                hint: "métriques live arrivent au sprint 2",
+                hint: "métriques live · Plan Pro",
+                tooltip:
+                  "Disponible sur plan Pro — l'observabilité live est incluse dès l'offre Pro.",
                 icon: <BarChart3 />,
                 spark: "wave",
               },
               {
                 label: "Coût ce mois",
-                value: "—",
-                hint: "FCFA · facturation arrive bientôt",
+                value: formatFcfa(monthlyCost),
+                hint:
+                  user.plan === "FREE"
+                    ? `gratuit · ${user.generationsUsed} génération${user.generationsUsed > 1 ? "s" : ""} utilisée${user.generationsUsed > 1 ? "s" : ""}`
+                    : `plan ${user.plan} · ${user.generationsUsed}/${user.generationsLimit} générations`,
                 icon: <DollarSign />,
                 spark: "flat",
               },

@@ -143,4 +143,30 @@
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
+
+  /* Shiki dual-theme: show light theme by default, dark when html[data-theme="dark"] */
+  .shiki-host pre.shiki {
+    margin: 0;
+    padding: 14px 16px;
+    font-family: var(--font-mono), ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace;
+    font-size: 12.5px;
+    line-height: 1.6;
+    background-color: transparent !important;
+    color: var(--shiki-light) !important;
+  }
+  .shiki-host pre.shiki span {
+    color: var(--shiki-light) !important;
+    font-style: var(--shiki-light-font-style) !important;
+    font-weight: var(--shiki-light-font-weight) !important;
+    text-decoration: var(--shiki-light-text-decoration) !important;
+  }
+  html[data-theme="dark"] .shiki-host pre.shiki {
+    color: var(--shiki-dark) !important;
+  }
+  html[data-theme="dark"] .shiki-host pre.shiki span {
+    color: var(--shiki-dark) !important;
+    font-style: var(--shiki-dark-font-style) !important;
+    font-weight: var(--shiki-dark-font-weight) !important;
+    text-decoration: var(--shiki-dark-text-decoration) !important;
+  }
 }

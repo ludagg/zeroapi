@@ -1,3 +1,4 @@
+import { StatCardTooltip } from "@/components/dashboard/stat-card-tooltip";
 import { formatNumber } from "@/lib/utils";
 
 type Stat = {
@@ -5,6 +6,8 @@ type Stat = {
   value: string | number;
   delta?: { value: string; direction: "up" | "down" };
   hint: string;
+  /** Optional tooltip shown on hover/focus of the whole card. */
+  tooltip?: string;
   icon: React.ReactNode;
   spark: "rise" | "step" | "wave" | "flat";
 };
@@ -12,34 +15,44 @@ type Stat = {
 export function StatsCards({ stats }: { stats: Stat[] }) {
   return (
     <div className="mb-7 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-      {stats.map((s) => (
-        <div
-          key={s.label}
-          className="rounded-[12px] border border-line bg-surface p-4 transition hover:border-line-2"
-        >
-          <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-            {s.label}
-            <span className="[&>svg]:h-[13px] [&>svg]:w-[13px]">{s.icon}</span>
+      {stats.map((s) => {
+        const card = (
+          <div
+            key={s.label}
+            className="rounded-[12px] border border-line bg-surface p-4 transition hover:border-line-2"
+          >
+            <div className="flex items-center justify-between font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+              {s.label}
+              <span className="[&>svg]:h-[13px] [&>svg]:w-[13px]">{s.icon}</span>
+            </div>
+            <div className="mt-2.5 flex items-baseline gap-2 font-serif text-[36px] leading-none tracking-[-0.01em]">
+              {typeof s.value === "number" ? formatNumber(s.value) : s.value}
+              {s.delta && (
+                <small
+                  className={
+                    "rounded-[5px] px-1.5 py-0.5 font-sans text-[12px] font-medium " +
+                    (s.delta.direction === "up"
+                      ? "bg-accent-soft text-accent-ink"
+                      : "bg-danger-soft text-danger")
+                  }
+                >
+                  {s.delta.direction === "up" ? "↑" : "↓"} {s.delta.value}
+                </small>
+              )}
+            </div>
+            <div className="mt-1.5 text-[12px] text-muted">{s.hint}</div>
+            <Spark variant={s.spark} />
           </div>
-          <div className="mt-2.5 flex items-baseline gap-2 font-serif text-[36px] leading-none tracking-[-0.01em]">
-            {typeof s.value === "number" ? formatNumber(s.value) : s.value}
-            {s.delta && (
-              <small
-                className={
-                  "rounded-[5px] px-1.5 py-0.5 font-sans text-[12px] font-medium " +
-                  (s.delta.direction === "up"
-                    ? "bg-accent-soft text-accent-ink"
-                    : "bg-danger-soft text-danger")
-                }
-              >
-                {s.delta.direction === "up" ? "↑" : "↓"} {s.delta.value}
-              </small>
-            )}
-          </div>
-          <div className="mt-1.5 text-[12px] text-muted">{s.hint}</div>
-          <Spark variant={s.spark} />
-        </div>
-      ))}
+        );
+        if (s.tooltip) {
+          return (
+            <StatCardTooltip key={s.label} content={s.tooltip}>
+              {card}
+            </StatCardTooltip>
+          );
+        }
+        return card;
+      })}
     </div>
   );
 }
