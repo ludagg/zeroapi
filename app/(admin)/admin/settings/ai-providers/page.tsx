@@ -1,12 +1,49 @@
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
-import { listProvidersForAdmin } from "@/lib/ai-providers";
+import { AlertTriangle, ArrowRight } from "lucide-react";
+import { listProvidersForAdmin, type ProviderAdminView } from "@/lib/ai-providers";
 import { ProviderCard } from "@/components/admin/provider-card";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAIProvidersPage() {
-  const providers = await listProvidersForAdmin();
+  let providers: ProviderAdminView[];
+  try {
+    providers = await listProvidersForAdmin();
+  } catch (err) {
+    const isKeyMissing =
+      err instanceof Error && err.message.includes("SECRETS_ENCRYPTION_KEY");
+    return (
+      <>
+        <header className="mb-7">
+          <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
+            AI <em className="italic">Providers</em>.
+          </h1>
+        </header>
+        <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-6">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-ink-2" />
+            <div className="space-y-2 text-[13px]">
+              <p className="font-semibold text-ink">
+                Configuration de chiffrement indisponible
+              </p>
+              <p className="text-muted">
+                {isKeyMissing
+                  ? "La variable d'environnement SECRETS_ENCRYPTION_KEY est manquante ou invalide (32 bytes base64 requis). Les clés des providers ne peuvent pas être lues."
+                  : "Impossible de charger la configuration des providers."}
+              </p>
+              <p className="text-muted">
+                Définis la variable côté hébergeur puis redéploie. Génération&nbsp;:{" "}
+                <code className="font-mono text-ink-2">
+                  openssl rand -base64 32
+                </code>
+                .
+              </p>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
   const enabled = providers.filter((p) => p.enabled).length;
 
   return (
