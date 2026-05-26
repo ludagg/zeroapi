@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, Download, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { deriveEndpoints, EndpointsList } from "@/components/api-detail/endpoints-list";
 import { ModelsList } from "@/components/api-detail/models-list";
 import { AgentsProgress } from "@/components/api-detail/agents-progress";
+import { DownloadButton } from "@/components/api-detail/download-button";
 import { JobTabs } from "@/components/api-detail/job-tabs";
 import { JobStatusPoller } from "@/components/api-detail/job-status-poller";
 import { extractVersion, readSpec } from "@/lib/job-helpers";
@@ -79,14 +80,8 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 <RefreshCw className="h-3.5 w-3.5" />
                 Régénérer
               </button>
-              {job.zipUrl && (
-                <a
-                  href={job.zipUrl}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
-                >
-                  <Download className="h-3.5 w-3.5" />
-                  Télécharger
-                </a>
+              {(job.status === "READY" || job.status === "DEPLOYED") && (
+                <DownloadButton jobId={job.id} />
               )}
               {(job.status === "READY" || job.status === "DEPLOYED") && (
                 <Link
