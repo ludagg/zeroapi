@@ -1,0 +1,23 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+
+.env
+.env.local
+.env.*.local
+
+*.tsbuildinfo
+next-env.d.ts
+
+.DS_Store
+.idea/
+.vscode/
+*.log
+.turbo
+
+# Local bundles when R2 is not configured (fallback du worker)
+.bundles/
+# Trigger.dev local state
+.trigger/

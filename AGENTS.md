@@ -241,89 +241,214 @@ enum DeploymentStatus {
 
 ---
 
+## 📐 SPEC JSON / DSL
+
+La spec consommée par `@ludagg/zeroapi-runtime` suit la DSL ZeroAPI :
+
+- **`version` est OBLIGATOIRE** (string, ex : `"1.0"`)
+- **`fields` est un `Record<string, FieldDefinition>`** (objet indexé par
+  nom de champ), **PAS un tableau**.
+- **`auth.strategy`** prend `"jwt" | "apikey" | "bearer"` —
+  **PAS `auth.type`**.
+- Les endpoints CRUD sont configurés par ressource via
+  `endpoints?: CrudAction[]`, **pas dans un tableau plat au niveau racine**.
+
+```ts
+type FieldType =
+  | "string" | "text" | "number" | "integer" | "boolean"
+  | "date" | "datetime" | "email" | "url" | "uuid" | "file"
+
+interface FieldDefinition {
+  type: FieldType
+  required?: boolean
+  unique?: boolean
+  default?: string | number | boolean | null
+  min?: number; max?: number
+  minLength?: number; maxLength?: number
+  description?: string
+}
+
+interface ResourceDefinition {
+  name: string
+  description?: string
+  fields: Record<string, FieldDefinition>
+  endpoints?: ("list" | "create" | "read" | "update" | "delete")[]
+  auth?: { required: boolean; roles?: string[]; strategy?: "jwt" | "apikey" | "bearer" }
+  rbac?: { read?: string[]; write?: string[]; delete?: string[] }
+  relations?: RelationDefinition[]
+  customEndpoints?: CustomEndpointDef[]
+}
+
+interface ZeroAPISpec {
+  version: string                      // ← OBLIGATOIRE
+  name: string
+  description?: string
+  auth?: { strategy: "jwt" | "apikey" | "bearer"; secret?: string }
+  roles?: { name: string; inherits?: string[] }[]
+  rateLimit?: { windowMs: number; max: number }
+  cors?: { origins: string[] }
+  resources: ResourceDefinition[]      // ← OBLIGATOIRE, au moins 1
+  authFlows?: { passwordReset?: boolean; refreshTokens?: boolean; revocation?: boolean }
+  requiredEnv?: string[]
+}
+```
+
+**Exemple minimal valide** (passe `parseSpec()`) :
+
+```json
+{
+  "version": "1.0",
+  "name": "test",
+  "resources": [
+    {
+      "name": "items",
+      "fields": {
+        "title": { "type": "string", "required": true }
+      }
+    }
+  ]
+}
+```
+
+**Validation** : toujours passer la spec brute par
+`parseSpec(raw)` (exporté par `@ludagg/zeroapi-runtime`). Il combine
+validation Zod structurelle et vérifications sémantiques (intégrité des
+relations) et lance `ParseError` avec détails par champ en cas d'échec.
+
+---
+
 ## 🤖 INTÉGRATION CLAUDE API
 
 ```typescript
-// lib/claude.ts
+// lib/llm-router.ts — multi-provider (Claude / Mistral / Gemini)
+// avec routage par plan (FREE → Mistral/Gemini, PRO → Claude)
+// et fallback automatique sur les autres providers en cas d'erreur.
 
-// Le prompt système pour la conversation de génération
-export const GENERATION_SYSTEM_PROMPT = `
+// Prompt conversation (PHASE 1 + 2) :
+export const CONVERSATION_SYSTEM_PROMPT = `
 Tu es l'assistant de génération de ZeroAPI.
-Tu aides l'utilisateur à définir son backend API.
+Tu aides l'utilisateur à définir son backend API en français.
 
 PHASE 1 — COMPRÉHENSION :
 Pose des questions ciblées pour comprendre :
-- Les ressources (entités) du projet
+- Les ressources (entités) du projet et leurs champs
 - Les relations entre elles
-- Les rôles utilisateurs
-- Le type d'authentification
-- Les fonctionnalités spéciales
+- Les rôles utilisateurs (RBAC)
+- Le type d'authentification (jwt / apikey / bearer)
+- Les intégrations spéciales (paiements, SMS, uploads)
 
 PHASE 2 — PLAN :
-Génère un plan structuré et demande validation.
-
-PHASE 3 — SPEC JSON :
-Une fois validé, génère UNIQUEMENT un JSON 
-conforme au format ZeroAPISpec de @ludagg/zeroapi-runtime.
+Quand tu as assez d'informations, présente un plan structuré
+et demande validation.
 
 RÈGLES :
 - Toujours en français
 - Maximum 2 questions à la fois
-- Être concis et précis
-- Ne jamais générer la Spec sans validation du plan
+- Ne JAMAIS produire de JSON dans la conversation
 `
 
-// Génère la Spec JSON depuis la conversation
-export async function generateSpec(
-  messages: Message[]
-): Promise<ZeroAPISpec>
+// Prompt génération de spec (PHASE 3, déclenché par "launch") :
+// décrit la shape EXACTE de la DSL ci-dessus et exige du JSON pur.
+export const SPEC_SYSTEM_PROMPT = `…`
 ```
 
 ---
 
-## ⚡ TRIGGER.DEV — JOB ASYNCHRONE
+## ⚙️ RUNTIME — `@ludagg/zeroapi-runtime`
+
+`createRuntime(spec, options?)` retourne un `RuntimeResult` avec
+**exactement ces clés** :
+
+```ts
+interface RuntimeResult {
+  app: Hono                                  // instance Hono montée en mémoire
+  prismaSchema: string                       // schéma Prisma sérialisable
+  zodSchemas: Record<string, ResourceSchemas> // create/update par ressource
+  testSuite: string                          // suite Vitest sérialisable
+  openApiSpec: OpenAPISpec                   // OpenAPI 3.0.3 JSON
+  spec: ZeroAPISpec                          // spec validée/normalisée
+}
+```
+
+⚠️ **Pas de `result.endpoints` ni `result.tests.total/passed`** —
+ces métriques se dérivent côté plateforme :
+
+```ts
+import { countEndpoints } from "@/lib/spec"
+
+const endpoints = countEndpoints(spec)
+const testsTotal = (result.testSuite.match(/\bit\(/g) ?? []).length
+```
+
+**Les `deployConfigs` ne sont PAS dans `RuntimeResult`** — utiliser les
+helpers dédiés exportés par `@ludagg/zeroapi-runtime` :
+
+```ts
+import {
+  generateRailwayConfig,   // → railway.toml
+  generateRenderConfig,    // → render.yaml
+  generateVercelConfig,    // → vercel.json
+  generateFlyConfig,       // → fly.toml
+} from "@ludagg/zeroapi-runtime"
+
+const railway = generateRailwayConfig(spec)
+const render  = generateRenderConfig(spec)
+const vercel  = generateVercelConfig(spec)
+const fly     = generateFlyConfig(spec)
+```
+
+Le ZIP exportable est assemblé dans `workers/zip-bundle.ts` avec JSZip
+(DEFLATE niveau 6) et contient :
+
+```
+├── README.md            ← généré (stack + démarrage + déploiement)
+├── package.json         ← scripts dev/build/test/prisma
+├── tsconfig.json        ← strict
+├── .env.example         ← dérivé de validateEnv(spec) + requiredEnv
+├── .gitignore
+├── src/server.ts        ← boot @hono/node-server → createRuntime(spec)
+├── spec.json            ← la spec validée
+├── openapi.json         ← result.openApiSpec
+├── prisma/schema.prisma ← result.prismaSchema
+├── tests/api.test.ts    ← result.testSuite
+└── deploy/{railway.toml, render.yaml, vercel.json, fly.toml}
+```
+
+---
+
+## ⚡ TRIGGER.DEV v3 — JOB ASYNCHRONE
 
 ```typescript
 // triggers/generate-api.ts
+import { task } from "@trigger.dev/sdk/v3"
+import { runGenerationWorker } from "@/workers/runtime-worker"
 
-export const generateApiJob = trigger.defineJob({
-  id: "generate-api",
-  name: "Generate API from Spec",
-  version: "1.0.0",
-  trigger: eventTrigger({ name: "api.generate" }),
+export const GENERATE_API_TASK_ID = "generate-api" as const
 
-  run: async (payload, io) => {
-    const { jobId, spec } = payload
-
-    // 1. Clarificateur
-    await io.logger.info("Agent Clarificateur...")
-    await updateAgentLog(jobId, "clarifier", "running")
-
-    // 2. Orchestrateur
-    await io.logger.info("Agent Orchestrateur...")
-    await updateAgentLog(jobId, "orchestrator", "running")
-
-    // 3. Génération via @ludagg/zeroapi-runtime
-    await io.logger.info("Génération du code...")
-    const result = await createRuntime(spec)
-
-    // 4. ZIP et upload sur R2
-    const zipUrl = await uploadToR2(result, jobId)
-
-    // 5. Mise à jour du job
-    await updateJob(jobId, {
-      status: "READY",
-      zipUrl,
-      endpoints: result.endpoints.length,
-      testsTotal: result.tests.total,
-      testsPassed: result.tests.passed
-    })
-
-    // 6. Email de notification
-    await sendNotificationEmail(jobId)
-  }
+export const generateApiTask = task({
+  id: GENERATE_API_TASK_ID,
+  maxDuration: 600,
+  retry: { maxAttempts: 1 },
+  run: async (payload: { jobId: string; spec: ZeroAPISpec }) => {
+    await runGenerationWorker(payload)
+    return { jobId: payload.jobId, status: "completed" as const }
+  },
 })
+
+// lib/jobs.ts — déclenchement depuis l'API route :
+import { tasks } from "@trigger.dev/sdk/v3"
+await tasks.trigger<typeof generateApiTask>(GENERATE_API_TASK_ID, payload)
 ```
+
+Le worker `runGenerationWorker({ jobId, spec })` enchaîne les agents
+(clarifier → orchestrator → code → security → tests → upload),
+loggue chaque étape dans `AgentLog`, monte le runtime,
+build le ZIP, upload sur R2 (ou écrit dans `.bundles/<jobId>.zip`
+en fallback dev), puis envoie l'email via Resend.
+
+Variables d'env Trigger.dev v3 : `TRIGGER_SECRET_KEY` et
+`TRIGGER_PROJECT_REF` (anciens `TRIGGER_API_KEY` / `TRIGGER_API_URL`
+supprimés).
 
 ---
 
@@ -507,6 +632,29 @@ NEXT_PUBLIC_APP_URL=
 7. **Loading states** — chaque action async a un état de chargement
 8. **Responsive** — mobile first
 9. **Accessibilité** — aria-labels, focus management
+
+---
+
+## ✅ STUBS DÉBRANCHÉS
+
+État de la pipeline génération à fin de sprint :
+
+- ✅ **`createRuntime` branché** — l'agent "code" appelle
+  `createRuntime(spec, options)` et extrait
+  `prismaSchema` / `testSuite` / `openApiSpec` pour le bundle.
+  L'instance Hono est validée en mémoire avant export.
+- ✅ **Upload R2 branché** — `lib/r2.ts` utilise
+  `@aws-sdk/client-s3` configuré pour Cloudflare R2
+  (endpoint `https://<account>.r2.cloudflarestorage.com`, region `auto`)
+  + `@aws-sdk/s3-request-presigner` pour URLs signées 7j.
+  Fallback `.bundles/<jobId>.zip` quand les creds manquent.
+- ✅ **Trigger.dev v3 branché** — `task({ id, run })` dans
+  `triggers/generate-api.ts`, déclenché via
+  `tasks.trigger<GenerateApiTask>(GENERATE_API_TASK_ID, payload)`.
+  Fallback exécution locale si `TRIGGER_SECRET_KEY` est absent.
+- ✅ **Pipeline E2E vert** — `pnpm test:pipeline` exécute
+  parseSpec → createRuntime → /health 200 → GET /items 200 →
+  buildBundle (ZIP avec 14 fichiers) sans toucher Prisma.
 
 ---
 
