@@ -113,7 +113,7 @@ export default async function DashboardPage({
       />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-7 lg:px-7 lg:py-7">
+        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-serif text-[clamp(36px,4.6vw,50px)] leading-[1.05] tracking-[-0.01em]">

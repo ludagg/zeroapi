@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { DashboardShell } from "@/components/dashboard/shell";
 import { initials, requireUser } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="grid h-screen grid-cols-1 overflow-hidden bg-bg-2 lg:grid-cols-[248px_1fr]">
-      <Sidebar
+      <DashboardShell
         user={{
           name: user.name,
           email: user.email,
@@ -18,8 +18,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
           generationsLimit: user.generationsLimit,
           initials: initials(user.name ?? user.email, "??"),
         }}
-      />
-      <div className="flex h-screen flex-col overflow-hidden bg-bg-2">{children}</div>
+      >
+        {children}
+      </DashboardShell>
     </div>
   );
 }

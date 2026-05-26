@@ -48,7 +48,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
       />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-7 lg:px-8">
+        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
           <Link
             href={`/jobs/${job.id}`}
             className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-muted transition hover:text-ink"
@@ -60,7 +60,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
           <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className="font-serif text-[42px] leading-none tracking-[-0.01em]">
+                <span className="font-serif text-[32px] leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none break-words">
                   {job.name}
                 </span>
                 <span className="rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
