@@ -2,8 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Mistral } from "@mistralai/mistralai";
 import type { Plan } from "@prisma/client";
+import { loadResolvedProviders, type ProviderId } from "./ai-providers";
+import { loadResolvedRouting, type RoutingTask } from "./llm-routing-config";
+import { prisma } from "./prisma";
 
-export type LLMTask = "conversation" | "spec_generation" | "validation" | "complex_spec";
+export type LLMTask = RoutingTask | "validation" | "complex_spec";
 
 export type LLMMessage = {
   role: "system" | "user" | "assistant";
@@ -22,67 +25,55 @@ export type LLMResponse = {
   content: string;
   provider: string;
   model: string;
+  latencyMs: number;
   usage?: { inputTokens?: number; outputTokens?: number };
 };
 
 export interface LLMProvider {
-  readonly name: string;
-  readonly available: boolean;
-  generate(req: LLMRequest): Promise<LLMResponse>;
+  readonly name: ProviderId;
+  generate(req: LLMRequest, ctx: { apiKey: string; model: string }): Promise<LLMResponse>;
 }
 
 const DEFAULT_SYSTEM = "Tu es l'assistant de ZeroAPI. Réponds en français, concis et précis.";
 
 function splitSystem(messages: LLMMessage[]): { system: string; rest: LLMMessage[] } {
-  const sys = messages.filter((m) => m.role === "system").map((m) => m.content).join("\n\n");
+  const sys = messages
+    .filter((m) => m.role === "system")
+    .map((m) => m.content)
+    .join("\n\n");
   const rest = messages.filter((m) => m.role !== "system");
   return { system: sys || DEFAULT_SYSTEM, rest };
 }
 
 // ============ CLAUDE ============
 
-const CLAUDE_MODELS: Record<LLMTask, string> = {
-  conversation: "claude-haiku-4-5-20251001",
-  validation: "claude-haiku-4-5-20251001",
-  spec_generation: "claude-sonnet-4-6",
-  complex_spec: "claude-opus-4-7",
-};
-
 export class ClaudeProvider implements LLMProvider {
-  readonly name = "claude";
-  readonly available: boolean;
-  private client: Anthropic | null;
-
-  constructor(apiKey = process.env.ANTHROPIC_API_KEY) {
-    this.available = Boolean(apiKey);
-    this.client = apiKey ? new Anthropic({ apiKey }) : null;
-  }
-
-  async generate(req: LLMRequest): Promise<LLMResponse> {
-    if (!this.client) throw new Error("Claude provider not configured");
+  readonly name = "anthropic" as const;
+  async generate(req: LLMRequest, ctx: { apiKey: string; model: string }): Promise<LLMResponse> {
+    const client = new Anthropic({ apiKey: ctx.apiKey });
     const { system, rest } = splitSystem(req.messages);
-    const model = CLAUDE_MODELS[req.task];
-
-    const res = await this.client.messages.create({
-      model,
+    const t0 = Date.now();
+    const res = await client.messages.create({
+      model: ctx.model,
       max_tokens: req.maxTokens ?? 4096,
       temperature: req.temperature ?? (req.json ? 0.1 : 0.7),
-      system: req.json ? `${system}\n\nRéponds UNIQUEMENT par du JSON valide, sans markdown.` : system,
+      system: req.json
+        ? `${system}\n\nRéponds UNIQUEMENT par du JSON valide, sans markdown.`
+        : system,
       messages: rest.map((m) => ({
         role: m.role === "assistant" ? "assistant" : "user",
         content: m.content,
       })),
     });
-
     const text = res.content
       .filter((block): block is Anthropic.TextBlock => block.type === "text")
       .map((block) => block.text)
       .join("");
-
     return {
       content: text,
       provider: this.name,
-      model,
+      model: ctx.model,
+      latencyMs: Date.now() - t0,
       usage: {
         inputTokens: res.usage.input_tokens,
         outputTokens: res.usage.output_tokens,
@@ -93,35 +84,18 @@ export class ClaudeProvider implements LLMProvider {
 
 // ============ MISTRAL ============
 
-const MISTRAL_MODELS: Record<LLMTask, string> = {
-  conversation: "mistral-small-latest",
-  validation: "mistral-small-latest",
-  spec_generation: "mistral-large-latest",
-  complex_spec: "mistral-large-latest",
-};
-
 export class MistralProvider implements LLMProvider {
-  readonly name = "mistral";
-  readonly available: boolean;
-  private client: Mistral | null;
-
-  constructor(apiKey = process.env.MISTRAL_API_KEY) {
-    this.available = Boolean(apiKey);
-    this.client = apiKey ? new Mistral({ apiKey }) : null;
-  }
-
-  async generate(req: LLMRequest): Promise<LLMResponse> {
-    if (!this.client) throw new Error("Mistral provider not configured");
-    const model = MISTRAL_MODELS[req.task];
-
-    const res = await this.client.chat.complete({
-      model,
+  readonly name = "mistral" as const;
+  async generate(req: LLMRequest, ctx: { apiKey: string; model: string }): Promise<LLMResponse> {
+    const client = new Mistral({ apiKey: ctx.apiKey });
+    const t0 = Date.now();
+    const res = await client.chat.complete({
+      model: ctx.model,
       maxTokens: req.maxTokens ?? 4096,
       temperature: req.temperature ?? (req.json ? 0.1 : 0.7),
       responseFormat: req.json ? { type: "json_object" } : undefined,
       messages: req.messages.map((m) => ({ role: m.role, content: m.content })),
     });
-
     const choice = res.choices?.[0];
     const raw = choice?.message?.content;
     const text =
@@ -130,11 +104,11 @@ export class MistralProvider implements LLMProvider {
         : Array.isArray(raw)
           ? raw.map((c) => ("text" in c ? c.text : "")).join("")
           : "";
-
     return {
       content: text,
       provider: this.name,
-      model,
+      model: ctx.model,
+      latencyMs: Date.now() - t0,
       usage: {
         inputTokens: res.usage?.promptTokens,
         outputTokens: res.usage?.completionTokens,
@@ -145,30 +119,13 @@ export class MistralProvider implements LLMProvider {
 
 // ============ GEMINI ============
 
-const GEMINI_MODELS: Record<LLMTask, string> = {
-  conversation: "gemini-2.0-flash",
-  validation: "gemini-2.0-flash",
-  spec_generation: "gemini-2.5-pro",
-  complex_spec: "gemini-2.5-pro",
-};
-
 export class GeminiProvider implements LLMProvider {
-  readonly name = "gemini";
-  readonly available: boolean;
-  private client: GoogleGenerativeAI | null;
-
-  constructor(apiKey = process.env.GEMINI_API_KEY) {
-    this.available = Boolean(apiKey);
-    this.client = apiKey ? new GoogleGenerativeAI(apiKey) : null;
-  }
-
-  async generate(req: LLMRequest): Promise<LLMResponse> {
-    if (!this.client) throw new Error("Gemini provider not configured");
-    const modelName = GEMINI_MODELS[req.task];
+  readonly name = "gemini" as const;
+  async generate(req: LLMRequest, ctx: { apiKey: string; model: string }): Promise<LLMResponse> {
+    const client = new GoogleGenerativeAI(ctx.apiKey);
     const { system, rest } = splitSystem(req.messages);
-
-    const model = this.client.getGenerativeModel({
-      model: modelName,
+    const model = client.getGenerativeModel({
+      model: ctx.model,
       systemInstruction: req.json
         ? `${system}\n\nRéponds UNIQUEMENT par du JSON valide, sans markdown.`
         : system,
@@ -178,18 +135,18 @@ export class GeminiProvider implements LLMProvider {
         responseMimeType: req.json ? "application/json" : "text/plain",
       },
     });
-
+    const t0 = Date.now();
     const res = await model.generateContent({
       contents: rest.map((m) => ({
         role: m.role === "assistant" ? "model" : "user",
         parts: [{ text: m.content }],
       })),
     });
-
     return {
       content: res.response.text(),
       provider: this.name,
-      model: modelName,
+      model: ctx.model,
+      latencyMs: Date.now() - t0,
       usage: {
         inputTokens: res.response.usageMetadata?.promptTokenCount,
         outputTokens: res.response.usageMetadata?.candidatesTokenCount,
@@ -198,87 +155,119 @@ export class GeminiProvider implements LLMProvider {
   }
 }
 
-// ============ ROUTER ============
+// ============ GROQ (OpenAI-compatible via fetch) ============
 
-type ProviderName = "claude" | "mistral" | "gemini";
-
-const ROUTING: Record<Plan, Record<LLMTask, ProviderName[]>> = {
-  FREE: {
-    conversation: ["mistral", "gemini", "claude"],
-    validation: ["mistral", "gemini", "claude"],
-    spec_generation: ["gemini", "mistral", "claude"],
-    complex_spec: ["claude", "gemini", "mistral"],
-  },
-  STARTER: {
-    conversation: ["mistral", "claude", "gemini"],
-    validation: ["mistral", "claude", "gemini"],
-    spec_generation: ["claude", "mistral", "gemini"],
-    complex_spec: ["claude", "gemini", "mistral"],
-  },
-  PRO: {
-    conversation: ["claude", "mistral", "gemini"],
-    validation: ["claude", "mistral", "gemini"],
-    spec_generation: ["claude", "gemini", "mistral"],
-    complex_spec: ["claude", "gemini", "mistral"],
-  },
-  BUSINESS: {
-    conversation: ["claude", "mistral", "gemini"],
-    validation: ["claude", "mistral", "gemini"],
-    spec_generation: ["claude", "gemini", "mistral"],
-    complex_spec: ["claude", "gemini", "mistral"],
-  },
-};
-
-let registry: Record<ProviderName, LLMProvider> | null = null;
-
-function getRegistry(): Record<ProviderName, LLMProvider> {
-  if (!registry) {
-    registry = {
-      claude: new ClaudeProvider(),
-      mistral: new MistralProvider(),
-      gemini: new GeminiProvider(),
+export class GroqProvider implements LLMProvider {
+  readonly name = "groq" as const;
+  async generate(req: LLMRequest, ctx: { apiKey: string; model: string }): Promise<LLMResponse> {
+    const t0 = Date.now();
+    const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${ctx.apiKey}`,
+      },
+      body: JSON.stringify({
+        model: ctx.model,
+        messages: req.messages,
+        max_tokens: req.maxTokens ?? 4096,
+        temperature: req.temperature ?? (req.json ? 0.1 : 0.7),
+        ...(req.json ? { response_format: { type: "json_object" } } : {}),
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Groq HTTP ${res.status}: ${await res.text()}`);
+    }
+    const data = (await res.json()) as {
+      choices: Array<{ message: { content: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number };
+    };
+    return {
+      content: data.choices[0]?.message?.content ?? "",
+      provider: this.name,
+      model: ctx.model,
+      latencyMs: Date.now() - t0,
+      usage: {
+        inputTokens: data.usage?.prompt_tokens,
+        outputTokens: data.usage?.completion_tokens,
+      },
     };
   }
-  return registry;
 }
 
-export function listProviders(): Array<{ name: ProviderName; available: boolean }> {
-  const r = getRegistry();
-  return (["claude", "mistral", "gemini"] as ProviderName[]).map((name) => ({
-    name,
-    available: r[name].available,
-  }));
+// ============ REGISTRY ============
+
+const REGISTRY: Record<ProviderId, LLMProvider> = {
+  anthropic: new ClaudeProvider(),
+  mistral: new MistralProvider(),
+  gemini: new GeminiProvider(),
+  groq: new GroqProvider(),
+};
+
+export function getProviderImpl(id: ProviderId): LLMProvider {
+  return REGISTRY[id];
 }
 
+export async function listProviderAvailability(): Promise<
+  Array<{ name: ProviderId; available: boolean }>
+> {
+  const resolved = await loadResolvedProviders();
+  return resolved.map((r) => ({ name: r.provider, available: r.enabled }));
+}
+
+// ============ ROUTER ============
+
+export type RouteContext = {
+  /** When set, the chosen provider/model is logged into AgentLog. */
+  jobId?: string;
+  /** Agent name used as `AgentLog.agent`. Defaults to the task name. */
+  agent?: string;
+};
+
+/**
+ * Routes an LLM request using:
+ *   1. The DB routing matrix (with 5-min cache) for the (plan, task) pair
+ *   2. The hardcoded fallback list when DB is empty / unreachable
+ *   3. Provider API keys from DB (decrypted) with env fallback
+ *
+ * On error, tries the next provider in order. Logs the chosen provider in
+ * AgentLog when `ctx.jobId` is provided.
+ */
 export async function routeLLM(
   task: LLMTask,
   userPlan: Plan,
   req: Omit<LLMRequest, "task">,
+  ctx: RouteContext = {},
 ): Promise<LLMResponse> {
-  const r = getRegistry();
-  const order = ROUTING[userPlan]?.[task] ?? ROUTING.FREE[task];
+  const [providers, routing] = await Promise.all([
+    loadResolvedProviders(),
+    loadResolvedRouting(),
+  ]);
 
-  const errors: Array<{ provider: ProviderName; error: string }> = [];
+  const byId = new Map(providers.map((p) => [p.provider, p]));
 
-  for (const providerName of order) {
-    const provider = r[providerName];
-    if (!provider.available) continue;
+  // Some tasks (validation / complex_spec) reuse the spec_generation route.
+  const routingKey: RoutingTask = task === "conversation" ? "conversation" : "spec_generation";
+  const order = routing[userPlan]?.[routingKey] ?? [];
+
+  const errors: Array<{ provider: ProviderId; error: string }> = [];
+
+  for (const providerId of order) {
+    const cfg = byId.get(providerId);
+    if (!cfg || !cfg.enabled || !cfg.apiKey) continue;
     try {
-      return await provider.generate({ task, ...req });
+      const impl = getProviderImpl(providerId);
+      const res = await impl.generate(
+        { task, ...req },
+        { apiKey: cfg.apiKey, model: cfg.model },
+      );
+      if (ctx.jobId) {
+        await logProviderUse(ctx.jobId, ctx.agent ?? task, res);
+      }
+      return res;
     } catch (err) {
       errors.push({
-        provider: providerName,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    }
-  }
-
-  if (r.claude.available && !order.includes("claude")) {
-    try {
-      return await r.claude.generate({ task, ...req });
-    } catch (err) {
-      errors.push({
-        provider: "claude",
+        provider: providerId,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -286,6 +275,24 @@ export async function routeLLM(
 
   throw new Error(
     `Aucun fournisseur LLM disponible pour task=${task} plan=${userPlan}. Erreurs : ` +
-      errors.map((e) => `${e.provider}: ${e.error}`).join(" | "),
+      (errors.length ? errors.map((e) => `${e.provider}: ${e.error}`).join(" | ") : "aucun provider activé"),
   );
+}
+
+async function logProviderUse(
+  jobId: string,
+  agent: string,
+  res: LLMResponse,
+): Promise<void> {
+  await prisma.agentLog
+    .create({
+      data: {
+        jobId,
+        agent,
+        status: "done",
+        message: `${res.provider}/${res.model}`,
+        duration: res.latencyMs,
+      },
+    })
+    .catch(() => undefined);
 }

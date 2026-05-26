@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { Home, Briefcase, ShieldAlert, Users } from "lucide-react";
+import { Briefcase, Home, KeyRound, Network, ShieldAlert, Users } from "lucide-react";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -62,6 +62,22 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </AdminLink>
           <AdminLink href="/admin/jobs" icon={<Briefcase className="h-4 w-4" />}>
             Jobs
+          </AdminLink>
+
+          <div className="px-2 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
+            Plateforme
+          </div>
+          <AdminLink
+            href="/admin/settings/ai-providers"
+            icon={<KeyRound className="h-4 w-4" />}
+          >
+            AI Providers
+          </AdminLink>
+          <AdminLink
+            href="/admin/settings/llm-routing"
+            icon={<Network className="h-4 w-4" />}
+          >
+            LLM Routing
           </AdminLink>
         </nav>
 

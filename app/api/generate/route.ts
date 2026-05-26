@@ -97,6 +97,7 @@ export async function POST(req: Request) {
   }
 
   let spec;
+  let specGenInfo: { provider: string; model: string; latencyMs: number } | null = null;
   try {
     const res = await routeLLM("spec_generation", user.plan, {
       messages: [
@@ -113,6 +114,7 @@ export async function POST(req: Request) {
       json: true,
     });
     spec = safeParseSpec(res.content);
+    specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
   } catch (err) {
     return NextResponse.json(
       {
@@ -140,6 +142,17 @@ export async function POST(req: Request) {
       where: { id: user.id },
       data: { generationsUsed: { increment: 1 } },
     });
+    if (specGenInfo) {
+      await tx.agentLog.create({
+        data: {
+          jobId: created.id,
+          agent: "spec_generation",
+          status: "done",
+          message: `${specGenInfo.provider}/${specGenInfo.model}`,
+          duration: specGenInfo.latencyMs,
+        },
+      });
+    }
     return created;
   });
 
