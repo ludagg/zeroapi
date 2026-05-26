@@ -116,11 +116,13 @@ export async function POST(req: Request) {
     spec = safeParseSpec(res.content);
     specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
   } catch (err) {
+    const detail = err instanceof Error ? err.message : null;
     return NextResponse.json(
       {
-        error:
-          "Impossible de générer une spec valide. Réessaie en précisant ta description.",
-        details: err instanceof Error ? err.message : null,
+        error: detail
+          ? `Impossible de générer une spec valide — ${detail}`
+          : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
+        details: detail,
       },
       { status: 502 },
     );
