@@ -2,7 +2,13 @@ import { Resend } from "resend";
 import { prisma } from "./prisma";
 
 const FROM = process.env.RESEND_FROM ?? "ZeroAPI <noreply@zeroapi.io>";
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const APP_URL =
+  process.env.NEXT_PUBLIC_APP_URL ??
+  (process.env.NODE_ENV === "production"
+    ? (() => {
+        throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
+      })()
+    : "http://localhost:3000");
 
 let _client: Resend | null = null;
 
