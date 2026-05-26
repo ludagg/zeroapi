@@ -21,3 +21,7 @@ next-env.d.ts
 .bundles/
 # Trigger.dev local state
 .trigger/
+
+# Repo uses pnpm — ignore foreign lockfiles
+package-lock.json
+yarn.lock
