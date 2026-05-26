@@ -70,7 +70,7 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
 
       const uploaded = await uploadJobBundle(jobId, bundle.buffer);
       if (uploaded.configured) {
-        zipUrl = uploaded.url;
+        zipUrl = uploaded.storedRef;
       } else {
         // R2 non configuré : on stocke le bundle local pour pouvoir le télécharger en dev.
         const fs = await import("node:fs/promises");
