@@ -16,6 +16,7 @@ model User {
   name             String?
   avatar           String?
   image            String?
+  role             UserRole @default(USER)
   plan             Plan     @default(FREE)
   generationsUsed  Int      @default(0)
   generationsLimit Int      @default(3)
@@ -99,12 +100,27 @@ model Job {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deployment Deployment?
-  agentLogs  AgentLog[]
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deployment   Deployment?
+  agentLogs    AgentLog[]
+  envVariables EnvVariable[]
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status])
+}
+
+model EnvVariable {
+  id        String   @id @default(cuid())
+  jobId     String
+  key       String
+  value     String
+  managed   Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([jobId, key])
+  @@index([jobId])
 }
 
 model AgentLog {
@@ -145,6 +161,11 @@ model TeamMember {
   createdAt DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum UserRole {
+  USER
+  ADMIN
 }
 
 enum Plan {
