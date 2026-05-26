@@ -70,7 +70,7 @@ export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
         <Link
           key={job.id}
           href={`/jobs/${job.id}`}
-          className="group grid cursor-pointer items-center gap-4 px-4 py-3.5 transition hover:bg-bg sm:grid-cols-[36px_minmax(0,1fr)_200px_120px_120px_36px]"
+          className="group grid cursor-pointer grid-cols-[36px_minmax(0,1fr)_auto] items-center gap-3 px-3.5 py-3.5 transition hover:bg-bg sm:gap-4 sm:px-4 sm:grid-cols-[36px_minmax(0,1fr)_200px_120px_120px_36px]"
           style={i > 0 ? { borderTop: "1px solid var(--line)" } : undefined}
         >
           <div className="grid h-9 w-9 place-items-center rounded-[9px] border border-line bg-bg-2 font-mono text-[14px]">

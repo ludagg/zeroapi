@@ -11,8 +11,8 @@ export function AuthShell({
 }) {
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
-      <div className="relative flex min-h-screen flex-col bg-bg px-8 py-7">
-        <div className="flex items-center justify-between">
+      <div className="relative flex min-h-screen flex-col bg-bg px-5 py-6 sm:px-8 sm:py-7">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <Link href="/" className="flex items-center gap-2.5 font-semibold">
             <span className="brand-mark h-[26px] w-[26px] text-[13px]">
               <span>0</span>
@@ -24,31 +24,28 @@ export function AuthShell({
           <div className="flex items-center gap-1.5">
             <Link
               href="/"
+              aria-label="Retour au site"
               className="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
               <ArrowLeft className="h-3 w-3" />
-              Retour au site
+              <span className="hidden sm:inline">Retour au site</span>
             </Link>
             <ThemeToggle />
           </div>
         </div>
 
-        <div className="flex flex-1 items-center justify-center py-10">
+        <div className="flex flex-1 items-center justify-center py-8 sm:py-10">
           <div className="w-full max-w-[400px]">{children}</div>
         </div>
 
-        <div className="flex items-center justify-between font-mono text-[12px] text-muted">
+        <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted sm:text-[12px]">
           <span>© 2026 ZeroAPI</span>
           <span>
-            <Link href="#" className="transition hover:text-ink">
-              Aide
-            </Link>
-            {" · "}
-            <Link href="#" className="transition hover:text-ink">
+            <Link href="/privacy" className="transition hover:text-ink">
               Confidentialité
             </Link>
             {" · "}
-            <Link href="#" className="transition hover:text-ink">
+            <Link href="/terms" className="transition hover:text-ink">
               Conditions
             </Link>
           </span>

@@ -9,6 +9,7 @@ import {
   Check,
   ChevronDown,
   FileText,
+  ListChecks,
   Mic,
   Paperclip,
   PenLine,
@@ -17,6 +18,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { toast } from "sonner";
 
 type ChatMessage = {
@@ -55,6 +57,7 @@ export function ChatInterface({
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [progress, setProgress] = useState(12);
+  const [specOpen, setSpecOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
 
@@ -142,37 +145,47 @@ export function ChatInterface({
 
   return (
     <div className="grid h-screen grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
-      <div className="flex h-screen flex-col bg-bg">
-        <header className="flex h-[60px] flex-shrink-0 items-center gap-3 border-b border-line bg-bg px-6">
+      <div className="flex h-screen min-w-0 flex-col bg-bg">
+        <header className="flex h-[60px] flex-shrink-0 items-center gap-2 border-b border-line bg-bg px-4 sm:gap-3 sm:px-6">
           <Link
             href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-[9px] px-2.5 py-1.5 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            aria-label="Retour à la console"
+            className="inline-flex items-center gap-2 rounded-[9px] px-2 py-1.5 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink sm:px-2.5"
           >
             <ArrowLeft className="h-3 w-3" />
-            Console
+            <span className="hidden sm:inline">Console</span>
           </Link>
-          <div className="ml-2 min-w-0">
-            <div className="flex items-center gap-1.5 truncate text-[14px] font-medium">
-              <ShieldCheck className="h-3 w-3 text-muted" />
-              Nouvelle API · brouillon
+          <div className="min-w-0 flex-1 sm:ml-2 sm:flex-none">
+            <div className="flex items-center gap-1.5 truncate text-[13.5px] font-medium sm:text-[14px]">
+              <ShieldCheck className="hidden h-3 w-3 text-muted sm:block" />
+              <span className="truncate">Nouvelle API · brouillon</span>
             </div>
-            <div className="font-mono text-[10.5px] uppercase tracking-[0.04em] text-muted">
+            <div className="hidden font-mono text-[10.5px] uppercase tracking-[0.04em] text-muted sm:block">
               Auto-save activé
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
             <button
+              type="button"
+              onClick={() => setSpecOpen(true)}
+              aria-label="Voir la spec"
+              className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-line bg-surface px-2.5 text-[12px] font-medium text-ink-2 transition hover:border-line-2 lg:hidden"
+            >
+              <ListChecks className="h-[15px] w-[15px]" />
+              <span className="font-mono text-[11px] tracking-[0.04em]">{progress}%</span>
+            </button>
+            <button
               aria-label="Nouvelle conversation"
-              className="grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-line bg-surface text-ink-2 transition hover:-translate-y-px hover:border-line-2"
+              className="hidden h-[34px] w-[34px] place-items-center rounded-[9px] border border-line bg-surface text-ink-2 transition hover:-translate-y-px hover:border-line-2 sm:grid"
             >
               <PenLine className="h-[15px] w-[15px]" />
             </button>
-            <ThemeToggle />
+            <ThemeToggle className="hidden sm:grid" />
           </div>
         </header>
 
         <div ref={threadRef} className="flex-1 overflow-y-auto scrollbar-thin">
-          <div className="mx-auto flex max-w-[760px] flex-col gap-7 px-6 pb-6 pt-8">
+          <div className="mx-auto flex max-w-[760px] flex-col gap-6 px-4 pb-6 pt-6 sm:gap-7 sm:px-6 sm:pt-8">
             {messages.map((m) => (
               <Bubble key={m.id} message={m} userInitials={user.initials} />
             ))}
@@ -180,15 +193,15 @@ export function ChatInterface({
           </div>
         </div>
 
-        <div className="flex-shrink-0 bg-gradient-to-t from-bg via-bg/85 to-transparent px-6 pb-5 pt-3.5">
+        <div className="flex-shrink-0 bg-gradient-to-t from-bg via-bg/85 to-transparent px-3 pb-4 pt-3 sm:px-6 sm:pb-5 sm:pt-3.5">
           <div className="mx-auto max-w-[760px]">
-            <div className="mb-3 flex flex-wrap gap-1.5 px-1">
+            <div className="mb-3 flex flex-wrap gap-1.5 overflow-x-auto px-1 scrollbar-thin">
               {SUGGESTIONS.map((s, i) => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => setDraft((d) => (d ? d : s.text.replace(/^[+✓]\s*/, "")))}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface px-2.5 py-1.5 text-[12.5px] text-ink-2 transition hover:-translate-y-px hover:border-ink"
+                  className="inline-flex flex-shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-line bg-surface px-2.5 py-1.5 text-[12.5px] text-ink-2 transition hover:-translate-y-px hover:border-ink"
                 >
                   {s.icon}
                   {s.text}
@@ -257,10 +270,11 @@ export function ChatInterface({
               </div>
             </div>
 
-            <div className="mt-2.5 flex items-center justify-between px-1 font-mono text-[10.5px] tracking-[0.03em] text-muted">
+            <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2 px-1 font-mono text-[10.5px] tracking-[0.03em] text-muted">
               <span className="inline-flex items-center gap-1.5">
                 <ShieldCheck className="h-2.5 w-2.5" />
-                Conversations chiffrées · jamais utilisées pour l&apos;entraînement
+                <span className="hidden xs:inline">Conversations chiffrées · jamais utilisées pour l&apos;entraînement</span>
+                <span className="xs:hidden">Chiffré · pas d&apos;entraînement</span>
               </span>
               <span className="inline-flex items-center gap-2.5">
                 modèle <b className="font-medium text-ink">spec-architect-v3</b>
@@ -275,7 +289,28 @@ export function ChatInterface({
         canLaunch={messages.length >= 3 && progress >= 50}
         pending={pending}
         onLaunch={launchGeneration}
+        variant="desktop"
       />
+
+      <MobileDrawer
+        open={specOpen}
+        onClose={() => setSpecOpen(false)}
+        side="right"
+        width={340}
+        label="Spec en cours"
+        className="bg-bg-2"
+      >
+        <SpecSide
+          progress={progress}
+          canLaunch={messages.length >= 3 && progress >= 50}
+          pending={pending}
+          onLaunch={() => {
+            setSpecOpen(false);
+            void launchGeneration();
+          }}
+          variant="drawer"
+        />
+      </MobileDrawer>
     </div>
   );
 }
@@ -392,14 +427,23 @@ function SpecSide({
   canLaunch,
   pending,
   onLaunch,
+  variant,
 }: {
   progress: number;
   canLaunch: boolean;
   pending: boolean;
   onLaunch: () => void;
+  variant: "desktop" | "drawer";
 }) {
+  const isDrawer = variant === "drawer";
   return (
-    <aside className="hidden flex-col overflow-hidden border-l border-line bg-bg-2 lg:flex">
+    <aside
+      className={
+        isDrawer
+          ? "flex h-full flex-col overflow-hidden bg-bg-2 pt-14"
+          : "hidden flex-col overflow-hidden border-l border-line bg-bg-2 lg:flex"
+      }
+    >
       <div className="flex items-center justify-between border-b border-line px-4.5 py-4">
         <div className="flex items-center gap-2 text-[13.5px] font-semibold">
           <span

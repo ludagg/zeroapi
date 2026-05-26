@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type SidebarUser = {
+export type SidebarUser = {
   name: string | null;
   email: string;
   role: "USER" | "ADMIN";
@@ -28,14 +28,29 @@ type SidebarUser = {
   initials: string;
 };
 
-export function Sidebar({ user }: { user: SidebarUser }) {
+type SidebarProps = {
+  user: SidebarUser;
+  variant?: "desktop" | "drawer";
+  onNavigate?: () => void;
+};
+
+export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps) {
   const pct = Math.min(
     100,
     Math.round((user.generationsUsed / Math.max(1, user.generationsLimit)) * 100),
   );
 
+  const isDrawer = variant === "drawer";
+
   return (
-    <aside className="hidden flex-col overflow-y-auto border-r border-line bg-bg p-3.5 lg:flex">
+    <aside
+      className={cn(
+        "flex-col overflow-y-auto bg-bg p-3.5",
+        isDrawer
+          ? "flex h-full pt-14"
+          : "hidden border-r border-line lg:flex",
+      )}
+    >
       <div className="mb-3 flex items-center gap-2.5 border-b border-line px-2 pb-3.5">
         <span className="brand-mark h-[30px] w-[30px] text-[14px]">
           <span>0</span>
@@ -67,32 +82,32 @@ export function Sidebar({ user }: { user: SidebarUser }) {
       </button>
 
       <nav className="mb-5 flex flex-col gap-0.5">
-        <NavLink href="/dashboard" icon={<Home />}>
+        <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate}>
           Vue d&apos;ensemble
         </NavLink>
-        <NavLink href="/jobs" icon={<Briefcase />}>
+        <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate}>
           Jobs
         </NavLink>
-        <NavLink href="/apis" icon={<Package />}>
+        <NavLink href="/apis" icon={<Package />} onNavigate={onNavigate}>
           APIs
         </NavLink>
-        <NavLink href="/deployments" icon={<GitBranch />}>
+        <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate}>
           Déploiements
         </NavLink>
-        <NavLink href="/databases" icon={<Database />}>
+        <NavLink href="/databases" icon={<Database />} onNavigate={onNavigate}>
           Bases de données
         </NavLink>
 
         <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
           Équipe
         </div>
-        <NavLink href="/members" icon={<Users />}>
+        <NavLink href="/members" icon={<Users />} onNavigate={onNavigate}>
           Membres
         </NavLink>
-        <NavLink href="/discussions" icon={<MessageCircle />}>
+        <NavLink href="/discussions" icon={<MessageCircle />} onNavigate={onNavigate}>
           Discussions
         </NavLink>
-        <NavLink href="/settings" icon={<Settings />}>
+        <NavLink href="/settings" icon={<Settings />} onNavigate={onNavigate}>
           Paramètres
         </NavLink>
 
@@ -101,7 +116,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
             <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
               Plateforme
             </div>
-            <NavLink href="/admin" icon={<Shield />}>
+            <NavLink href="/admin" icon={<Shield />} onNavigate={onNavigate}>
               Admin
             </NavLink>
           </>
@@ -124,6 +139,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
           </div>
           <Link
             href="/settings/billing"
+            onClick={onNavigate}
             className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
           >
             Passer Business →
@@ -132,6 +148,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
 
         <Link
           href="/settings/account"
+          onClick={onNavigate}
           className="flex items-center gap-2.5 rounded-[9px] p-2 transition hover:bg-bg-2"
         >
           <div className="grid h-[30px] w-[30px] flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink">
@@ -154,12 +171,14 @@ function NavLink({
   children,
   count,
   hasDot,
+  onNavigate,
 }: {
   href: string;
   icon: React.ReactNode;
   children: React.ReactNode;
   count?: number;
   hasDot?: boolean;
+  onNavigate?: () => void;
 }) {
   const pathname = usePathname();
   const active = pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
@@ -167,8 +186,9 @@ function NavLink({
   return (
     <Link
       href={href}
+      onClick={onNavigate}
       className={cn(
-        "relative flex items-center gap-2.5 rounded-[7px] px-2 py-1.5 text-[13.5px] transition",
+        "relative flex items-center gap-2.5 rounded-[7px] px-2 py-2 text-[14px] transition",
         active
           ? "bg-ink text-bg [&_svg]:text-bg"
           : "text-ink-2 hover:bg-bg-2 hover:text-ink [&_svg]:text-muted hover:[&_svg]:text-ink",

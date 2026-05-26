@@ -42,9 +42,9 @@ export default async function JobsPage() {
         ]}
       />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-7 lg:px-7">
+        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
           <header className="mb-6">
-            <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
+            <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
               Tous tes <em className="italic">jobs</em>.
             </h1>
             <p className="mt-2 text-muted">{jobs.length} jobs au total</p>

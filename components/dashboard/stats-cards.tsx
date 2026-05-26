@@ -21,7 +21,7 @@ export function StatsCards({ stats }: { stats: Stat[] }) {
             {s.label}
             <span className="[&>svg]:h-[13px] [&>svg]:w-[13px]">{s.icon}</span>
           </div>
-          <div className="mt-2.5 flex items-baseline gap-2 font-serif text-[36px] leading-none tracking-[-0.01em]">
+          <div className="mt-2.5 flex items-baseline gap-2 font-serif text-[30px] leading-none tracking-[-0.01em] sm:text-[36px]">
             {typeof s.value === "number" ? formatNumber(s.value) : s.value}
             {s.delta && (
               <small
