@@ -15,14 +15,15 @@ export const dynamic = "force-dynamic";
 export default async function ConversationsPage() {
   const user = await requireUser();
 
-  const rows = await prisma.conversation.findMany({
+  const conversations = await prisma.conversation.findMany({
     where: { userId: user.id },
     orderBy: { updatedAt: "desc" },
     take: 100,
     include: { job: { select: { id: true, name: true, status: true } } },
   });
+  console.log("conversations:", conversations.length);
 
-  const cards: ConversationCardData[] = rows.map((c) => {
+  const cards: ConversationCardData[] = conversations.map((c) => {
     const messages = parseMessages(c.messages);
     return {
       id: c.id,
@@ -70,11 +71,10 @@ export default async function ConversationsPage() {
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
               <MessagesSquare className="mx-auto mb-3 h-5 w-5 text-muted-2" />
               <p className="font-serif text-[26px] leading-tight">
-                Aucune conversation <em className="italic">pour l&apos;instant</em>.
+                Aucune conversation <em className="italic">pour le moment</em>.
               </p>
               <p className="mt-2 text-muted">
-                Lance une discussion depuis le dashboard pour démarrer une nouvelle API ou modifier
-                une existante.
+                Commence par décrire ton API ↑
               </p>
               <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
                 Démarrer
