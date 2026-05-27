@@ -2,13 +2,15 @@ import { Resend } from "resend";
 import { prisma } from "./prisma";
 
 const FROM = process.env.RESEND_FROM ?? "ZeroAPI <noreply@zeroapi.io>";
-const APP_URL =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  (process.env.NODE_ENV === "production"
-    ? (() => {
-        throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
-      })()
-    : "http://localhost:3000");
+
+function appUrl(): string {
+  const url = process.env.NEXT_PUBLIC_APP_URL;
+  if (url) return url;
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
+  }
+  return "http://localhost:3000";
+}
 
 let _client: Resend | null = null;
 
@@ -57,7 +59,7 @@ export async function sendJobReadyEmail(jobId: string): Promise<void> {
               ? ` · ${Math.round((job.testsPassed / job.testsTotal) * 100)} % de couverture de tests`
               : ""
           }. Tu peux passer au déploiement.`,
-    cta: { label: "Ouvrir le job", url: `${APP_URL}/jobs/${job.id}` },
+    cta: { label: "Ouvrir le job", url: `${appUrl()}/jobs/${job.id}` },
     isError: job.status === "FAILED",
   });
 

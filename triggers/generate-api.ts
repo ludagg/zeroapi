@@ -19,6 +19,11 @@ export type GenerateApiPayload = {
  * remonte avant ou après le try/catch du worker (job introuvable, DB
  * indisponible, infra Trigger.dev), on garantit ici que le job ne reste
  * jamais bloqué en PENDING/RUNNING.
+ *
+ * IMPORTANT : ce fichier est bundlé par Trigger.dev et tourne hors-Vercel.
+ * Il NE DOIT importer aucun module qui touche aux variables NEXT_PUBLIC_* ou
+ * à Resend (cf. `lib/resend.ts`, `lib/auth.ts`). La notification email
+ * passe par un appel HTTP vers Vercel (`/api/jobs/:id/notify`).
  */
 export const generateApiTask = task({
   id: GENERATE_API_TASK_ID,
@@ -27,6 +32,7 @@ export const generateApiTask = task({
   run: async ({ jobId, spec }: GenerateApiPayload) => {
     try {
       await runGenerationWorker({ jobId, spec });
+      await notifyVercel(jobId);
       return { jobId, status: "completed" as const };
     } catch (err) {
       await prisma.job
@@ -39,9 +45,20 @@ export const generateApiTask = task({
           },
         })
         .catch(() => undefined);
+      await notifyVercel(jobId);
       throw err;
     }
   },
 });
+
+async function notifyVercel(jobId: string): Promise<void> {
+  const appUrl = process.env.APP_URL;
+  if (!appUrl) return;
+  try {
+    await fetch(`${appUrl}/api/jobs/${jobId}/notify`, { method: "POST" });
+  } catch {
+    // best-effort : l'absence d'email ne doit pas faire échouer le job
+  }
+}
 
 export type GenerateApiTask = typeof generateApiTask;

@@ -14,14 +14,6 @@ const ALGO = "AES-GCM";
 const IV_BYTES = 12;
 const KEY_BYTES = 32;
 
-// En prod, on échoue tôt si la clé n'est pas définie plutôt que d'attendre
-// le premier encrypt/decrypt (qui crashait le rendu Server Component).
-if (process.env.NODE_ENV === "production" && !process.env.SECRETS_ENCRYPTION_KEY) {
-  throw new Error(
-    "SECRETS_ENCRYPTION_KEY manquante (32 bytes base64 attendus en production).",
-  );
-}
-
 let _key: CryptoKey | null = null;
 let _warnedDevKey = false;
 
@@ -34,6 +26,11 @@ async function loadKey(): Promise<CryptoKey> {
 
 function readKeyMaterial(): Uint8Array {
   const explicit = process.env.SECRETS_ENCRYPTION_KEY;
+  if (!explicit && process.env.NODE_ENV === "production" && !process.env.BETTER_AUTH_SECRET) {
+    throw new Error(
+      "SECRETS_ENCRYPTION_KEY manquante (32 bytes base64 attendus en production).",
+    );
+  }
   if (explicit) {
     const bytes = Buffer.from(explicit, "base64");
     if (bytes.byteLength !== KEY_BYTES) {
