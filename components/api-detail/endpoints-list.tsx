@@ -28,7 +28,7 @@ const CRUD: Record<string, { method: string; suffix: string; verb: string }> = {
 export function deriveEndpoints(resources: ResourceDefinition[]): DerivedEndpoint[] {
   const out: DerivedEndpoint[] = [];
   for (const r of resources) {
-    const slug = r.name.toLowerCase();
+    const slug = `${r.name.toLowerCase()}s`;
     const ep = r.endpoints ?? ["list", "create", "read", "update", "delete"];
     for (const action of ep) {
       const cfg = CRUD[action];
