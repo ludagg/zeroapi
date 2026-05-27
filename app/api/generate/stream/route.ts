@@ -8,6 +8,8 @@ import {
   estimateProgress,
   type ConversationMessage,
 } from "@/lib/spec";
+import { captureException } from "@/lib/observability";
+import { checkGenerationLimits, clientIp, denyResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -56,6 +58,14 @@ export async function POST(req: Request) {
   });
   if (!user) return jsonError("Utilisateur introuvable.", 404);
 
+  const deny = await checkGenerationLimits({
+    userId: session.user.id,
+    plan: user.plan,
+    ip: clientIp(),
+    consumesDailyQuota: false,
+  });
+  if (deny) return denyResponse(deny);
+
   let routed;
   try {
     routed = await routeLLMStream("conversation", user.plan, {
@@ -67,6 +77,7 @@ export async function POST(req: Request) {
       temperature: 0.7,
     });
   } catch (err) {
+    captureException(err, { scope: "api.generate.stream", userId: session.user.id });
     return jsonError(err instanceof Error ? err.message : "Erreur LLM.", 502);
   }
 
@@ -90,6 +101,10 @@ export async function POST(req: Request) {
         }
         controller.enqueue(encodeEvent({ type: "done" }));
       } catch (err) {
+        captureException(err, {
+          scope: "api.generate.stream.body",
+          userId: session.user.id,
+        });
         controller.enqueue(
           encodeEvent({
             type: "error",

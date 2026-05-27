@@ -5,6 +5,7 @@ import type { Plan } from "@prisma/client";
 import { loadResolvedProviders, type ProviderId } from "./ai-providers";
 import { loadResolvedRouting, type RoutingTask } from "./llm-routing-config";
 import { prisma } from "./prisma";
+import { captureException, captureMessage } from "./observability";
 
 export type LLMTask = RoutingTask | "validation" | "complex_spec";
 
@@ -433,6 +434,11 @@ export async function routeLLM(
       }
       return res;
     } catch (err) {
+      captureException(err, {
+        scope: "llm-router.generate",
+        tags: { provider: providerId, task, plan: userPlan },
+        extra: { jobId: ctx.jobId, model: cfg.model },
+      });
       errors.push({
         provider: providerId,
         error: err instanceof Error ? err.message : String(err),
@@ -440,10 +446,18 @@ export async function routeLLM(
     }
   }
 
-  throw new Error(
+  const summary =
     `Aucun fournisseur LLM disponible pour task=${task} plan=${userPlan}. Erreurs : ` +
-      (errors.length ? errors.map((e) => `${e.provider}: ${e.error}`).join(" | ") : "aucun provider activé"),
-  );
+    (errors.length
+      ? errors.map((e) => `${e.provider}: ${e.error}`).join(" | ")
+      : "aucun provider activé");
+  // Single capture per request, with the full chain of provider failures.
+  captureMessage(summary, "error", {
+    scope: "llm-router.exhausted",
+    tags: { task, plan: userPlan },
+    extra: { jobId: ctx.jobId, errors },
+  });
+  throw new Error(summary);
 }
 
 export type StreamRouteResult = {
@@ -482,6 +496,10 @@ export async function routeLLMStream(
       const iter = impl.stream({ task, ...req }, { apiKey: cfg.apiKey, model: cfg.model });
       const first = await pullFirstChunk(iter);
       if (first.ok === false) {
+        captureMessage(`llm-router.stream first-chunk failed: ${first.error}`, "warning", {
+          scope: "llm-router.stream",
+          tags: { provider: providerId, task, plan: userPlan },
+        });
         errors.push({ provider: providerId, error: first.error });
         continue;
       }
@@ -491,6 +509,11 @@ export async function routeLLMStream(
         stream: prependChunks(first.chunks, first.rest),
       };
     } catch (err) {
+      captureException(err, {
+        scope: "llm-router.stream",
+        tags: { provider: providerId, task, plan: userPlan },
+        extra: { model: cfg.model },
+      });
       errors.push({
         provider: providerId,
         error: err instanceof Error ? err.message : String(err),
@@ -498,12 +521,17 @@ export async function routeLLMStream(
     }
   }
 
-  throw new Error(
+  const summary =
     `Aucun fournisseur LLM streaming disponible pour task=${task} plan=${userPlan}. Erreurs : ` +
-      (errors.length
-        ? errors.map((e) => `${e.provider}: ${e.error}`).join(" | ")
-        : "aucun provider activé"),
-  );
+    (errors.length
+      ? errors.map((e) => `${e.provider}: ${e.error}`).join(" | ")
+      : "aucun provider activé");
+  captureMessage(summary, "error", {
+    scope: "llm-router.stream.exhausted",
+    tags: { task, plan: userPlan },
+    extra: { errors },
+  });
+  throw new Error(summary);
 }
 
 type PullResult =

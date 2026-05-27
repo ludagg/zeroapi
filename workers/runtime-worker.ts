@@ -6,6 +6,7 @@ import { countTables, ensureDatabaseForJob } from "@/lib/databases";
 import { r2Configured, uploadJobBundle } from "@/lib/r2";
 import { computeSecurity } from "@/lib/security-grade";
 import { buildBundle } from "@/workers/zip-bundle";
+import { captureException } from "@/lib/observability";
 
 type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
 
@@ -90,6 +91,11 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
       });
     });
   } catch (err) {
+    captureException(err, {
+      scope: "worker.runtime",
+      userId: job.userId,
+      extra: { jobId, specName: spec.name },
+    });
     await prisma.job.update({
       where: { id: jobId },
       data: {
@@ -110,6 +116,11 @@ async function runAgent<T>(jobId: string, name: string, fn: () => Promise<T>): P
     await logAgent(jobId, name, "done", undefined, Date.now() - t0);
     return result;
   } catch (err) {
+    captureException(err, {
+      scope: "worker.runtime.agent",
+      tags: { agent: name },
+      extra: { jobId, durationMs: Date.now() - t0 },
+    });
     await logAgent(
       jobId,
       name,

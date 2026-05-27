@@ -1,3 +1,5 @@
+import { captureException, captureMessage } from "./observability";
+
 /**
  * Coolify API client for ZeroAPI Cloud deployments.
  *
@@ -183,7 +185,13 @@ async function call<T>(
       elapsedMs: elapsed,
       body: raw,
     });
-    throw new CoolifyError(message, res.status, raw, fieldErrors);
+    const error = new CoolifyError(message, res.status, raw, fieldErrors);
+    captureException(error, {
+      scope: "coolify.api",
+      tags: { path, status: String(res.status) },
+      extra: { elapsedMs: elapsed, fieldErrors, method: init.method ?? "GET" },
+    });
+    throw error;
   }
   console.log("[coolify] ok", {
     path,
@@ -484,6 +492,10 @@ export async function removeExistingApplications(
     console.warn("[coolify] listApplications failed during dedupe", {
       err: err instanceof Error ? err.message : String(err),
     });
+    captureMessage("coolify.listApplications failed during dedupe", "warning", {
+      scope: "coolify.dedupe",
+      extra: { name, error: err instanceof Error ? err.message : String(err) },
+    });
     return;
   }
   const duplicates = apps.filter((a) => a.name === name && a.uuid);
@@ -544,6 +556,10 @@ export async function removeExistingDatabases(
   } catch (err) {
     console.warn("[coolify] listDatabases failed during dedupe", {
       err: err instanceof Error ? err.message : String(err),
+    });
+    captureMessage("coolify.listDatabases failed during dedupe", "warning", {
+      scope: "coolify.dedupe",
+      extra: { name, error: err instanceof Error ? err.message : String(err) },
     });
     return;
   }

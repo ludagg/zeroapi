@@ -15,6 +15,8 @@ import {
   readSpec,
   type ChatMessage,
 } from "@/lib/conversation-helpers";
+import { captureException } from "@/lib/observability";
+import { checkGenerationLimits, clientIp, denyResponse } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,6 +81,14 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!user) return jsonError("Utilisateur introuvable.", 404);
 
+  const deny = await checkGenerationLimits({
+    userId: session.user.id,
+    plan: user.plan,
+    ip: clientIp(),
+    consumesDailyQuota: false,
+  });
+  if (deny) return denyResponse(deny);
+
   // In replay mode the conversation already ends with this exact user message
   // (typical when the conversation was created from the dashboard chatbox and
   // we're just firing the first assistant reply). Don't double-persist.
@@ -117,6 +127,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       temperature: 0.7,
     });
   } catch (err) {
+    captureException(err, {
+      scope: "api.conversations.messages.route",
+      userId: session.user.id,
+      extra: { conversationId: conv.id },
+    });
     return jsonError(err instanceof Error ? err.message : "Erreur LLM.", 502);
   }
 
@@ -148,6 +163,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         }
         controller.enqueue(encodeEvent({ type: "done" }));
       } catch (err) {
+        captureException(err, {
+          scope: "api.conversations.messages.stream",
+          userId: session.user.id,
+          extra: { conversationId },
+        });
         controller.enqueue(
           encodeEvent({
             type: "error",

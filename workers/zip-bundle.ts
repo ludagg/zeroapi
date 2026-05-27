@@ -7,6 +7,7 @@ import {
   validateEnv,
   type ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
+import { captureException } from "@/lib/observability";
 
 export type BundleInput = {
   spec: ZeroAPISpec;
@@ -172,11 +173,20 @@ export async function buildBundle({
     ),
   );
 
-  const buffer = await zip.generateAsync({
-    type: "nodebuffer",
-    compression: "DEFLATE",
-    compressionOptions: { level: 6 },
-  });
+  let buffer: Buffer;
+  try {
+    buffer = await zip.generateAsync({
+      type: "nodebuffer",
+      compression: "DEFLATE",
+      compressionOptions: { level: 6 },
+    });
+  } catch (err) {
+    captureException(err, {
+      scope: "worker.zip-bundle",
+      extra: { specName: spec.name, resources: spec.resources.length },
+    });
+    throw err;
+  }
 
   return { buffer, size: buffer.byteLength };
 }

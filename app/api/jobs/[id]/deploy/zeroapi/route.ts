@@ -14,6 +14,8 @@ import {
   type CoolifyEnvVar,
 } from "@/lib/coolify";
 import { decryptSecret } from "@/lib/crypto-secrets";
+import { captureException } from "@/lib/observability";
+import { checkUserActionLimit, clientIp, denyResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +51,17 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       { status: 402 },
     );
   }
+
+  // Deploys are expensive (Coolify provisioning + Postgres). Cap at 5/min
+  // per user to absorb double-clicks and accidental loops.
+  const deny = await checkUserActionLimit({
+    userId: user.id,
+    ip: clientIp(),
+    scope: "deploy-user",
+    limit: 5,
+    windowSec: 60,
+  });
+  if (deny) return denyResponse(deny);
 
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },
@@ -167,6 +180,16 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       status: isCoolify ? err.status : undefined,
       message,
       fieldErrors,
+    });
+    captureException(err, {
+      scope: "api.deploy.zeroapi",
+      userId: user.id,
+      extra: {
+        jobId: job.id,
+        slug,
+        coolifyStatus: isCoolify ? err.status : null,
+        fieldErrors,
+      },
     });
     await prisma.deployment.update({
       where: { id: deployment.id },

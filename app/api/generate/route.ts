@@ -13,6 +13,12 @@ import {
   type ConversationMessage,
 } from "@/lib/spec";
 import { triggerGenerateJob } from "@/lib/jobs";
+import { captureException } from "@/lib/observability";
+import {
+  checkGenerationLimits,
+  clientIp,
+  denyResponse,
+} from "@/lib/rate-limit";
 
 const RequestSchema = z.discriminatedUnion("mode", [
   z.object({
@@ -63,6 +69,15 @@ export async function POST(req: Request) {
   });
   if (!user) return NextResponse.json({ error: "Utilisateur introuvable." }, { status: 404 });
 
+  const ip = clientIp();
+  const deny = await checkGenerationLimits({
+    userId: user.id,
+    plan: user.plan,
+    ip,
+    consumesDailyQuota: payload.mode === "launch",
+  });
+  if (deny) return denyResponse(deny);
+
   // ============ CONVERSATION ============
   if (payload.mode === "conversation") {
     try {
@@ -81,6 +96,7 @@ export async function POST(req: Request) {
         progress: estimateProgress(payload.messages as ConversationMessage[]),
       });
     } catch (err) {
+      captureException(err, { scope: "api.generate.conversation", userId: user.id });
       return NextResponse.json(
         { error: err instanceof Error ? err.message : "Erreur LLM." },
         { status: 502 },
@@ -116,6 +132,7 @@ export async function POST(req: Request) {
     spec = safeParseSpec(res.content);
     specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
   } catch (err) {
+    captureException(err, { scope: "api.generate.spec", userId: user.id });
     const detail = err instanceof Error ? err.message : null;
     return NextResponse.json(
       {
@@ -161,8 +178,11 @@ export async function POST(req: Request) {
   try {
     await triggerGenerateJob({ jobId: job.id, spec });
   } catch (err) {
-    // Trigger.dev dispatch failed — surface a 502 to the client and mark
-    // the job FAILED so it doesn't sit in PENDING forever.
+    captureException(err, {
+      scope: "api.generate.trigger",
+      userId: user.id,
+      extra: { jobId: job.id },
+    });
     await prisma.job
       .update({
         where: { id: job.id },

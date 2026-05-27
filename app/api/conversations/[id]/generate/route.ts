@@ -11,12 +11,22 @@ import {
 } from "@/lib/spec";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
+import { captureException } from "@/lib/observability";
+import { checkGenerationLimits, clientIp, denyResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+
+  const deny = await checkGenerationLimits({
+    userId: user.id,
+    plan: user.plan,
+    ip: clientIp(),
+    consumesDailyQuota: true,
+  });
+  if (deny) return denyResponse(deny);
 
   if (user.generationsUsed >= user.generationsLimit) {
     return NextResponse.json(
@@ -64,6 +74,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     spec = safeParseSpec(res.content);
     info = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
   } catch (err) {
+    captureException(err, {
+      scope: "api.conversations.generate.spec",
+      userId: user.id,
+      extra: { conversationId: conv.id },
+    });
     const detail = err instanceof Error ? err.message : null;
     return NextResponse.json(
       {
@@ -115,6 +130,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   try {
     await triggerGenerateJob({ jobId: job.id, spec });
   } catch (err) {
+    captureException(err, {
+      scope: "api.conversations.generate.trigger",
+      userId: user.id,
+      extra: { jobId: job.id, conversationId: conv.id },
+    });
     await prisma.job
       .update({
         where: { id: job.id },
