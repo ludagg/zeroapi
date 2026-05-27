@@ -7,9 +7,11 @@ import { toast } from "sonner";
 export function ExportButton({
   jobId,
   disabled,
+  label = "Exporter",
 }: {
   jobId: string;
   disabled?: boolean;
+  label?: string;
 }) {
   const [loading, setLoading] = useState(false);
 
@@ -17,24 +19,19 @@ export function ExportButton({
     setLoading(true);
     try {
       const res = await fetch(`/api/jobs/${jobId}/download`, { cache: "no-store" });
-      if (res.status === 200 && res.headers.get("content-type")?.includes("application/json")) {
-        const data = (await res.json()) as { url?: string; error?: string };
-        if (!data.url) throw new Error(data.error ?? "Lien indisponible.");
+      const data = (await res.json().catch(() => null)) as
+        | { url?: string; error?: string }
+        | null;
+
+      if (res.status === 200 && data?.url) {
         window.location.href = data.url;
-      } else if (res.status === 200) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${jobId}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? `Erreur ${res.status}`);
+        return;
       }
+      if (res.status === 202) {
+        toast.info(data?.error ?? "ZIP en cours de génération...");
+        return;
+      }
+      throw new Error(data?.error ?? `Erreur ${res.status}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Export impossible.");
     } finally {
@@ -54,7 +51,7 @@ export function ExportButton({
       ) : (
         <Download className="h-3.5 w-3.5" />
       )}
-      Exporter
+      {label}
     </button>
   );
 }

@@ -244,7 +244,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 <div className="space-y-3">
                   <CodeViewer files={sourceFiles} />
                   <div className="flex justify-end">
-                    <ExportButton jobId={job.id} />
+                    <ExportButton jobId={job.id} label="Télécharger ZIP" />
                   </div>
                 </div>
               ) : (
