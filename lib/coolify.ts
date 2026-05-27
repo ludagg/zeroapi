@@ -296,6 +296,10 @@ export async function deployApplication(
   const [imageName, imageTag] = splitImage(cfg.runtimeImage);
 
   // ---------- Step 1 : create the application (no env vars yet) ----------
+  // `force_domain_override: true` lets us reuse a subdomain that's already
+  // attached to an old, half-failed application (e.g. after a previous deploy
+  // attempt crashed between create and env push). Without it, Coolify rejects
+  // the create call with "Domain conflicts detected".
   const createPayload = {
     name: `api-${args.apiSlug}`,
     description: `ZeroAPI · job ${args.jobId}`,
@@ -307,6 +311,7 @@ export async function deployApplication(
     ports_exposes: "3000",
     instant_deploy: false,
     domains: `https://${fqdn}`,
+    force_domain_override: true,
   };
   console.log("[coolify] createApplication →", {
     apiSlug: args.apiSlug,
