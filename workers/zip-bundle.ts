@@ -17,7 +17,7 @@ export type BundleInput = {
 
 export type Bundle = { buffer: Buffer; size: number };
 
-const SERVER_TS = `import { serve } from "@hono/node-server";
+const INDEX_TS = `import { serve } from "@hono/node-server";
 import { createRuntime } from "@ludagg/zeroapi-runtime";
 import spec from "./spec.json";
 
@@ -35,17 +35,27 @@ serve({ fetch: app.fetch, port });
 console.log(\`API listening on http://localhost:\${port}\`);
 `;
 
+const DOCKERFILE = `FROM node:20-alpine
+WORKDIR /app
+COPY package.json ./
+RUN npm install
+COPY . .
+RUN npx prisma generate
+RUN npm run build
+EXPOSE 3000
+CMD ["npm", "start"]
+`;
+
 function packageJson(spec: ZeroAPISpec): string {
   return JSON.stringify(
     {
       name: spec.name,
       version: spec.version || "1.0.0",
       private: true,
-      type: "module",
       scripts: {
-        dev: "tsx watch src/server.ts",
+        dev: "tsx watch index.ts",
         build: "tsc",
-        start: "node dist/server.js",
+        start: "node dist/index.js",
         test: "vitest run",
         "prisma:generate": "prisma generate",
         "prisma:push": "prisma db push",
@@ -127,8 +137,10 @@ export async function buildBundle({
   zip.file("package.json", packageJson(spec));
   zip.file(".env.example", envExample(spec));
   zip.file(".gitignore", "node_modules/\ndist/\n.env\nuploads/\n");
+  zip.file("Dockerfile", DOCKERFILE);
+  zip.file(".dockerignore", "node_modules\ndist\n.env\n.git\n");
 
-  zip.folder("src")!.file("server.ts", SERVER_TS);
+  zip.file("index.ts", INDEX_TS);
   zip.file("spec.json", JSON.stringify(spec, null, 2));
   zip.file("openapi.json", JSON.stringify(openApiSpec, null, 2));
 
@@ -146,17 +158,14 @@ export async function buildBundle({
     JSON.stringify(
       {
         compilerOptions: {
-          target: "ES2022",
-          module: "esnext",
-          moduleResolution: "bundler",
-          strict: true,
+          outDir: "dist",
+          target: "ES2020",
+          module: "commonjs",
           esModuleInterop: true,
           resolveJsonModule: true,
-          outDir: "dist",
-          rootDir: "src",
           skipLibCheck: true,
         },
-        include: ["src/**/*", "spec.json"],
+        include: ["index.ts"],
       },
       null,
       2,

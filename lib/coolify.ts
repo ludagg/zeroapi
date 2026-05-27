@@ -293,7 +293,14 @@ export async function deployApplication(
   args: DeployAppArgs,
 ): Promise<DeployAppResult> {
   const fqdn = `api-${args.apiSlug}.${cfg.cloudDomain}`;
+  const appName = `api-${args.apiSlug}`;
   const [imageName, imageTag] = splitImage(cfg.runtimeImage);
+
+  // ---------- Step 0 : remove any existing application with the same name ----
+  // A redeploy after a previous failure can leave an orphan app behind, which
+  // makes Coolify reject the new create call (name + domain collision). Drop
+  // any duplicate before recreating to keep the deploy idempotent.
+  await removeExistingApplications(cfg, appName);
 
   // ---------- Step 1 : create the application (no env vars yet) ----------
   // `force_domain_override: true` lets us reuse a subdomain that's already
@@ -301,7 +308,7 @@ export async function deployApplication(
   // attempt crashed between create and env push). Without it, Coolify rejects
   // the create call with "Domain conflicts detected".
   const createPayload = {
-    name: `api-${args.apiSlug}`,
+    name: appName,
     description: `ZeroAPI · job ${args.jobId}`,
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
@@ -384,6 +391,72 @@ async function pushEnvVars(
       } else {
         throw err;
       }
+    }
+  }
+}
+
+interface ApplicationSummary {
+  uuid: string;
+  name?: string;
+}
+
+/**
+ * Lists every application visible to the configured Coolify token.
+ *
+ * The v4 API returns a plain array; we accept the `{ data: [...] }` wrapper
+ * defensively in case a future release wraps the response.
+ */
+async function listApplications(cfg: CoolifyConfig): Promise<ApplicationSummary[]> {
+  const response = await call<ApplicationSummary[] | { data: ApplicationSummary[] }>(
+    cfg,
+    "/api/v1/applications",
+  );
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray((response as { data?: unknown }).data)) {
+    return (response as { data: ApplicationSummary[] }).data;
+  }
+  return [];
+}
+
+async function deleteApplication(cfg: CoolifyConfig, uuid: string): Promise<void> {
+  await call(cfg, `/api/v1/applications/${encodeURIComponent(uuid)}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Deletes every application matching `name` so the subsequent create call
+ * doesn't hit a duplicate-name collision. List/delete failures are logged
+ * and swallowed: the create call will surface a clearer error if a stale
+ * app is actually blocking the deploy.
+ */
+async function removeExistingApplications(
+  cfg: CoolifyConfig,
+  name: string,
+): Promise<void> {
+  let apps: ApplicationSummary[];
+  try {
+    apps = await listApplications(cfg);
+  } catch (err) {
+    console.warn("[coolify] listApplications failed during dedupe", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return;
+  }
+  const duplicates = apps.filter((a) => a.name === name && a.uuid);
+  if (duplicates.length === 0) return;
+  console.log("[coolify] removing duplicate applications", {
+    name,
+    uuids: duplicates.map((d) => d.uuid),
+  });
+  for (const dup of duplicates) {
+    try {
+      await deleteApplication(cfg, dup.uuid);
+    } catch (err) {
+      console.warn("[coolify] deleteApplication failed", {
+        uuid: dup.uuid,
+        err: err instanceof Error ? err.message : String(err),
+      });
     }
   }
 }
