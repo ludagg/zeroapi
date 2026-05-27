@@ -286,7 +286,7 @@ function buildCoolifyDockerfile(zipUrl: string): string {
   return [
     "FROM node:20-alpine",
     "WORKDIR /app",
-    "RUN apk add --no-cache curl unzip",
+    "RUN apk add --no-cache curl unzip openssl",
     `RUN curl -fL "${zipUrl}" -o /tmp/app.zip \\`,
     " && unzip /tmp/app.zip -d /app \\",
     " && rm /tmp/app.zip",
