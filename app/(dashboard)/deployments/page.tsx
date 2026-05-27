@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ExternalLink, GitBranch, Server } from "lucide-react";
+import { GitBranch, Server } from "lucide-react";
 import type { DeployPlatform, DeploymentStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { DeploymentsFilter } from "@/components/deployments/deployments-filter";
+import { ExternalUrlLink } from "@/components/deployments/external-url-link";
 import { formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -115,16 +116,7 @@ export default async function DeploymentsPage({
                   <div className="min-w-0">
                     <div className="truncate text-[14px] font-semibold">{d.job.name}</div>
                     {d.url ? (
-                      <a
-                        href={d.url}
-                        target="_blank"
-                        rel="noreferrer"
-                        onClick={(e) => e.stopPropagation()}
-                        className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate font-mono text-[11.5px] text-muted transition hover:text-ink"
-                      >
-                        <span className="truncate">{d.url}</span>
-                        <ExternalLink className="h-2.5 w-2.5 flex-shrink-0" />
-                      </a>
+                      <ExternalUrlLink url={d.url} />
                     ) : (
                       <span className="mt-0.5 inline-block font-mono text-[11.5px] text-muted-2">
                         — pas encore d&apos;URL
