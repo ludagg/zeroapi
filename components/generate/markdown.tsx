@@ -1,25 +1,20 @@
 "use client";
 
-import { memo } from "react";
+import { memo, Fragment } from "react";
+import { Check, FileJson } from "lucide-react";
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
-// Strip fenced code blocks that look like JSON (defense against the spec
-// leaking into chat). Other fenced blocks render as code via react-markdown.
-function stripJsonFences(s: string): string {
-  return s.replace(/```(?:json)?\s*\n?([\s\S]*?)```/g, (match, body: string) => {
-    const trimmed = body.trim();
-    if (looksLikeJson(trimmed)) return "";
-    return match;
-  });
-}
+type Segment = { kind: "text"; value: string } | { kind: "spec"; value: SpecSummary };
 
-function stripJsonParagraphs(s: string): string {
-  return s
-    .split("\n\n")
-    .filter((p) => !looksLikeJson(p.trim()))
-    .join("\n\n");
-}
+type SpecSummary = {
+  name?: string;
+  resourceCount: number;
+  endpointCount: number;
+  authStrategy?: string;
+  hasRoles: boolean;
+  hasRateLimit: boolean;
+};
 
 function looksLikeJson(s: string): boolean {
   if (!s) return false;
@@ -34,8 +29,80 @@ function looksLikeJson(s: string): boolean {
   }
 }
 
-function sanitize(raw: string): string {
-  return stripJsonParagraphs(stripJsonFences(raw)).trim();
+function summarizeIfSpec(raw: string): SpecSummary | null {
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (!parsed || typeof parsed !== "object") return null;
+    const resources = (parsed as { resources?: unknown }).resources;
+    if (!Array.isArray(resources) || resources.length === 0) return null;
+    let endpointCount = 0;
+    for (const r of resources) {
+      if (!r || typeof r !== "object") continue;
+      const eps = (r as { endpoints?: unknown }).endpoints;
+      if (Array.isArray(eps)) endpointCount += eps.length;
+      else endpointCount += 5;
+      const custom = (r as { customEndpoints?: unknown }).customEndpoints;
+      if (Array.isArray(custom)) endpointCount += custom.length;
+    }
+    const auth = (parsed as { auth?: { strategy?: string } }).auth;
+    const roles = (parsed as { roles?: unknown[] }).roles;
+    const rateLimit = (parsed as { rateLimit?: unknown }).rateLimit;
+    return {
+      name: typeof (parsed as { name?: unknown }).name === "string"
+        ? ((parsed as { name?: string }).name as string)
+        : undefined,
+      resourceCount: resources.length,
+      endpointCount,
+      authStrategy: auth?.strategy,
+      hasRoles: Array.isArray(roles) && roles.length > 0,
+      hasRateLimit: Boolean(rateLimit),
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Splits the assistant content into a mix of text segments and spec-card
+// segments. Any fenced JSON block or standalone JSON paragraph is removed
+// from the textual stream and replaced (or summarized) as a card.
+function segment(raw: string): Segment[] {
+  const out: Segment[] = [];
+  const fenceRe = /```(?:json|JSON)?\s*\n?([\s\S]*?)```/g;
+  let cursor = 0;
+  let match: RegExpExecArray | null;
+  while ((match = fenceRe.exec(raw)) !== null) {
+    const before = raw.slice(cursor, match.index);
+    if (before.trim().length > 0) out.push({ kind: "text", value: before });
+    const body = match[1].trim();
+    if (looksLikeJson(body)) {
+      const summary = summarizeIfSpec(body);
+      if (summary) out.push({ kind: "spec", value: summary });
+      // else: drop the fenced JSON entirely
+    } else {
+      out.push({ kind: "text", value: match[0] });
+    }
+    cursor = match.index + match[0].length;
+  }
+  const rest = raw.slice(cursor);
+  // For the rest, split on double newlines so we can detect standalone JSON
+  // paragraphs as well.
+  const paragraphs = rest.split(/\n\n+/);
+  const textBuffer: string[] = [];
+  for (const p of paragraphs) {
+    const trimmed = p.trim();
+    if (looksLikeJson(trimmed)) {
+      if (textBuffer.length) {
+        out.push({ kind: "text", value: textBuffer.join("\n\n") });
+        textBuffer.length = 0;
+      }
+      const summary = summarizeIfSpec(trimmed);
+      if (summary) out.push({ kind: "spec", value: summary });
+    } else if (trimmed.length > 0) {
+      textBuffer.push(p);
+    }
+  }
+  if (textBuffer.length) out.push({ kind: "text", value: textBuffer.join("\n\n") });
+  return out;
 }
 
 const MARKDOWN_COMPONENTS: Components = {
@@ -157,11 +224,62 @@ const MARKDOWN_COMPONENTS: Components = {
   },
 };
 
-function MarkdownInner({ content }: { content: string }) {
+function SpecCard({ summary }: { summary: SpecSummary }) {
+  const parts: string[] = [
+    `${summary.resourceCount} ressource${summary.resourceCount > 1 ? "s" : ""}`,
+  ];
+  if (summary.authStrategy) parts.push(summary.authStrategy.toUpperCase());
+  parts.push(`${summary.endpointCount} endpoint${summary.endpointCount > 1 ? "s" : ""}`);
+  if (summary.hasRateLimit) parts.push("rate-limit");
+  if (summary.hasRoles) parts.push("RBAC");
+
   return (
-    <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS} skipHtml>
-      {sanitize(content)}
-    </ReactMarkdown>
+    <div className="my-2 rounded-[12px] border border-accent/40 bg-accent-soft px-4 py-3">
+      <div className="flex items-center gap-2 text-[13.5px] font-semibold text-accent-ink">
+        <Check className="h-3.5 w-3.5" strokeWidth={3} />
+        Spec générée
+      </div>
+      <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[11.5px] text-accent-ink/85">
+        <FileJson className="h-3 w-3" />
+        {summary.name ?? "spec"}
+      </div>
+      <div className="mt-2 text-[12.5px] leading-snug text-ink-2">
+        {parts.join(" · ")}
+      </div>
+      <div className="mt-2.5 text-[11.5px] text-muted">
+        Lance la génération pour voir le code, les tests et les endpoints détaillés.
+      </div>
+    </div>
+  );
+}
+
+function MarkdownInner({ content }: { content: string }) {
+  const segments = segment(content);
+  if (segments.length === 0) {
+    return (
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={MARKDOWN_COMPONENTS} skipHtml>
+        {""}
+      </ReactMarkdown>
+    );
+  }
+  return (
+    <>
+      {segments.map((seg, i) => (
+        <Fragment key={i}>
+          {seg.kind === "text" ? (
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={MARKDOWN_COMPONENTS}
+              skipHtml
+            >
+              {seg.value}
+            </ReactMarkdown>
+          ) : (
+            <SpecCard summary={seg.value} />
+          )}
+        </Fragment>
+      ))}
+    </>
   );
 }
 

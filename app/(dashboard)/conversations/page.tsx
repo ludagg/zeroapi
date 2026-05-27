@@ -7,6 +7,7 @@ import {
   ConversationCard,
   type ConversationCardData,
 } from "@/components/conversations/conversation-card";
+import { NewConversationBox } from "@/components/conversations/new-conversation-box";
 import { lastMessageExcerpt, parseMessages } from "@/lib/conversation-helpers";
 
 export const dynamic = "force-dynamic";
@@ -56,12 +57,14 @@ export default async function ConversationsPage() {
             </div>
             <Link
               href="/generate"
-              className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+              className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
             >
               <Plus className="h-3.5 w-3.5" />
-              Nouvelle conversation
+              Avancé
             </Link>
           </header>
+
+          <NewConversationBox />
 
           {cards.length === 0 ? (
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">

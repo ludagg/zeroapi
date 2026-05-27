@@ -6,6 +6,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { ProfileCard, SettingsCard } from "@/components/settings/profile-card";
 import { PasswordCard } from "@/components/settings/password-card";
 import { NotificationsCard } from "@/components/settings/notifications-card";
+import { ApiKeysCard } from "@/components/settings/api-keys-card";
 import { DangerCard } from "@/components/settings/danger-card";
 
 export const dynamic = "force-dynamic";
@@ -19,22 +20,43 @@ const PLAN_DESCRIPTION: Record<string, string> = {
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const account = await prisma.user.findUnique({
-    where: { id: user.id },
-    select: {
-      email: true,
-      name: true,
-      plan: true,
-      generationsUsed: true,
-      generationsLimit: true,
-      notifyOnReady: true,
-      notifyOnFailed: true,
-    },
-  });
+  const [account, apiKeys] = await Promise.all([
+    prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        email: true,
+        name: true,
+        plan: true,
+        generationsUsed: true,
+        generationsLimit: true,
+        notifyOnReady: true,
+        notifyOnFailed: true,
+      },
+    }),
+    prisma.personalApiKey.findMany({
+      where: { userId: user.id, revokedAt: null },
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        keyPrefix: true,
+        lastUsedAt: true,
+        createdAt: true,
+      },
+    }),
+  ]);
 
   if (!account) {
     return null;
   }
+
+  const initialKeys = apiKeys.map((k) => ({
+    id: k.id,
+    name: k.name,
+    keyPrefix: k.keyPrefix,
+    lastUsedAt: k.lastUsedAt ? k.lastUsedAt.toISOString() : null,
+    createdAt: k.createdAt.toISOString(),
+  }));
 
   return (
     <>
@@ -95,6 +117,7 @@ export default async function SettingsPage() {
                 notifyOnFailed: account.notifyOnFailed,
               }}
             />
+            <ApiKeysCard initial={initialKeys} />
             <DangerCard email={account.email} />
           </div>
         </div>

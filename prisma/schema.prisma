@@ -33,6 +33,7 @@ model User {
   sessions    Session[]
   accounts    Account[]
   conversations Conversation[]
+  apiKeys     PersonalApiKey[]
 
   @@map("user")
 }
@@ -204,6 +205,22 @@ model Database {
   job  Job  @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([userId, createdAt(sort: Desc)])
+}
+
+model PersonalApiKey {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  keyHash    String    @unique
+  keyPrefix  String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model AIProviderConfig {

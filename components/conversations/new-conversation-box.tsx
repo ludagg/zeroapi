@@ -1,35 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronDown, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
 import { TEMPLATES, type Template } from "@/lib/templates";
 
-const PLACEHOLDERS = [
-  "API e-commerce avec paiement Wave et livraison à domicile…",
-  "Backend RH avec congés, paie, et fiches employés…",
-  "API de réservation de restaurants avec disponibilités…",
-  "Plateforme de cours en ligne avec quiz et certificats…",
-  "Système de tickets support avec attribution automatique…",
-  "API de marketplace de location de matériel pro…",
-];
-
-export function DashboardChatbox() {
+export function NewConversationBox() {
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [templatesOpen, setTemplatesOpen] = useState(false);
-  const [placeholderIdx, setPlaceholderIdx] = useState(0);
-
-  useEffect(() => {
-    if (value.length > 0) return;
-    const id = setInterval(() => {
-      setPlaceholderIdx((i) => (i + 1) % PLACEHOLDERS.length);
-    }, 4000);
-    return () => clearInterval(id);
-  }, [value]);
 
   function resizeTextarea() {
     const el = textareaRef.current;
@@ -69,7 +51,6 @@ export function DashboardChatbox() {
   }
 
   const canSubmit = value.trim().length > 0 && !submitting;
-  const placeholder = PLACEHOLDERS[placeholderIdx];
 
   return (
     <div className="relative mb-7 overflow-hidden rounded-[14px] bg-ink px-5 py-5 text-bg">
@@ -87,10 +68,10 @@ export function DashboardChatbox() {
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-serif text-[22px] leading-tight">
-            Décris ta prochaine <em className="italic">API</em>.
+            Démarre une <em className="italic">nouvelle conversation</em>.
           </div>
           <div className="mt-0.5 text-[13px] text-white/65">
-            Génération asynchrone · ferme l&apos;onglet, on te prévient quand c&apos;est prêt.
+            Décris ton API en quelques phrases, ou choisis un template.
           </div>
         </div>
       </div>
@@ -109,7 +90,7 @@ export function DashboardChatbox() {
               if (canSubmit) void submit();
             }
           }}
-          placeholder={placeholder}
+          placeholder="Ex : API de gestion de pharmacie avec stock, ordonnances et paiement Wave…"
           rows={1}
           disabled={submitting}
           className="block min-h-12 w-full resize-none rounded-t-[12px] border-0 bg-transparent px-4 pb-1.5 pt-3.5 text-[15px] leading-snug text-bg outline-none placeholder:text-white/40"
