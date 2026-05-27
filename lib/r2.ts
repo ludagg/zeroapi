@@ -3,26 +3,41 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import type { Readable } from "node:stream";
 
 type R2Config = {
+  endpoint: string;
   accountId: string;
   accessKeyId: string;
   secretAccessKey: string;
   bucket: string;
-  publicUrl?: string;
 };
 
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
+
+/**
+ * Extracts the account ID from an R2 S3 endpoint URL.
+ * Expected hostname shape : `<account-id>.r2.cloudflarestorage.com`.
+ * Returns `null` for custom-domain endpoints (no account ID derivable).
+ */
+function extractAccountId(endpoint: string): string | null {
+  try {
+    const host = new URL(endpoint).hostname;
+    const match = host.match(/^([a-z0-9]+)\.r2\.cloudflarestorage\.com$/i);
+    return match ? match[1] : null;
+  } catch {
+    return null;
+  }
+}
+
 function readConfig(): R2Config | null {
-  const accountId = process.env.R2_ACCOUNT_ID;
+  const rawEndpoint = process.env.R2_PUBLIC_URL;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   const bucket = process.env.R2_BUCKET_NAME;
-  if (!accountId || !accessKeyId || !secretAccessKey || !bucket) return null;
-  return {
-    accountId,
-    accessKeyId,
-    secretAccessKey,
-    bucket,
-    publicUrl: process.env.R2_PUBLIC_URL,
-  };
+  if (!rawEndpoint || !accessKeyId || !secretAccessKey || !bucket) return null;
+
+  const endpoint = rawEndpoint.replace(/\/$/, "");
+  const accountId = extractAccountId(endpoint) ?? process.env.R2_ACCOUNT_ID ?? "";
+
+  return { endpoint, accountId, accessKeyId, secretAccessKey, bucket };
 }
 
 let _client: S3Client | null = null;
@@ -30,7 +45,7 @@ function client(cfg: R2Config): S3Client {
   if (_client) return _client;
   _client = new S3Client({
     region: "auto",
-    endpoint: `https://${cfg.accountId}.r2.cloudflarestorage.com`,
+    endpoint: cfg.endpoint,
     credentials: {
       accessKeyId: cfg.accessKeyId,
       secretAccessKey: cfg.secretAccessKey,
@@ -48,19 +63,14 @@ export function bundleKey(jobId: string): string {
 }
 
 export type UploadResult =
-  | { configured: true; key: string; storedRef: string; size: number }
+  | { configured: true; key: string; signedUrl: string; size: number }
   | { configured: false };
 
 /**
- * Uploads the ZIP bundle for a job to R2.
+ * Uploads the ZIP bundle for a job to R2 and returns a 7-day signed GET URL.
+ * The signed URL is what callers persist in `Job.zipUrl`.
  *
- * Returns `storedRef`, the value to persist in `Job.zipUrl` :
- *   - if R2_PUBLIC_URL is set → the public HTTPS URL (servable as-is)
- *   - otherwise → `r2://<key>` sentinel so the download route can mint a
- *     fresh signed GET URL on demand.
- *
- * If R2 is not configured the caller is expected to use the local file
- * fallback (see worker).
+ * If R2 is not configured the caller is expected to use a local-file fallback.
  */
 export async function uploadJobBundle(
   jobId: string,
@@ -82,16 +92,26 @@ export async function uploadJobBundle(
     }),
   );
 
-  const storedRef = cfg.publicUrl
-    ? `${cfg.publicUrl.replace(/\/$/, "")}/${key}`
-    : `r2://${key}`;
+  const signedUrl = await getSignedUrl(
+    c,
+    new GetObjectCommand({
+      Bucket: cfg.bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="zeroapi-${jobId}.zip"`,
+    }),
+    { expiresIn: SIGNED_URL_TTL_SECONDS },
+  );
 
-  return { configured: true, key, storedRef, size: buffer.byteLength };
+  return { configured: true, key, signedUrl, size: buffer.byteLength };
 }
 
 /**
  * Resolves a value stored in `Job.zipUrl` into a publicly fetchable HTTPS URL.
- * Returns `null` for local-file references (`file://`).
+ *
+ * - `https?://` references are returned as-is (already-signed URLs, custom CDN).
+ * - `r2://<key>` references are minted into a fresh signed URL on demand
+ *   (kept for backwards compatibility with older job rows).
+ * - `file://` and unknown shapes return `null`.
  */
 export async function resolveDownloadUrl(
   storedRef: string,
@@ -116,7 +136,7 @@ export async function resolveDownloadUrl(
         ? `attachment; filename="${options.filename}"`
         : undefined,
     }),
-    { expiresIn: options.expiresIn ?? 60 * 60 * 24 * 7 },
+    { expiresIn: options.expiresIn ?? SIGNED_URL_TTL_SECONDS },
   );
 }
 

@@ -15,6 +15,7 @@ import JSZip from "jszip";
 import { createRuntime, parseSpec } from "@ludagg/zeroapi-runtime";
 import { buildBundle } from "../workers/zip-bundle.js";
 import { countEndpoints } from "../lib/spec.js";
+import { r2Configured, uploadJobBundle } from "../lib/r2.js";
 
 const SAMPLE = {
   version: "1.0",
@@ -85,6 +86,23 @@ async function main() {
   console.log("  ✓ contient :", files.filter((f) => !f.endsWith("/")).join(", "));
 
   console.log("→ countEndpoints :", countEndpoints(spec));
+
+  if (r2Configured()) {
+    const jobId = `smoke-${Date.now()}`;
+    console.log("→ uploadJobBundle (R2 configuré, jobId =", jobId, ")…");
+    const upload = await uploadJobBundle(jobId, bundle.buffer);
+    if (!upload.configured) throw new Error("R2 configuré mais upload non-configured");
+    if (!upload.signedUrl) throw new Error("URL signée vide");
+    if (!upload.signedUrl.startsWith("http")) {
+      throw new Error("URL signée invalide : " + upload.signedUrl);
+    }
+    console.log("  ✓ key  :", upload.key);
+    console.log("  ✓ size :", upload.size, "bytes");
+    console.log("  ✓ signedUrl OK (longueur :", upload.signedUrl.length, ")");
+  } else {
+    console.log("→ R2 non configuré, skip upload (set R2_PUBLIC_URL pour activer)");
+  }
+
   console.log("\n✅ Pipeline OK");
 }
 

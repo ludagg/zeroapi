@@ -3,19 +3,24 @@ import { prisma } from "@/lib/prisma";
 import { logAgent } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
 import { countTables, ensureDatabaseForJob } from "@/lib/databases";
+import { r2Configured, uploadJobBundle } from "@/lib/r2";
+import { buildBundle } from "@/workers/zip-bundle";
 
 type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
 
 /**
- * Trigger.dev worker — minimal surface so it only needs DATABASE_URL.
+ * Trigger.dev worker.
  *
- * Side-effects allowed in the worker:
- *   - createRuntime(spec) — pure, no env
- *   - Prisma writes (RUNNING / READY / FAILED, endpoints/test counts, ensureDatabaseForJob)
+ * Pipeline :
+ *   1. `clarifier` — sanity-check the incoming spec.
+ *   2. `code`      — run `createRuntime(spec)` to produce app + artefacts.
+ *   3. `bundle`    — `buildBundle()` zips spec / Prisma schema / tests / etc.
+ *   4. `upload`    — `uploadJobBundle()` PUTs the ZIP on R2 and mints a
+ *                    7-day signed URL persisted in `Job.zipUrl`.
  *
- * Anything env-dependent (R2 upload, Resend email, ZIP bundling) has been
- * moved out — those run on Vercel (download route + webhook listener that
- * fires on the READY transition).
+ * Each step is wrapped in `runAgent()` so timings and errors land in
+ * `JobLog`. If R2 isn't configured the upload step is skipped and the
+ * download route's on-the-fly rebuild kicks in as fallback.
  */
 export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promise<void> {
   const job = await prisma.job.findUnique({ where: { id: jobId } });
@@ -42,6 +47,23 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
       });
     });
 
+    const bundle = await runAgent(jobId, "bundle", async () => {
+      return buildBundle({
+        spec,
+        prismaSchema: result.prismaSchema,
+        testSuite: result.testSuite,
+        openApiSpec: result.openApiSpec,
+      });
+    });
+
+    const zipUrl = await runAgent<string | null>(jobId, "upload", async () => {
+      if (!r2Configured()) {
+        return null;
+      }
+      const upload = await uploadJobBundle(jobId, bundle.buffer);
+      return upload.configured ? upload.signedUrl : null;
+    });
+
     const endpoints = countEndpoints(spec);
     const testsTotal = countTestCases(result.testSuite);
 
@@ -55,6 +77,7 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
           testsTotal,
           testsPassed: testsTotal,
           securityScore: "A",
+          zipUrl,
         },
       });
       await ensureDatabaseForJob(tx, {

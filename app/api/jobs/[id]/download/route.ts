@@ -5,16 +5,19 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readSpec } from "@/lib/job-helpers";
 import { buildBundle } from "@/workers/zip-bundle";
+import { resolveDownloadUrl } from "@/lib/r2";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Rebuilds the ZIP bundle on-the-fly for a READY job.
+ * Serves the ZIP bundle for a READY job.
  *
- * Previously the worker uploaded the bundle to R2 and we redirected to a
- * signed URL. Now the worker only persists metadata (status, endpoints,
- * counts) — the spec is in `Job.spec` and the bundle is deterministic, so
- * we just rerun createRuntime + buildBundle here and stream the bytes.
+ * Fast path : if `Job.zipUrl` is set (the worker uploaded to R2 and persisted
+ * a 7-day signed URL), redirect the client there directly.
+ *
+ * Fallback  : rebuild the bundle on-the-fly with `createRuntime + buildBundle`
+ * and stream the bytes. This keeps downloads working when R2 isn't configured
+ * or for older jobs whose signed URL has expired.
  */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await auth.api.getSession({ headers: headers() });
@@ -24,7 +27,7 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
 
   const job = await prisma.job.findUnique({
     where: { id: params.id },
-    select: { id: true, userId: true, status: true, spec: true, name: true },
+    select: { id: true, userId: true, status: true, spec: true, name: true, zipUrl: true },
   });
   if (!job) {
     return NextResponse.json({ error: "Job introuvable." }, { status: 404 });
@@ -37,6 +40,13 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       { error: "Le bundle n'est pas encore prêt." },
       { status: 404 },
     );
+  }
+
+  if (job.zipUrl) {
+    const resolved = await resolveDownloadUrl(job.zipUrl, {
+      filename: `${job.name}.zip`,
+    });
+    if (resolved) return NextResponse.redirect(resolved, 302);
   }
 
   const spec = readSpec(job.spec);
