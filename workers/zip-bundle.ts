@@ -18,10 +18,10 @@ export type BundleInput = {
 export type Bundle = { buffer: Buffer; size: number };
 
 const INDEX_TS = `import { serve } from "@hono/node-server";
-import { createRuntime } from "@ludagg/zeroapi-runtime";
+import { createRuntime, type ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import spec from "./spec.json";
 
-const { app } = createRuntime(spec, {
+const { app } = createRuntime(spec as ZeroAPISpec, {
   enableLogging: true,
   enableCors: true,
   enableHelmet: true,
