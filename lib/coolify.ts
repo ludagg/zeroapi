@@ -262,29 +262,40 @@ export interface DeployAppResult {
   publicUrl: string;
 }
 
+interface CreateAppResponse {
+  uuid: string;
+  fqdn?: string;
+}
+
+interface EnvVar {
+  key: string;
+  value: string;
+  /** Use `is_literal: true` to disable Coolify's magic-string expansion. */
+  is_literal?: boolean;
+}
+
 /**
- * Creates a Coolify application that pulls the ZeroAPI Docker image,
- * injects the user env + DATABASE_URL, and exposes it on a sub-domain.
+ * Three-step flow per Coolify v4 API :
  *
- * The Docker image is expected to be `ghcr.io/ludagg/zeroapi-runtime:latest`,
- * configured to download the bundle ZIP from `ZEROAPI_BUNDLE_URL` at boot.
+ *  1. POST /api/v1/applications/dockerimage  (with `instant_deploy: false` —
+ *     `environment_variables` is rejected at creation time)
+ *  2. POST /api/v1/applications/{uuid}/envs  once per env var
+ *  3. POST /api/v1/deploy?uuid={uuid}        to trigger the actual deploy
+ *
+ * Step 2 sends each variable individually (the API takes one key/value pair
+ * at a time). Step 3 returns immediately — the container build runs async on
+ * the Coolify side; we treat "queued" as success and the GET status endpoint
+ * picks up live updates.
  */
 export async function deployApplication(
   cfg: CoolifyConfig,
   args: DeployAppArgs,
 ): Promise<DeployAppResult> {
   const fqdn = `api-${args.apiSlug}.${cfg.cloudDomain}`;
-  const envString = [
-    `DATABASE_URL=${args.databaseUrl}`,
-    `ZEROAPI_BUNDLE_URL=${args.zipUrl}`,
-    `PORT=3000`,
-    `NODE_ENV=production`,
-    ...args.envVars.map((e) => `${e.key}=${e.value}`),
-  ].join("\n");
-
   const [imageName, imageTag] = splitImage(cfg.runtimeImage);
 
-  const payload = {
+  // ---------- Step 1 : create the application (no env vars yet) ----------
+  const createPayload = {
     name: `api-${args.apiSlug}`,
     description: `ZeroAPI · job ${args.jobId}`,
     project_uuid: cfg.projectUuid,
@@ -293,29 +304,90 @@ export async function deployApplication(
     docker_registry_image_name: imageName,
     docker_registry_image_tag: imageTag,
     ports_exposes: "3000",
-    instant_deploy: true,
+    instant_deploy: false,
     domains: `https://${fqdn}`,
-    environment_variables: envString,
   };
-  console.log("[coolify] deployApplication →", {
+  console.log("[coolify] createApplication →", {
     apiSlug: args.apiSlug,
     fqdn,
     image: cfg.runtimeImage,
-    payload: { ...payload, environment_variables: `${envString.length} chars` },
+    payload: createPayload,
   });
-
-  const body = await call<{ uuid: string; fqdn?: string }>(
+  const created = await call<CreateAppResponse>(
     cfg,
     "/api/v1/applications/dockerimage",
-    {
-      method: "POST",
-      body: JSON.stringify(payload),
-    },
+    { method: "POST", body: JSON.stringify(createPayload) },
   );
+
+  // ---------- Step 2 : push env vars one by one ----------
+  const envVars: EnvVar[] = [
+    { key: "DATABASE_URL", value: args.databaseUrl, is_literal: true },
+    { key: "ZEROAPI_BUNDLE_URL", value: args.zipUrl, is_literal: true },
+    { key: "PORT", value: "3000", is_literal: true },
+    { key: "NODE_ENV", value: "production", is_literal: true },
+    ...args.envVars.map((e) => ({ key: e.key, value: e.value, is_literal: true })),
+  ];
+  await pushEnvVars(cfg, created.uuid, envVars);
+
+  // ---------- Step 3 : trigger deployment ----------
+  console.log("[coolify] triggerDeploy →", { uuid: created.uuid });
+  await call(cfg, `/api/v1/deploy?uuid=${encodeURIComponent(created.uuid)}`, {
+    method: "POST",
+  });
+
   return {
-    uuid: body.uuid,
-    publicUrl: `https://${body.fqdn ?? fqdn}`,
+    uuid: created.uuid,
+    publicUrl: `https://${created.fqdn ?? fqdn}`,
   };
+}
+
+/**
+ * Adds each env var to a Coolify application.
+ *
+ * The endpoint accepts one variable per call. If a key already exists (e.g.
+ * on a redeploy after a previous failed attempt), the POST returns 409 — we
+ * fall back to PATCH so the value is updated in place.
+ */
+async function pushEnvVars(
+  cfg: CoolifyConfig,
+  uuid: string,
+  envVars: EnvVar[],
+): Promise<void> {
+  console.log("[coolify] pushEnvVars →", {
+    uuid,
+    count: envVars.length,
+    keys: envVars.map((e) => e.key),
+  });
+  for (const ev of envVars) {
+    try {
+      await call(cfg, `/api/v1/applications/${encodeURIComponent(uuid)}/envs`, {
+        method: "POST",
+        body: JSON.stringify({
+          key: ev.key,
+          value: ev.value,
+          is_literal: ev.is_literal ?? true,
+          is_preview: false,
+          is_build_time: false,
+        }),
+      });
+    } catch (err) {
+      if (err instanceof CoolifyError && (err.status === 409 || err.status === 422)) {
+        // Variable already exists — overwrite.
+        await call(cfg, `/api/v1/applications/${encodeURIComponent(uuid)}/envs`, {
+          method: "PATCH",
+          body: JSON.stringify({
+            key: ev.key,
+            value: ev.value,
+            is_literal: ev.is_literal ?? true,
+            is_preview: false,
+            is_build_time: false,
+          }),
+        });
+      } else {
+        throw err;
+      }
+    }
+  }
 }
 
 function splitImage(full: string): [string, string] {
