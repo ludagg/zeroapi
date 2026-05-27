@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
+import { Markdown } from "@/components/generate/markdown";
 import { toast } from "sonner";
 
 type ChatMessage = {
@@ -328,12 +329,12 @@ function Bubble({
         <div className="mt-0.5 grid h-8 w-8 place-items-center rounded-[8px] bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[12px] font-semibold text-accent-ink">
           {userInitials}
         </div>
-        <div>
+        <div className="min-w-0">
           <div className="mb-2 text-[12.5px] text-muted">
-            <b className="font-medium text-ink">Toi</b> · à l&apos;instant
+            <b className="font-medium text-ink">Toi</b> · {formatRelative(message.ts)}
           </div>
-          <div className="rounded-[12px] border border-line bg-bg-2 px-4 py-3.5 text-[15px] leading-snug text-ink">
-            {message.content}
+          <div className="rounded-[12px] border border-line bg-bg-2 px-4 py-3 text-[15px] leading-snug text-ink">
+            <Markdown source={message.content} className="space-y-2.5" />
           </div>
         </div>
       </div>
@@ -345,7 +346,7 @@ function Bubble({
       <span className="brand-mark mt-0.5 h-8 w-8 text-[12px]">
         <span>0</span>
       </span>
-      <div>
+      <div className="min-w-0">
         <div className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
           <b className="font-medium text-ink">ZeroAPI</b>
           {message.meta && (
@@ -353,22 +354,23 @@ function Bubble({
               {message.meta}
             </span>
           )}
+          <span className="text-muted-2">· {formatRelative(message.ts)}</span>
         </div>
-        <div className="space-y-3.5 text-[15px] leading-relaxed text-ink-2">
-          {message.content.split("\n\n").map((p, i) => (
-            <p key={i} dangerouslySetInnerHTML={{ __html: applyMarkdown(p) }} />
-          ))}
-        </div>
+        <Markdown source={message.content} className="space-y-3" />
       </div>
     </div>
   );
 }
 
-function applyMarkdown(s: string): string {
-  return s
-    .replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!)
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-ink font-semibold">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="font-mono text-[13px] px-1.5 py-px bg-bg-2 rounded">$1</code>');
+function formatRelative(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  if (diff < 45_000) return "à l'instant";
+  const mins = Math.round(diff / 60_000);
+  if (mins < 60) return `il y a ${mins} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.round(hours / 24);
+  return `il y a ${days} j`;
 }
 
 function TypingBubble() {
