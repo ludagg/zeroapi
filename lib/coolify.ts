@@ -473,7 +473,7 @@ async function deleteApplication(cfg: CoolifyConfig, uuid: string): Promise<void
  * and swallowed: the create call will surface a clearer error if a stale
  * app is actually blocking the deploy.
  */
-async function removeExistingApplications(
+export async function removeExistingApplications(
   cfg: CoolifyConfig,
   name: string,
 ): Promise<void> {
@@ -497,6 +497,67 @@ async function removeExistingApplications(
       await deleteApplication(cfg, dup.uuid);
     } catch (err) {
       console.warn("[coolify] deleteApplication failed", {
+        uuid: dup.uuid,
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+}
+
+interface DatabaseSummary {
+  uuid: string;
+  name?: string;
+}
+
+async function listDatabases(cfg: CoolifyConfig): Promise<DatabaseSummary[]> {
+  const response = await call<DatabaseSummary[] | { data: DatabaseSummary[] }>(
+    cfg,
+    "/api/v1/databases",
+  );
+  if (Array.isArray(response)) return response;
+  if (response && Array.isArray((response as { data?: unknown }).data)) {
+    return (response as { data: DatabaseSummary[] }).data;
+  }
+  return [];
+}
+
+async function deleteDatabase(cfg: CoolifyConfig, uuid: string): Promise<void> {
+  await call(cfg, `/api/v1/databases/${encodeURIComponent(uuid)}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * Mirrors `removeExistingApplications`: drops every Coolify database whose
+ * name matches `name` so the subsequent `provisionPostgres` call doesn't
+ * accumulate orphan databases on each retry. List/delete failures are
+ * logged and swallowed — provisioning will surface a clearer error if a
+ * stale database is actually blocking the deploy.
+ */
+export async function removeExistingDatabases(
+  cfg: CoolifyConfig,
+  name: string,
+): Promise<void> {
+  let dbs: DatabaseSummary[];
+  try {
+    dbs = await listDatabases(cfg);
+  } catch (err) {
+    console.warn("[coolify] listDatabases failed during dedupe", {
+      err: err instanceof Error ? err.message : String(err),
+    });
+    return;
+  }
+  const duplicates = dbs.filter((d) => d.name === name && d.uuid);
+  if (duplicates.length === 0) return;
+  console.log("[coolify] removing duplicate databases", {
+    name,
+    uuids: duplicates.map((d) => d.uuid),
+  });
+  for (const dup of duplicates) {
+    try {
+      await deleteDatabase(cfg, dup.uuid);
+    } catch (err) {
+      console.warn("[coolify] deleteDatabase failed", {
         uuid: dup.uuid,
         err: err instanceof Error ? err.message : String(err),
       });

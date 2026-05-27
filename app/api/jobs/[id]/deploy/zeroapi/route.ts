@@ -9,6 +9,8 @@ import {
   describeCoolifyEnv,
   provisionPostgres,
   readCoolifyConfigDetailed,
+  removeExistingApplications,
+  removeExistingDatabases,
   type CoolifyEnvVar,
 } from "@/lib/coolify";
 import { decryptSecret } from "@/lib/crypto-secrets";
@@ -117,6 +119,11 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   });
 
   try {
+    // Drop any orphan app + database before recreating, so retries after a
+    // failed deploy don't accumulate duplicates on Coolify.
+    await removeExistingApplications(cfg, `api-${slug}`);
+    await removeExistingDatabases(cfg, `db-${slug}`);
+
     const db = await provisionPostgres(cfg, { jobId: job.id, apiSlug: slug });
     if (!db.internalUrl) {
       throw new CoolifyError(
