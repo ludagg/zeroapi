@@ -99,6 +99,34 @@ RÈGLES DE SORTIE :
 
 export type ConversationMessage = { role: "user" | "assistant"; content: string };
 
+/**
+ * Builds a system prompt for the modification chat that's tied to an existing
+ * job. The current spec is embedded as JSON, the LLM is told to apply ONLY
+ * what the user explicitly asks, and to present a diff before suggesting a
+ * regeneration.
+ */
+export function buildModificationSystemPrompt(apiName: string, currentSpec: unknown): string {
+  return `Tu modifies une API existante appelée "${apiName}".
+Voici la spec ACTUELLE (référence — ne l'altère pas sans demande explicite) :
+
+\`\`\`json
+${JSON.stringify(currentSpec, null, 2)}
+\`\`\`
+
+RÈGLES STRICTES ANTI-RÉGRESSION :
+1. Ne modifie QUE ce que l'utilisateur demande explicitement. Ne reformule pas, ne renomme pas, ne supprime pas de champ existant si ce n'est pas demandé.
+2. Avant chaque modification, présente un diff structuré, exactement sous cette forme :
+   + Ajout : <ce qui est ajouté>
+   ~ Modification : <ce qui change>
+   ✗ Suppression : <ce qui est retiré> (ou "rien")
+3. Demande TOUJOURS confirmation avant une suppression (ressource, champ, endpoint, rôle).
+4. La nouvelle version = ancienne spec + diff. Conserve tout ce qui n'est pas explicitement modifié.
+5. Quand le diff est validé par l'utilisateur, propose-lui de lancer une régénération.
+6. Réponds en français. Concis. Mets en gras (**texte**) les éléments structurants et utilise des backticks pour les noms techniques.
+7. Ne produis JAMAIS de spec JSON dans la conversation — la régénération s'occupera de la transformation finale.
+`;
+}
+
 export function estimateProgress(messages: ConversationMessage[]): number {
   const userMessages = messages.filter((m) => m.role === "user");
   if (userMessages.length === 0) return 12;
