@@ -3,7 +3,8 @@
  *
  * Endpoints used :
  * - POST /api/v1/databases/postgresql → provisions an isolated Postgres
- * - POST /api/v1/applications/dockerimage → creates the Docker container app
+ * - POST /api/v1/applications/dockerfile → creates the app and lets Coolify
+ *   build it on the VPS (nixpacks build pack — no prebuilt image required)
  * - GET  /api/v1/applications/{uuid} → polls deployment status
  *
  * Configuration via env :
@@ -14,7 +15,7 @@
  *   COOLIFY_ENVIRONMENT_UUID?             (preferred — bypasses name lookup)
  *   COOLIFY_ENVIRONMENT_NAME?             (fallback, defaults to "production")
  *   ZEROAPI_CLOUD_DOMAIN?                 (defaults to "zeroapi.app")
- *   ZEROAPI_RUNTIME_IMAGE?                (defaults to "ghcr.io/ludagg/zeroapi-runtime:latest")
+ *   ZEROAPI_BUILD_BASE_IMAGE?             (defaults to "node:20-alpine")
  */
 
 export interface CoolifyConfig {
@@ -25,7 +26,7 @@ export interface CoolifyConfig {
   environmentName?: string;
   environmentUuid?: string;
   cloudDomain: string;
-  runtimeImage: string;
+  buildBaseImage: string;
 }
 
 export type CoolifyEnvVar =
@@ -75,8 +76,7 @@ export function readCoolifyConfigDetailed(): ConfigReadResult {
       environmentUuid: environmentUuid || undefined,
       environmentName: environmentUuid ? undefined : (environmentName ?? "production"),
       cloudDomain: process.env.ZEROAPI_CLOUD_DOMAIN ?? "zeroapi.app",
-      runtimeImage:
-        process.env.ZEROAPI_RUNTIME_IMAGE ?? "ghcr.io/ludagg/zeroapi-runtime:latest",
+      buildBaseImage: process.env.ZEROAPI_BUILD_BASE_IMAGE ?? "node:20-alpine",
     },
   };
 }
@@ -275,8 +275,11 @@ interface EnvVar {
 /**
  * Three-step flow per Coolify v4 API :
  *
- *  1. POST /api/v1/applications/dockerimage  (with `instant_deploy: false` —
- *     `environment_variables` is rejected at creation time)
+ *  1. POST /api/v1/applications/dockerfile  — register the app and let Coolify
+ *     build it on the VPS (nixpacks build pack; no prebuilt image to pull, so
+ *     `ghcr.io/ludagg/zeroapi-runtime` is no longer required). The source
+ *     bundle is delivered to the build via the `ZEROAPI_BUNDLE_URL` env var —
+ *     the build step on the VPS fetches and extracts it before nixpacks runs.
  *  2. POST /api/v1/applications/{uuid}/envs  once per env var
  *     (body kept to the minimum `{ key, value }` — Coolify rejects extras
  *     like `is_build_time` / `is_preview` / `is_literal` with
@@ -294,7 +297,6 @@ export async function deployApplication(
 ): Promise<DeployAppResult> {
   const fqdn = `api-${args.apiSlug}.${cfg.cloudDomain}`;
   const appName = `api-${args.apiSlug}`;
-  const [imageName, imageTag] = splitImage(cfg.runtimeImage);
 
   // ---------- Step 0 : remove any existing application with the same name ----
   // A redeploy after a previous failure can leave an orphan app behind, which
@@ -303,19 +305,22 @@ export async function deployApplication(
   await removeExistingApplications(cfg, appName);
 
   // ---------- Step 1 : create the application (no env vars yet) ----------
-  // `force_domain_override: true` lets us reuse a subdomain that's already
-  // attached to an old, half-failed application (e.g. after a previous deploy
-  // attempt crashed between create and env push). Without it, Coolify rejects
-  // the create call with "Domain conflicts detected".
+  // We use the `dockerfile` endpoint with `build_pack: "nixpacks"` so Coolify
+  // builds the app on the VPS from the bundled source (fetched via
+  // `ZEROAPI_BUNDLE_URL`) rather than pulling a prebuilt image that doesn't
+  // exist. `force_domain_override: true` lets us reuse a subdomain that's
+  // still attached to a previous, half-failed application.
   const createPayload = {
     name: appName,
     description: `ZeroAPI · job ${args.jobId}`,
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
     ...envIdentifier(cfg),
-    docker_registry_image_name: imageName,
-    docker_registry_image_tag: imageTag,
+    build_pack: "nixpacks",
+    base_image: cfg.buildBaseImage,
     ports_exposes: "3000",
+    git_repository: null,
+    dockerfile: null,
     instant_deploy: false,
     domains: `https://${fqdn}`,
     force_domain_override: true,
@@ -323,12 +328,12 @@ export async function deployApplication(
   console.log("[coolify] createApplication →", {
     apiSlug: args.apiSlug,
     fqdn,
-    image: cfg.runtimeImage,
+    baseImage: cfg.buildBaseImage,
     payload: createPayload,
   });
   const created = await call<CreateAppResponse>(
     cfg,
-    "/api/v1/applications/dockerimage",
+    "/api/v1/applications/dockerfile",
     { method: "POST", body: JSON.stringify(createPayload) },
   );
 
@@ -459,12 +464,6 @@ async function removeExistingApplications(
       });
     }
   }
-}
-
-function splitImage(full: string): [string, string] {
-  const idx = full.lastIndexOf(":");
-  if (idx === -1) return [full, "latest"];
-  return [full.slice(0, idx), full.slice(idx + 1)];
 }
 
 export interface ApplicationStatus {
