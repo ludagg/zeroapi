@@ -12,7 +12,7 @@ export function ConnectionString({ dbName }: { dbName: string }) {
   const [reveal, setReveal] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const raw = `postgresql://zeroapi:••••••••@db.zeroapi.io:5432/${dbName}?sslmode=require`;
+  const raw = `postgresql://zeroapi:••••••••@db.zeroapi.app:5432/${dbName}?sslmode=require`;
   const shown = reveal
     ? raw.replace(
         /zeroapi:••••••••/,

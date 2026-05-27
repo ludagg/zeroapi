@@ -31,22 +31,22 @@ export function LandingFooter() {
             <h4>Ressources</h4>
             <ul>
               <li>
-                <a href="https://docs.zeroapi.io" target="_blank" rel="noreferrer">
+                <a href="https://docs.zeroapi.app" target="_blank" rel="noreferrer">
                   Docs
                 </a>
               </li>
               <li>
-                <a href="https://docs.zeroapi.io/guides" target="_blank" rel="noreferrer">
+                <a href="https://docs.zeroapi.app/guides" target="_blank" rel="noreferrer">
                   Guides
                 </a>
               </li>
               <li>
-                <a href="https://docs.zeroapi.io/api" target="_blank" rel="noreferrer">
+                <a href="https://docs.zeroapi.app/api" target="_blank" rel="noreferrer">
                   API référence
                 </a>
               </li>
               <li>
-                <a href="https://status.zeroapi.io" target="_blank" rel="noreferrer">
+                <a href="https://status.zeroapi.app" target="_blank" rel="noreferrer">
                   Statut
                 </a>
               </li>
@@ -56,16 +56,16 @@ export function LandingFooter() {
             <h4>Entreprise</h4>
             <ul>
               <li>
-                <a href="mailto:bonjour@zeroapi.io">Contact</a>
+                <a href="mailto:bonjour@zeroapi.app">Contact</a>
               </li>
               <li>
-                <a href="mailto:carrieres@zeroapi.io">Carrières</a>
+                <a href="mailto:carrieres@zeroapi.app">Carrières</a>
               </li>
               <li>
                 <Link href="/legal-notice">Mentions légales</Link>
               </li>
               <li>
-                <a href="mailto:presse@zeroapi.io">Presse</a>
+                <a href="mailto:presse@zeroapi.app">Presse</a>
               </li>
             </ul>
           </div>

@@ -148,8 +148,8 @@ export default function SecurityPage() {
       <ul>
         <li>
           Notification par email et sur{" "}
-          <a href="https://status.zeroapi.io" target="_blank" rel="noreferrer">
-            status.zeroapi.io
+          <a href="https://status.zeroapi.app" target="_blank" rel="noreferrer">
+            status.zeroapi.app
           </a>{" "}
           dans les 4 heures.
         </li>
@@ -165,7 +165,7 @@ export default function SecurityPage() {
       <h2>7. Programme de divulgation responsable</h2>
       <p>
         Tu as trouvé une faille ? Merci. Écris à{" "}
-        <a href="mailto:security@zeroapi.io">security@zeroapi.io</a>{" "}
+        <a href="mailto:security@zeroapi.app">security@zeroapi.app</a>{" "}
         (clé PGP disponible sur demande) avec :
       </p>
       <ul>
@@ -223,10 +223,10 @@ export default function SecurityPage() {
       <h2>10. Contact</h2>
       <p>
         Questions techniques :{" "}
-        <a href="mailto:security@zeroapi.io">security@zeroapi.io</a>
+        <a href="mailto:security@zeroapi.app">security@zeroapi.app</a>
         <br />
         Conformité et données :{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>
       </p>
     </article>
   );

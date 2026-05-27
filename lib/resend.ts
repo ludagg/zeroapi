@@ -1,7 +1,7 @@
 import { Resend } from "resend";
 import { prisma } from "./prisma";
 
-const FROM = process.env.RESEND_FROM ?? "ZeroAPI <noreply@zeroapi.io>";
+const FROM = process.env.RESEND_FROM ?? "ZeroAPI <noreply@zeroapi.app>";
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ??
   (process.env.NODE_ENV === "production"

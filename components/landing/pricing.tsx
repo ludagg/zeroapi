@@ -135,7 +135,7 @@ export function Pricing() {
                 <Check /> Onboarding 1-à-1 · support Slack
               </li>
             </ul>
-            <a href="mailto:ventes@zeroapi.io" className="btn btn-ghost">
+            <a href="mailto:ventes@zeroapi.app" className="btn btn-ghost">
               Contacter les ventes
             </a>
           </Reveal>

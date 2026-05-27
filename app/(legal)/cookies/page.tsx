@@ -151,7 +151,7 @@ export default function CookiesPage() {
           de ton navigateur, ou
         </li>
         <li>
-          écrivant à <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a> qui prendra le
+          écrivant à <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a> qui prendra le
           relais.
         </li>
       </ul>
@@ -217,7 +217,7 @@ export default function CookiesPage() {
 
       <h2>6. Contact</h2>
       <p>
-        Questions ? <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>.
+        Questions ? <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>.
       </p>
     </article>
   );

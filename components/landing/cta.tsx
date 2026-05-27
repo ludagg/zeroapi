@@ -29,7 +29,7 @@ export function CTA() {
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </Link>
-            <a href="mailto:bonjour@zeroapi.io" className="btn btn-ghost btn-lg">
+            <a href="mailto:bonjour@zeroapi.app" className="btn btn-ghost btn-lg">
               Parler à un humain
             </a>
           </div>

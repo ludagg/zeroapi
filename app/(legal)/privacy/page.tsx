@@ -61,7 +61,7 @@ export default function PrivacyPage() {
         social est à Dakar, Sénégal, immatriculée au registre du commerce de Dakar.
         Pour toute question relative à tes données personnelles, contacte notre
         Délégué à la protection des données (DPO) à{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>.
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>.
       </p>
 
       <h2 id="donnees">2. Données collectées</h2>
@@ -268,7 +268,7 @@ export default function PrivacyPage() {
       </ul>
       <p>
         Pour exercer ces droits, écris à{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>. Nous répondons sous 30 jours
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>. Nous répondons sous 30 jours
         maximum. La plupart de ces droits sont aussi exerçables directement depuis ton
         tableau de bord (« Mes données »).
       </p>
@@ -283,7 +283,7 @@ export default function PrivacyPage() {
 
       <h2 id="contact">9. Contact et réclamation</h2>
       <p>
-        Pour toute question : <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>.
+        Pour toute question : <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>.
       </p>
       <p>
         Si tu estimes que tes droits ne sont pas respectés, tu peux introduire une

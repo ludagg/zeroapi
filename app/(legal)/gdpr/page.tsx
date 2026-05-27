@@ -48,7 +48,7 @@ export default function GDPRPage() {
         traitement de tes données :
       </p>
       <p>
-        <strong>Email</strong> : <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>
+        <strong>Email</strong> : <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>
         <br />
         <strong>Adresse postale</strong> : ZeroAPI SAS, à l&apos;attention du DPO,
         Dakar, Sénégal.
@@ -93,7 +93,7 @@ export default function GDPRPage() {
           tableau de bord&nbsp;;
         </li>
         <li>
-          <strong>par email</strong> : <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>
+          <strong>par email</strong> : <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>
           .
         </li>
       </ul>
@@ -206,7 +206,7 @@ export default function GDPRPage() {
       </ul>
       <p>
         Le résumé des AIPD est disponible sur demande motivée à{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>.
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>.
       </p>
 
       <h2>7. Violations de données</h2>
@@ -233,7 +233,7 @@ export default function GDPRPage() {
         Pour les clients Business agissant en tant que responsables du traitement de
         données personnelles transitant par leur API hébergée chez nous, un{" "}
         <strong>Data Processing Agreement (DPA)</strong> standard est disponible. Pour
-        l&apos;obtenir, écris à <a href="mailto:legal@zeroapi.io">legal@zeroapi.io</a>{" "}
+        l&apos;obtenir, écris à <a href="mailto:legal@zeroapi.app">legal@zeroapi.app</a>{" "}
         — il est conforme aux articles 28 du RGPD et inclut les clauses contractuelles
         types pour les transferts internationaux.
       </p>
@@ -283,7 +283,7 @@ export default function GDPRPage() {
       <h2>10. Contact</h2>
       <p>
         Pour toute question RGPD ou exercice de tes droits :{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>.
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>.
       </p>
     </article>
   );

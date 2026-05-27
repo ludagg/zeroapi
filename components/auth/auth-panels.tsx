@@ -10,7 +10,7 @@ export function LoginPanel() {
             <i className="h-2 w-2 rounded-full bg-white/15" />
             <i className="h-2 w-2 rounded-full bg-white/15" />
           </div>
-          <span>console.zeroapi.io / jobs</span>
+          <span>console.zeroapi.app / jobs</span>
         </div>
 
         <div className="flex items-center gap-2.5 py-2 text-[#D7D8D2]">
