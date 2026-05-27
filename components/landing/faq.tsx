@@ -64,7 +64,7 @@ export function FAQ() {
           <h2 className="display">
             Questions <em>légitimes</em>.
           </h2>
-          <p>Si tu en as une autre, écris-nous : bonjour@zeroapi.io.</p>
+          <p>Si tu en as une autre, écris-nous : bonjour@zeroapi.app.</p>
         </Reveal>
 
         <Reveal as="div" className="faq-wrap">

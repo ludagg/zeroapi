@@ -105,7 +105,7 @@ export function Demo() {
                 <i />
                 <i />
               </div>
-              <span className="url">console.zeroapi.io / jobs</span>
+              <span className="url">console.zeroapi.app / jobs</span>
             </div>
             <div className="demo-body">
               <div className="job">

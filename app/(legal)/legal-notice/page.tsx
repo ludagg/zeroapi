@@ -25,7 +25,7 @@ export default function LegalNoticePage() {
         <br />
         Immatriculation : Registre du commerce de Dakar
         <br />
-        Email : <a href="mailto:bonjour@zeroapi.io">bonjour@zeroapi.io</a>
+        Email : <a href="mailto:bonjour@zeroapi.app">bonjour@zeroapi.app</a>
       </p>
 
       <h2>Directeur de la publication</h2>
@@ -33,7 +33,7 @@ export default function LegalNoticePage() {
 
       <h2>Hébergement</h2>
       <p>
-        Le site et l&apos;application <strong>zeroapi.io</strong> sont hébergés par&nbsp;:
+        Le site et l&apos;application <strong>zeroapi.app</strong> sont hébergés par&nbsp;:
       </p>
       <ul>
         <li>
@@ -89,16 +89,16 @@ export default function LegalNoticePage() {
       <h2>Contact</h2>
       <p>
         Pour toute question d&apos;ordre général :{" "}
-        <a href="mailto:bonjour@zeroapi.io">bonjour@zeroapi.io</a>
+        <a href="mailto:bonjour@zeroapi.app">bonjour@zeroapi.app</a>
         <br />
         Pour les questions juridiques :{" "}
-        <a href="mailto:legal@zeroapi.io">legal@zeroapi.io</a>
+        <a href="mailto:legal@zeroapi.app">legal@zeroapi.app</a>
         <br />
         Pour les données personnelles :{" "}
-        <a href="mailto:dpo@zeroapi.io">dpo@zeroapi.io</a>
+        <a href="mailto:dpo@zeroapi.app">dpo@zeroapi.app</a>
         <br />
         Pour la sécurité :{" "}
-        <a href="mailto:security@zeroapi.io">security@zeroapi.io</a>
+        <a href="mailto:security@zeroapi.app">security@zeroapi.app</a>
       </p>
     </article>
   );

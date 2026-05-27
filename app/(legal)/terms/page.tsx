@@ -202,8 +202,8 @@ export default function TermsPage() {
         contractuel de 99,9 % est garanti sur le plan Business. Les plans Gratuit et
         Pro sont fournis « best effort ». Les opérations de maintenance planifiées sont
         annoncées sur{" "}
-        <a href="https://status.zeroapi.io" target="_blank" rel="noreferrer">
-          status.zeroapi.io
+        <a href="https://status.zeroapi.app" target="_blank" rel="noreferrer">
+          status.zeroapi.app
         </a>
         .
       </p>
@@ -252,7 +252,7 @@ export default function TermsPage() {
       <h2 id="contact">Contact</h2>
       <p>
         Pour toute question relative aux CGU :{" "}
-        <a href="mailto:legal@zeroapi.io">legal@zeroapi.io</a>.
+        <a href="mailto:legal@zeroapi.app">legal@zeroapi.app</a>.
       </p>
     </article>
   );
