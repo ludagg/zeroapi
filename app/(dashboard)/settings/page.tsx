@@ -1,13 +1,13 @@
-import Link from "next/link";
-import { ArrowRight, Sparkles } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { PLAN_LIMITS } from "@/lib/plans";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { ProfileCard, SettingsCard } from "@/components/settings/profile-card";
 import { PasswordCard } from "@/components/settings/password-card";
 import { NotificationsCard } from "@/components/settings/notifications-card";
 import { ApiKeysCard } from "@/components/settings/api-keys-card";
 import { DangerCard } from "@/components/settings/danger-card";
+import { UpgradeModal } from "@/components/settings/upgrade-modal";
 
 export const dynamic = "force-dynamic";
 
@@ -92,23 +92,24 @@ export default async function SettingsPage() {
                   <div className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
                     Plan actuel
                   </div>
-                  <div className="mt-1 inline-flex items-center gap-2">
+                  <div className="mt-1 inline-flex flex-wrap items-center gap-2">
                     <span className="rounded-[6px] bg-accent px-2 py-0.5 font-mono text-[12px] font-medium text-accent-ink">
                       {account.plan}
                     </span>
                     <span className="text-[13px] text-muted">
                       {account.generationsUsed} / {account.generationsLimit} générations utilisées
                     </span>
+                    <span className="font-mono text-[10.5px] text-muted">
+                      · {PLAN_LIMITS[account.plan].generationsPerDay} gén/jour
+                    </span>
                   </div>
                 </div>
-                <Link
-                  href="/#pricing"
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Voir les plans
-                  <ArrowRight className="h-3 w-3" />
-                </Link>
+                <UpgradeModal
+                  currentPlan={account.plan}
+                  email={account.email}
+                  whatsappUrl={process.env.NEXT_PUBLIC_ZEROAPI_WHATSAPP_URL}
+                  contactEmail={process.env.NEXT_PUBLIC_ZEROAPI_CONTACT_EMAIL}
+                />
               </div>
             </SettingsCard>
             <NotificationsCard
