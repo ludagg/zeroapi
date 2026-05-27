@@ -270,23 +270,24 @@ interface EnvVar {
 }
 
 /**
- * Three-step flow per Coolify v4 API :
+ * Four-step deploy flow following Coolify v4 API docs :
  *
- *  1. POST /api/v1/applications/dockerfile  — register the app and let Coolify
- *     build it on the VPS (nixpacks build pack; no prebuilt image to pull, so
- *     `ghcr.io/ludagg/zeroapi-runtime` is no longer required). The source
- *     bundle is delivered to the build via the `ZEROAPI_BUNDLE_URL` env var —
- *     the build step on the VPS fetches and extracts it before nixpacks runs.
- *  2. POST /api/v1/applications/{uuid}/envs  once per env var
- *     (body kept to the minimum `{ key, value }` — Coolify rejects extras
- *     like `is_build_time` / `is_preview` / `is_literal` with
- *     "This field is not allowed")
- *  3. POST /api/v1/deploy?uuid={uuid}        to trigger the actual deploy
+ *   1. POST /api/v1/applications/dockerfile  — register the app with the
+ *      minimal accepted body. Coolify v4 rejects unknown fields with
+ *      "This field is not allowed", so we ship only the canonical keys
+ *      (name, project/server/env, build_pack, ports_exposes, instant_deploy)
+ *      — no `description`, no `fqdn`, no `base_image`, no null-stubbed
+ *      `git_repository`/`dockerfile`, no `force_domain_override`.
+ *   2. PATCH /api/v1/applications/{uuid}     — attach the public domain
+ *      separately. `domains` isn't accepted on the create call for nixpacks
+ *      apps; the PATCH endpoint takes the partial update.
+ *   3. POST /api/v1/applications/{uuid}/envs — once per env var, body kept
+ *      to the minimum `{ key, value }`.
+ *   4. GET  /api/v1/deploy?uuid={uuid}       — trigger the actual deploy.
+ *      Returns immediately; the build runs async on the Coolify side.
  *
- * Step 2 sends each variable individually (the API takes one key/value pair
- * at a time). Step 3 returns immediately — the container build runs async on
- * the Coolify side; we treat "queued" as success and the GET status endpoint
- * picks up live updates.
+ * Each step logs an explicit `step N/4` line so cascading API rejections are
+ * easy to pinpoint in the worker output.
  */
 export async function deployApplication(
   cfg: CoolifyConfig,
@@ -299,30 +300,21 @@ export async function deployApplication(
   // A redeploy after a previous failure can leave an orphan app behind, which
   // makes Coolify reject the new create call (name + domain collision). Drop
   // any duplicate before recreating to keep the deploy idempotent.
+  console.log("[coolify] step 0/4 dedupe →", { name: appName });
   await removeExistingApplications(cfg, appName);
 
-  // ---------- Step 1 : create the application (no env vars yet) ----------
-  // We use the `dockerfile` endpoint with `build_pack: "nixpacks"` so Coolify
-  // builds the app on the VPS from the bundled source (fetched via
-  // `ZEROAPI_BUNDLE_URL`) rather than pulling a prebuilt image that doesn't
-  // exist. nixpacks auto-detects Node.js — no `base_image` needed (Coolify
-  // rejects it with "This field is not allowed"). `force_domain_override:
-  // true` lets us reuse a subdomain still attached to a previous, half-failed
-  // application.
+  // ---------- Step 1 : create the application (minimal body) ----------
   const createPayload = {
-    name: appName,
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
     ...envIdentifier(cfg),
+    name: appName,
     build_pack: "nixpacks",
     ports_exposes: "3000",
-    fqdn,
-    force_domain_override: true,
     instant_deploy: false,
   };
-  console.log("[coolify] createApplication →", {
+  console.log("[coolify] step 1/4 createApplication →", {
     apiSlug: args.apiSlug,
-    fqdn,
     payload: createPayload,
   });
   const created = await call<CreateAppResponse>(
@@ -330,8 +322,18 @@ export async function deployApplication(
     "/api/v1/applications/dockerfile",
     { method: "POST", body: JSON.stringify(createPayload) },
   );
+  console.log("[coolify] step 1/4 created", { uuid: created.uuid });
 
-  // ---------- Step 2 : push env vars one by one ----------
+  // ---------- Step 2 : attach the public domain via PATCH ----------
+  const domainPayload = { domains: `https://${fqdn}` };
+  console.log("[coolify] step 2/4 setDomain →", { uuid: created.uuid, ...domainPayload });
+  await call(cfg, `/api/v1/applications/${encodeURIComponent(created.uuid)}`, {
+    method: "PATCH",
+    body: JSON.stringify(domainPayload),
+  });
+  console.log("[coolify] step 2/4 domain attached");
+
+  // ---------- Step 3 : push env vars one by one ----------
   const envVars: EnvVar[] = [
     { key: "DATABASE_URL", value: args.databaseUrl },
     { key: "ZEROAPI_BUNDLE_URL", value: args.zipUrl },
@@ -339,13 +341,16 @@ export async function deployApplication(
     { key: "NODE_ENV", value: "production" },
     ...args.envVars.map((e) => ({ key: e.key, value: e.value })),
   ];
+  console.log("[coolify] step 3/4 pushEnvVars →", { uuid: created.uuid, count: envVars.length });
   await pushEnvVars(cfg, created.uuid, envVars);
+  console.log("[coolify] step 3/4 env vars pushed");
 
-  // ---------- Step 3 : trigger deployment ----------
-  console.log("[coolify] triggerDeploy →", { uuid: created.uuid });
+  // ---------- Step 4 : trigger the deploy ----------
+  console.log("[coolify] step 4/4 triggerDeploy →", { uuid: created.uuid });
   await call(cfg, `/api/v1/deploy?uuid=${encodeURIComponent(created.uuid)}`, {
-    method: "POST",
+    method: "GET",
   });
+  console.log("[coolify] step 4/4 deploy triggered", { fqdn });
 
   return {
     uuid: created.uuid,
@@ -368,11 +373,6 @@ async function pushEnvVars(
   uuid: string,
   envVars: EnvVar[],
 ): Promise<void> {
-  console.log("[coolify] pushEnvVars →", {
-    uuid,
-    count: envVars.length,
-    keys: envVars.map((e) => e.key),
-  });
   for (const ev of envVars) {
     const body = JSON.stringify({ key: ev.key, value: ev.value });
     try {
