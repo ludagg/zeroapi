@@ -1,8 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Download, Loader2 } from "lucide-react";
-import { toast } from "sonner";
+import { Download } from "lucide-react";
 
 export function ExportButton({
   jobId,
@@ -11,49 +9,18 @@ export function ExportButton({
   jobId: string;
   disabled?: boolean;
 }) {
-  const [loading, setLoading] = useState(false);
-
-  async function handle() {
-    setLoading(true);
-    try {
-      const res = await fetch(`/api/jobs/${jobId}/download`, { cache: "no-store" });
-      if (res.status === 200 && res.headers.get("content-type")?.includes("application/json")) {
-        const data = (await res.json()) as { url?: string; error?: string };
-        if (!data.url) throw new Error(data.error ?? "Lien indisponible.");
-        window.location.href = data.url;
-      } else if (res.status === 200) {
-        const blob = await res.blob();
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${jobId}.zip`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        URL.revokeObjectURL(url);
-      } else {
-        const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error ?? `Erreur ${res.status}`);
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Export impossible.");
-    } finally {
-      setLoading(false);
-    }
+  function handle() {
+    window.location.href = `/api/jobs/${jobId}/download`;
   }
 
   return (
     <button
       type="button"
       onClick={handle}
-      disabled={disabled || loading}
+      disabled={disabled}
       className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[13px] font-medium text-ink transition hover:-translate-y-px hover:border-line-2 disabled:opacity-50"
     >
-      {loading ? (
-        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-      ) : (
-        <Download className="h-3.5 w-3.5" />
-      )}
+      <Download className="h-3.5 w-3.5" />
       Exporter
     </button>
   );
