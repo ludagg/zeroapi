@@ -35,8 +35,18 @@ function GitHubIcon() {
   );
 }
 
-export function OAuthRow({ callbackURL = "/dashboard" }: { callbackURL?: string }) {
+export function OAuthRow({
+  callbackURL = "/dashboard",
+  google = true,
+  github = true,
+}: {
+  callbackURL?: string;
+  google?: boolean;
+  github?: boolean;
+}) {
   const [loading, setLoading] = useState<"google" | "github" | null>(null);
+
+  if (!google && !github) return null;
 
   async function handle(provider: "google" | "github") {
     setLoading(provider);
@@ -51,26 +61,32 @@ export function OAuthRow({ callbackURL = "/dashboard" }: { callbackURL?: string 
   const base =
     "inline-flex h-[42px] items-center justify-center gap-2 rounded-[10px] border border-line bg-surface text-[14px] font-medium text-ink transition hover:-translate-y-px hover:border-line-2 hover:bg-bg-2 disabled:opacity-60";
 
+  const gridCols = google && github ? "grid-cols-2" : "grid-cols-1";
+
   return (
-    <div className="mb-6 grid grid-cols-2 gap-2.5">
-      <button
-        type="button"
-        onClick={() => handle("google")}
-        disabled={loading !== null}
-        className={base}
-      >
-        <GoogleIcon />
-        {loading === "google" ? "…" : "Google"}
-      </button>
-      <button
-        type="button"
-        onClick={() => handle("github")}
-        disabled={loading !== null}
-        className={base}
-      >
-        <GitHubIcon />
-        {loading === "github" ? "…" : "GitHub"}
-      </button>
+    <div className={`mb-6 grid gap-2.5 ${gridCols}`}>
+      {google && (
+        <button
+          type="button"
+          onClick={() => handle("google")}
+          disabled={loading !== null}
+          className={base}
+        >
+          <GoogleIcon />
+          {loading === "google" ? "…" : "Google"}
+        </button>
+      )}
+      {github && (
+        <button
+          type="button"
+          onClick={() => handle("github")}
+          disabled={loading !== null}
+          className={base}
+        >
+          <GitHubIcon />
+          {loading === "github" ? "…" : "GitHub"}
+        </button>
+      )}
     </div>
   );
 }

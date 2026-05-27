@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowRight, RefreshCw, Shield, ShieldCheck, Gauge } from "lucide-react";
+import { ArrowRight, Shield, ShieldCheck, Gauge } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -8,6 +8,7 @@ import { deriveEndpoints, EndpointsList } from "@/components/api-detail/endpoint
 import { ModelsList } from "@/components/api-detail/models-list";
 import { AgentsProgress } from "@/components/api-detail/agents-progress";
 import { ExportButton } from "@/components/api-detail/export-button";
+import { RegenerateButton } from "@/components/api-detail/regenerate-button";
 import { JobTabs } from "@/components/api-detail/job-tabs";
 import { JobStatusPoller } from "@/components/api-detail/job-status-poller";
 import { CodeViewer } from "@/components/api-detail/code-viewer";
@@ -114,13 +115,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                Régénérer
-              </button>
+              <RegenerateButton jobId={job.id} disabled={!spec} />
               <ExportButton jobId={job.id} disabled={!isReady} />
               {isReady && (
                 <Link
