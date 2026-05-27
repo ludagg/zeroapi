@@ -330,20 +330,23 @@ export async function deployApplication(
   await removeExistingApplications(cfg, appName);
 
   // ---------- Step 1 : create the application (minimal body) ----------
+  // Coolify expects the dockerfile content base64-encoded:
+  // "The dockerfile should be base64 encoded."
   const dockerfile = buildCoolifyDockerfile(args.zipUrl);
+  const dockerfileB64 = Buffer.from(dockerfile, "utf-8").toString("base64");
   const createPayload = {
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
     ...envIdentifier(cfg),
     name: appName,
     build_pack: "dockerfile",
-    dockerfile,
+    dockerfile: dockerfileB64,
     ports_exposes: "3000",
     instant_deploy: false,
   };
   console.log("[coolify] step 1/4 createApplication →", {
     apiSlug: args.apiSlug,
-    payload: { ...createPayload, dockerfile: `<${dockerfile.length} bytes>` },
+    payload: { ...createPayload, dockerfile: `<${dockerfile.length} bytes, b64>` },
   });
   const created = await call<CreateAppResponse>(
     cfg,
