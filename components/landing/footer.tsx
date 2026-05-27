@@ -31,19 +31,19 @@ export function LandingFooter() {
             <h4>Ressources</h4>
             <ul>
               <li>
-                <a href="https://docs.zeroapi.app" target="_blank" rel="noreferrer">
-                  Docs
-                </a>
+                <Link href="/docs">Docs</Link>
               </li>
               <li>
-                <a href="https://docs.zeroapi.app/guides" target="_blank" rel="noreferrer">
-                  Guides
-                </a>
+                <Link href="/docs/guides">Guides</Link>
               </li>
               <li>
-                <a href="https://docs.zeroapi.app/api" target="_blank" rel="noreferrer">
-                  API référence
-                </a>
+                <Link href="/docs/api">API référence</Link>
+              </li>
+              <li>
+                <Link href="/templates">Templates</Link>
+              </li>
+              <li>
+                <Link href="/changelog">Changelog</Link>
               </li>
               <li>
                 <a href="https://status.zeroapi.app" target="_blank" rel="noreferrer">
