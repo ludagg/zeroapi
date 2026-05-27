@@ -1,7 +1,7 @@
 import { BarChart3, Briefcase, DollarSign, Package } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
-import { GenerateStrip } from "@/components/dashboard/generate-strip";
+import { DashboardChatbox } from "@/components/dashboard/dashboard-chatbox";
 import { JobsList, type DashboardJob } from "@/components/dashboard/jobs-list";
 import { JobFilters } from "@/components/dashboard/job-filters";
 import { ActivityPanel } from "@/components/dashboard/activity-panel";
@@ -176,7 +176,7 @@ export default async function DashboardPage({
             ]}
           />
 
-          <GenerateStrip />
+          <DashboardChatbox />
 
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.01em]">

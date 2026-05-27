@@ -8,6 +8,7 @@ import {
   GitBranch,
   Home,
   MessageCircle,
+  MessagesSquare,
   MoreVertical,
   Package,
   Search,
@@ -91,6 +92,9 @@ export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps)
         </NavLink>
         <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate}>
           Jobs
+        </NavLink>
+        <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate}>
+          Conversations
         </NavLink>
         <NavLink href="/apis" icon={<Package />} onNavigate={onNavigate}>
           APIs
