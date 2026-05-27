@@ -67,6 +67,17 @@ export default async function ConversationsPage() {
 
           <NewConversationBox />
 
+          <div className="my-4 rounded-[10px] border border-warn bg-warn-soft px-4 py-3 text-[12.5px] text-warn-ink">
+            <p className="font-semibold">debug · {conversations.length} conversations</p>
+            {conversations.length > 0 && (
+              <ul className="mt-1 list-disc pl-5">
+                {conversations.map((conv) => (
+                  <li key={conv.id}>{conv.title}</li>
+                ))}
+              </ul>
+            )}
+          </div>
+
           {cards.length === 0 ? (
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
               <MessagesSquare className="mx-auto mb-3 h-5 w-5 text-muted-2" />
