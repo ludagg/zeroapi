@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import { prisma } from "./prisma";
+import { sendEmailVerificationEmail, sendPasswordResetEmail } from "./resend";
 
 const socialProviders: Parameters<typeof betterAuth>[0]["socialProviders"] = {};
 
@@ -26,6 +27,16 @@ export const auth = betterAuth({
     enabled: true,
     minPasswordLength: 10,
     autoSignIn: true,
+    sendResetPassword: async ({ user, url }) => {
+      await sendPasswordResetEmail({ to: user.email, name: user.name ?? null, url });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: false,
+    autoSignInAfterVerification: true,
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendEmailVerificationEmail({ to: user.email, name: user.name ?? null, url });
+    },
   },
   socialProviders,
   session: {
@@ -41,5 +52,10 @@ export const auth = betterAuth({
   },
   plugins: [nextCookies()],
 });
+
+export const oauthAvailable = {
+  google: Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+  github: Boolean(process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET),
+};
 
 export type Session = typeof auth.$Infer.Session;

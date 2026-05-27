@@ -355,13 +355,40 @@ function Bubble({
           )}
         </div>
         <div className="space-y-3.5 text-[15px] leading-relaxed text-ink-2">
-          {message.content.split("\n\n").map((p, i) => (
+          {splitParagraphs(stripJsonBlocks(message.content)).map((p, i) => (
             <p key={i} dangerouslySetInnerHTML={{ __html: applyMarkdown(p) }} />
           ))}
         </div>
       </div>
     </div>
   );
+}
+
+// Strip fenced code blocks and standalone JSON paragraphs from assistant
+// messages so the raw spec never leaks into the chat UI when the LLM
+// accidentally returns JSON in conversation mode.
+function stripJsonBlocks(s: string): string {
+  return s.replace(/```[\s\S]*?```/g, "");
+}
+
+function splitParagraphs(s: string): string[] {
+  return s
+    .split("\n\n")
+    .map((p) => p.trim())
+    .filter((p) => p.length > 0 && !looksLikeJson(p));
+}
+
+function looksLikeJson(p: string): boolean {
+  const t = p.trim();
+  if (!t.startsWith("{") || !t.endsWith("}")) {
+    if (!t.startsWith("[") || !t.endsWith("]")) return false;
+  }
+  try {
+    JSON.parse(t);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 function applyMarkdown(s: string): string {

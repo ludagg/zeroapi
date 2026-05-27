@@ -131,6 +131,13 @@
   }
 }
 
+[cmdk-group-heading] {
+  @apply mb-1 mt-2 px-2.5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2;
+}
+[cmdk-group-heading]:first-child {
+  @apply mt-0;
+}
+
 @layer utilities {
   .scrollbar-thin::-webkit-scrollbar {
     width: 8px;

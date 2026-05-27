@@ -26,9 +26,16 @@ export async function sendJobReadyEmail(jobId: string): Promise<void> {
 
   const job = await prisma.job.findUnique({
     where: { id: jobId },
-    include: { user: { select: { email: true, name: true } } },
+    include: {
+      user: {
+        select: { email: true, name: true, notifyOnReady: true, notifyOnFailed: true },
+      },
+    },
   });
   if (!job) return;
+
+  if (job.status === "FAILED" && !job.user.notifyOnFailed) return;
+  if (job.status !== "FAILED" && !job.user.notifyOnReady) return;
 
   const firstName = job.user.name?.split(/\s+/)[0] ?? "toi";
   const subject =
@@ -58,6 +65,64 @@ export async function sendJobReadyEmail(jobId: string): Promise<void> {
     from: FROM,
     to: job.user.email,
     subject,
+    html,
+  });
+}
+
+export async function sendPasswordResetEmail({
+  to,
+  name,
+  url,
+}: {
+  to: string;
+  name: string | null;
+  url: string;
+}): Promise<void> {
+  const c = client();
+  if (!c) return;
+
+  const firstName = name?.split(/\s+/)[0] ?? "toi";
+  const html = renderEmail({
+    title: "Réinitialise ton mot de passe",
+    firstName,
+    body: "Tu as demandé à réinitialiser ton mot de passe ZeroAPI. Le lien est valable 30 minutes. Si ce n'était pas toi, ignore cet email.",
+    cta: { label: "Choisir un nouveau mot de passe", url },
+    isError: false,
+  });
+
+  await c.emails.send({
+    from: FROM,
+    to,
+    subject: "Réinitialise ton mot de passe ZeroAPI",
+    html,
+  });
+}
+
+export async function sendEmailVerificationEmail({
+  to,
+  name,
+  url,
+}: {
+  to: string;
+  name: string | null;
+  url: string;
+}): Promise<void> {
+  const c = client();
+  if (!c) return;
+
+  const firstName = name?.split(/\s+/)[0] ?? "toi";
+  const html = renderEmail({
+    title: "Vérifie ton adresse email",
+    firstName,
+    body: "Confirme ton adresse pour activer toutes les fonctionnalités de ZeroAPI. Ça nous évite les faux comptes et te permet de recevoir les notifications de jobs.",
+    cta: { label: "Vérifier mon email", url },
+    isError: false,
+  });
+
+  await c.emails.send({
+    from: FROM,
+    to,
+    subject: "Vérifie ton email ZeroAPI",
     html,
   });
 }

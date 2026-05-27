@@ -73,7 +73,11 @@ export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps)
         </button>
       </div>
 
-      <button className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2">
+      <button
+        type="button"
+        onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
+        className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2"
+      >
         <Search className="h-3.5 w-3.5" />
         <span>Rechercher, sauter à…</span>
         <span className="ml-auto rounded-[4px] border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px]">
@@ -138,7 +142,7 @@ export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps)
             />
           </div>
           <Link
-            href="/settings/billing"
+            href="/settings"
             onClick={onNavigate}
             className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
           >
@@ -147,7 +151,7 @@ export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps)
         </div>
 
         <Link
-          href="/settings/account"
+          href="/settings"
           onClick={onNavigate}
           className="flex items-center gap-2.5 rounded-[9px] p-2 transition hover:bg-bg-2"
         >

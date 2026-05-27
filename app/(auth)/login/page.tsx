@@ -4,12 +4,14 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { LoginPanel } from "@/components/auth/auth-panels";
 import { LoginForm } from "@/components/auth/login-form";
 import { AuthDivider, OAuthRow } from "@/components/auth/oauth-row";
+import { oauthAvailable } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "ZeroAPI — Connexion",
 };
 
 export default function LoginPage() {
+  const showOAuth = oauthAvailable.google || oauthAvailable.github;
   return (
     <AuthShell panel={<LoginPanel />}>
       <div className="eyebrow mb-4">
@@ -30,8 +32,16 @@ export default function LoginPage() {
         .
       </p>
 
-      <OAuthRow callbackURL="/dashboard" />
-      <AuthDivider />
+      {showOAuth && (
+        <>
+          <OAuthRow
+            callbackURL="/dashboard"
+            google={oauthAvailable.google}
+            github={oauthAvailable.github}
+          />
+          <AuthDivider />
+        </>
+      )}
       <LoginForm />
     </AuthShell>
   );
