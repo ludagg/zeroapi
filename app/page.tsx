@@ -4,7 +4,9 @@ import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Features } from "@/components/landing/features";
 import { Demo } from "@/components/landing/demo";
+import { VideoScreencast } from "@/components/landing/video-screencast";
 import { Integrations } from "@/components/landing/integrations";
+import { Comparison } from "@/components/landing/comparison";
 import { Pricing } from "@/components/landing/pricing";
 import { FAQ } from "@/components/landing/faq";
 import { CTA } from "@/components/landing/cta";
@@ -18,9 +20,11 @@ export default function HomePage() {
       <main>
         <Hero />
         <HowItWorks />
+        <VideoScreencast />
         <Features />
         <Demo />
         <Integrations />
+        <Comparison />
         <Pricing />
         <FAQ />
         <CTA />
