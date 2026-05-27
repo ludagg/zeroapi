@@ -356,7 +356,15 @@ export async function deployApplication(
   console.log("[coolify] step 1/4 created", { uuid: created.uuid });
 
   // ---------- Step 2 : attach the public domain via PATCH ----------
-  const domainPayload = { domains: `https://${fqdn}` };
+  // `instant_deploy: false` above keeps the app inactive, but a previous
+  // failed run may have leaked a domain claim on another inactive app that
+  // step 0's name-based dedupe missed (renamed app, manual rollback, etc.).
+  // `force_domain_override` tells Coolify to reassign the domain to the new
+  // app — without it the PATCH returns "Domain conflicts detected".
+  const domainPayload = {
+    domains: `https://${fqdn}`,
+    force_domain_override: true,
+  };
   console.log("[coolify] step 2/4 setDomain →", { uuid: created.uuid, ...domainPayload });
   await call(cfg, `/api/v1/applications/${encodeURIComponent(created.uuid)}`, {
     method: "PATCH",
