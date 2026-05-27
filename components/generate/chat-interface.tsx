@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,12 +13,12 @@ import {
   Mic,
   Paperclip,
   PenLine,
-  Plus,
   Send,
   ShieldCheck,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
+import { Markdown } from "@/components/generate/markdown";
 import { toast } from "sonner";
 
 type ChatMessage = {
@@ -27,6 +27,7 @@ type ChatMessage = {
   content: string;
   meta?: string;
   ts: number;
+  streaming?: boolean;
 };
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -76,41 +77,99 @@ export function ChatInterface({
       content: text,
       ts: Date.now(),
     };
-    setMessages((m) => [...m, userMsg]);
+    const assistantId = `a-${Date.now()}`;
+    setMessages((m) => [
+      ...m,
+      userMsg,
+      {
+        id: assistantId,
+        role: "assistant",
+        content: "",
+        ts: Date.now(),
+        streaming: true,
+      },
+    ]);
     setDraft("");
     setPending(true);
 
     try {
-      const res = await fetch("/api/generate", {
+      const res = await fetch("/api/generate/stream", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "conversation",
           messages: [...messages, userMsg].map((m) => ({
             role: m.role,
             content: m.content,
           })),
         }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Erreur de génération.");
-      const data = (await res.json()) as {
-        reply: string;
-        progress: number;
-        provider: string;
-        model: string;
+      if (!res.ok || !res.body) {
+        const data = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(data.error ?? "Erreur de génération.");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      const finish = () => {
+        setMessages((m) =>
+          m.map((msg) => (msg.id === assistantId ? { ...msg, streaming: false } : msg)),
+        );
       };
-      setMessages((m) => [
-        ...m,
-        {
-          id: `a-${Date.now()}`,
-          role: "assistant",
-          content: data.reply,
-          meta: `${data.provider} · ${data.model}`,
-          ts: Date.now(),
-        },
-      ]);
-      setProgress(Math.min(100, Math.max(progress, data.progress)));
+
+      let errorMessage: string | null = null;
+      streamLoop: while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line) continue;
+          let event: {
+            type: string;
+            text?: string;
+            provider?: string;
+            model?: string;
+            progress?: number;
+            error?: string;
+          };
+          try {
+            event = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (event.type === "meta") {
+            const meta = `${event.provider} · ${event.model}`;
+            setMessages((m) =>
+              m.map((msg) => (msg.id === assistantId ? { ...msg, meta } : msg)),
+            );
+            if (typeof event.progress === "number") {
+              setProgress((p) => Math.min(100, Math.max(p, event.progress!)));
+            }
+          } else if (event.type === "chunk" && event.text) {
+            const chunk = event.text;
+            setMessages((m) =>
+              m.map((msg) =>
+                msg.id === assistantId ? { ...msg, content: msg.content + chunk } : msg,
+              ),
+            );
+          } else if (event.type === "error") {
+            errorMessage = event.error ?? "Erreur de stream.";
+            break streamLoop;
+          }
+        }
+      }
+      finish();
+      if (errorMessage) throw new Error(errorMessage);
     } catch (err) {
+      setMessages((m) =>
+        m
+          .filter((msg) => msg.id !== assistantId || msg.content.length > 0)
+          .map((msg) => (msg.id === assistantId ? { ...msg, streaming: false } : msg)),
+      );
       toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
     } finally {
       setPending(false);
@@ -189,7 +248,6 @@ export function ChatInterface({
             {messages.map((m) => (
               <Bubble key={m.id} message={m} userInitials={user.initials} />
             ))}
-            {pending && <TypingBubble />}
           </div>
         </div>
 
@@ -340,94 +398,65 @@ function Bubble({
     );
   }
 
+  const empty = message.content.trim().length === 0;
   return (
     <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
       <span className="brand-mark mt-0.5 h-8 w-8 text-[12px]">
         <span>0</span>
       </span>
-      <div>
+      <div className="min-w-0">
         <div className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
           <b className="font-medium text-ink">ZeroAPI</b>
-          {message.meta && (
+          {message.streaming && (
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2 py-0.5 text-accent-ink">
+              <span
+                className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
+                style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
+              />
+              en train d&apos;écrire
+            </span>
+          )}
+          {message.meta && !message.streaming && (
             <span className="rounded-[4px] border border-line bg-bg-2 px-1.5 py-px font-mono text-[10px] tracking-[0.04em]">
               {message.meta}
             </span>
           )}
         </div>
-        <div className="space-y-3.5 text-[15px] leading-relaxed text-ink-2">
-          {splitParagraphs(stripJsonBlocks(message.content)).map((p, i) => (
-            <p key={i} dangerouslySetInnerHTML={{ __html: applyMarkdown(p) }} />
-          ))}
-        </div>
+        {empty && message.streaming ? (
+          <DotsIndicator />
+        ) : (
+          <div className="min-w-0 space-y-3 text-[15px] leading-relaxed text-ink-2">
+            <Markdown content={message.content} />
+            {message.streaming && <BlinkingCaret />}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// Strip fenced code blocks and standalone JSON paragraphs from assistant
-// messages so the raw spec never leaks into the chat UI when the LLM
-// accidentally returns JSON in conversation mode.
-function stripJsonBlocks(s: string): string {
-  return s.replace(/```[\s\S]*?```/g, "");
-}
-
-function splitParagraphs(s: string): string[] {
-  return s
-    .split("\n\n")
-    .map((p) => p.trim())
-    .filter((p) => p.length > 0 && !looksLikeJson(p));
-}
-
-function looksLikeJson(p: string): boolean {
-  const t = p.trim();
-  if (!t.startsWith("{") || !t.endsWith("}")) {
-    if (!t.startsWith("[") || !t.endsWith("]")) return false;
-  }
-  try {
-    JSON.parse(t);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function applyMarkdown(s: string): string {
-  return s
-    .replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" })[c]!)
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="text-ink font-semibold">$1</strong>')
-    .replace(/`([^`]+)`/g, '<code class="font-mono text-[13px] px-1.5 py-px bg-bg-2 rounded">$1</code>');
-}
-
-function TypingBubble() {
+function DotsIndicator() {
   return (
-    <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
-      <span className="brand-mark mt-0.5 h-8 w-8 text-[12px]">
-        <span>0</span>
-      </span>
-      <div>
-        <div className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
-          <b className="font-medium text-ink">ZeroAPI</b>
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2 py-0.5 text-accent-ink">
-            <span
-              className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
-              style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
-            />
-            en train d&apos;écrire
-          </span>
-        </div>
-        <div className="flex gap-1 py-2">
-          <i className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2" />
-          <i
-            className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
-            style={{ animationDelay: ".15s" }}
-          />
-          <i
-            className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
-            style={{ animationDelay: ".3s" }}
-          />
-        </div>
-      </div>
+    <div className="flex gap-1 py-2">
+      <i className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2" />
+      <i
+        className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
+        style={{ animationDelay: ".15s" }}
+      />
+      <i
+        className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
+        style={{ animationDelay: ".3s" }}
+      />
     </div>
+  );
+}
+
+function BlinkingCaret() {
+  return (
+    <span
+      aria-hidden
+      className="ml-0.5 inline-block h-[1em] w-[2px] translate-y-[2px] animate-pulse bg-accent align-middle"
+    />
   );
 }
 
