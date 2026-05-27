@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
+import { sendTeamInviteEmail } from "@/lib/resend";
 
 const Schema = z.object({
   email: z.string().email("Email invalide"),
@@ -46,6 +47,13 @@ export async function POST(req: Request) {
   const member = await prisma.teamMember.create({
     data: { userId: user.id, email, role: body.role },
   });
+
+  // Best-effort email — silent fallback if Resend isn't configured.
+  void sendTeamInviteEmail({
+    to: email,
+    inviterName: user.name ?? user.email.split("@")[0] ?? "Quelqu'un",
+    workspaceName: `Workspace de ${user.name ?? user.email.split("@")[0]}`,
+  }).catch(() => undefined);
 
   return NextResponse.json({ id: member.id });
 }

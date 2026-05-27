@@ -4,6 +4,7 @@ import { logAgent } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
 import { countTables, ensureDatabaseForJob } from "@/lib/databases";
 import { r2Configured, uploadJobBundle } from "@/lib/r2";
+import { computeSecurity } from "@/lib/security-grade";
 import { buildBundle } from "@/workers/zip-bundle";
 
 type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
@@ -66,6 +67,7 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
 
     const endpoints = countEndpoints(spec);
     const testsTotal = countTestCases(result.testSuite);
+    const securityScore = computeSecurity(spec).grade;
 
     await prisma.$transaction(async (tx) => {
       await tx.job.update({
@@ -76,7 +78,7 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
           endpoints,
           testsTotal,
           testsPassed: testsTotal,
-          securityScore: "A",
+          securityScore,
           zipUrl,
         },
       });

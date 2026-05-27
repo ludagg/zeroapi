@@ -98,6 +98,34 @@ export async function sendPasswordResetEmail({
   });
 }
 
+export async function sendTeamInviteEmail({
+  to,
+  inviterName,
+  workspaceName,
+}: {
+  to: string;
+  inviterName: string;
+  workspaceName: string;
+}): Promise<void> {
+  const c = client();
+  if (!c) return;
+
+  const html = renderEmail({
+    title: `Tu es invité·e sur ${workspaceName}`,
+    firstName: to.split("@")[0] ?? "toi",
+    body: `${inviterName} t'a invité·e à rejoindre son espace de travail ZeroAPI. Inscris-toi avec cette adresse email pour accéder aux APIs partagées.`,
+    cta: { label: "Rejoindre l'équipe", url: `${APP_URL}/register?email=${encodeURIComponent(to)}` },
+    isError: false,
+  });
+
+  await c.emails.send({
+    from: FROM,
+    to,
+    subject: `${inviterName} t'invite sur ZeroAPI`,
+    html,
+  });
+}
+
 export async function sendEmailVerificationEmail({
   to,
   name,

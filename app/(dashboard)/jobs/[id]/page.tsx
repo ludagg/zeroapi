@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowRight, Shield, ShieldCheck, Gauge } from "lucide-react";
+import { generateTests } from "@ludagg/zeroapi-runtime";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -24,7 +25,9 @@ import {
 } from "@/lib/api-detail";
 import { extractVersion, readSpec } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
-import type { DeployPlatform, JobStatus } from "@prisma/client";
+import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
+import { coolifyConfigured } from "@/lib/coolify";
+import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -54,6 +57,11 @@ export default async function JobDetailPage({ params }: { params: { id: string }
     },
   });
   if (!job) notFound();
+  const planUnlocksCloud = user.plan === "PRO" || user.plan === "BUSINESS";
+  const zeroApiCloudStatus: DeploymentStatus | null =
+    job.deployment?.platform === "ZEROAPI_CLOUD" ? job.deployment.status : null;
+  const zeroApiCloudUrl =
+    job.deployment?.platform === "ZEROAPI_CLOUD" ? job.deployment.url : null;
 
   const spec = readSpec(job.spec);
   const pill = STATUS_PILL[job.status];
@@ -65,6 +73,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
   const openApiEndpoints = spec ? listEndpointsFromOpenApi(buildOpenApiSpec(spec)) : [];
   const deployTargets = spec ? buildDeployConfigs(spec) : [];
   const endpointsList = spec ? deriveEndpoints(spec.resources) : [];
+  const testSuite = isCodeAvailable ? generateTests(spec) : null;
 
   const liveTargetId =
     job.deployment && job.deployment.status === "ONLINE"
@@ -74,6 +83,9 @@ export default async function JobDetailPage({ params }: { params: { id: string }
   const rateLimit = spec?.rateLimit;
   const authStrategy = spec?.auth?.strategy?.toUpperCase();
   const roles = spec?.roles?.map((r) => r.name) ?? [];
+  const security = spec ? computeSecurity(spec) : null;
+  const securityGrade: SecurityGrade | null =
+    (job.securityScore as SecurityGrade | null) ?? security?.grade ?? null;
 
   return (
     <>
@@ -183,6 +195,28 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                   </div>
                   <div className="space-y-4">
                     <Card title="Sécurité">
+                      {securityGrade && (
+                        <div className="mb-3 flex items-center justify-between rounded-[10px] border border-line bg-bg p-3">
+                          <div>
+                            <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                              Score sécurité
+                            </div>
+                            <div className="mt-0.5 text-[12.5px] text-muted">
+                              {security
+                                ? `${security.score}/100 · ${security.hasAuth ? "auth" : "no-auth"}`
+                                : "calcul automatique"}
+                            </div>
+                          </div>
+                          <span
+                            className={
+                              "grid h-10 w-10 place-items-center rounded-[10px] font-serif text-[20px] " +
+                              GRADE_TONE[securityGrade]
+                            }
+                          >
+                            {securityGrade}
+                          </span>
+                        </div>
+                      )}
                       <div className="space-y-3">
                         <SecRow
                           icon={<ShieldCheck className="h-3.5 w-3.5" />}
@@ -255,6 +289,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                   total={job.testsTotal}
                   passed={job.testsPassed}
                   durationMs={null}
+                  testSuite={testSuite}
                 />
               ),
               docs: <OpenApiEndpoints endpoints={openApiEndpoints} />,
@@ -263,9 +298,16 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               deploy:
                 deployTargets.length > 0 ? (
                   <JobDeployPanel
+                    jobId={job.id}
                     targets={deployTargets}
                     liveTargetId={liveTargetId}
                     liveVersion={liveTargetId ? version : null}
+                    zeroApiCloud={{
+                      enabled: coolifyConfigured(),
+                      unlocked: planUnlocksCloud,
+                      liveUrl: zeroApiCloudUrl,
+                      status: zeroApiCloudStatus,
+                    }}
                   />
                 ) : (
                   <EmptyHint label="Configuration disponible après génération." />
