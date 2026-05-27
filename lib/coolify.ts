@@ -15,7 +15,6 @@
  *   COOLIFY_ENVIRONMENT_UUID?             (preferred — bypasses name lookup)
  *   COOLIFY_ENVIRONMENT_NAME?             (fallback, defaults to "production")
  *   ZEROAPI_CLOUD_DOMAIN?                 (defaults to "zeroapi.app")
- *   ZEROAPI_BUILD_BASE_IMAGE?             (defaults to "node:20-alpine")
  */
 
 export interface CoolifyConfig {
@@ -26,7 +25,6 @@ export interface CoolifyConfig {
   environmentName?: string;
   environmentUuid?: string;
   cloudDomain: string;
-  buildBaseImage: string;
 }
 
 export type CoolifyEnvVar =
@@ -76,7 +74,6 @@ export function readCoolifyConfigDetailed(): ConfigReadResult {
       environmentUuid: environmentUuid || undefined,
       environmentName: environmentUuid ? undefined : (environmentName ?? "production"),
       cloudDomain: process.env.ZEROAPI_CLOUD_DOMAIN ?? "zeroapi.app",
-      buildBaseImage: process.env.ZEROAPI_BUILD_BASE_IMAGE ?? "node:20-alpine",
     },
   };
 }
@@ -308,27 +305,24 @@ export async function deployApplication(
   // We use the `dockerfile` endpoint with `build_pack: "nixpacks"` so Coolify
   // builds the app on the VPS from the bundled source (fetched via
   // `ZEROAPI_BUNDLE_URL`) rather than pulling a prebuilt image that doesn't
-  // exist. `force_domain_override: true` lets us reuse a subdomain that's
-  // still attached to a previous, half-failed application.
+  // exist. nixpacks auto-detects Node.js — no `base_image` needed (Coolify
+  // rejects it with "This field is not allowed"). `force_domain_override:
+  // true` lets us reuse a subdomain still attached to a previous, half-failed
+  // application.
   const createPayload = {
     name: appName,
-    description: `ZeroAPI · job ${args.jobId}`,
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
     ...envIdentifier(cfg),
     build_pack: "nixpacks",
-    base_image: cfg.buildBaseImage,
     ports_exposes: "3000",
-    git_repository: null,
-    dockerfile: null,
-    instant_deploy: false,
-    domains: `https://${fqdn}`,
+    fqdn,
     force_domain_override: true,
+    instant_deploy: false,
   };
   console.log("[coolify] createApplication →", {
     apiSlug: args.apiSlug,
     fqdn,
-    baseImage: cfg.buildBaseImage,
     payload: createPayload,
   });
   const created = await call<CreateAppResponse>(
