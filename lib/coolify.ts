@@ -270,19 +270,45 @@ interface EnvVar {
 }
 
 /**
+ * Builds a self-contained Dockerfile for Coolify's /applications/dockerfile
+ * endpoint. The endpoint requires `dockerfile` to be a non-empty string and
+ * builds from it alone — there is no source build context, so no `COPY`
+ * directives can succeed. We bake the signed bundle URL into a `curl` step
+ * so the build fetches its own source.
+ *
+ * (Originally tried `build_pack: "nixpacks"` with no Dockerfile — Coolify
+ * rejected the create call with `dockerfile: This field is required` because
+ * the dockerfile endpoint always validates the field, regardless of the
+ * `build_pack` value. nixpacks-from-source would require a Git repo, which
+ * we don't have for generated bundles.)
+ */
+function buildCoolifyDockerfile(zipUrl: string): string {
+  return [
+    "FROM node:20-alpine",
+    "WORKDIR /app",
+    "RUN apk add --no-cache curl unzip",
+    `RUN curl -fL "${zipUrl}" -o /tmp/app.zip \\`,
+    " && unzip /tmp/app.zip -d /app \\",
+    " && rm /tmp/app.zip",
+    "RUN npm install",
+    "RUN npx prisma generate",
+    "RUN npm run build",
+    "EXPOSE 3000",
+    'CMD ["npm", "start"]',
+    "",
+  ].join("\n");
+}
+
+/**
  * Four-step deploy flow following Coolify v4 API docs :
  *
- *   1. POST /api/v1/applications/dockerfile  — register the app with the
- *      minimal accepted body. Coolify v4 rejects unknown fields with
- *      "This field is not allowed", so we ship only the canonical keys
- *      (name, project/server/env, build_pack, ports_exposes, instant_deploy)
- *      — no `description`, no `fqdn`, no `base_image`, no null-stubbed
- *      `git_repository`/`dockerfile`, no `force_domain_override`.
- *   2. PATCH /api/v1/applications/{uuid}     — attach the public domain
- *      separately. `domains` isn't accepted on the create call for nixpacks
- *      apps; the PATCH endpoint takes the partial update.
- *   3. POST /api/v1/applications/{uuid}/envs — once per env var, body kept
- *      to the minimum `{ key, value }`.
+ *   1. POST /api/v1/applications/dockerfile  — register the app with a
+ *      self-contained Dockerfile (fetches the bundle ZIP at build time) plus
+ *      the canonical create fields. Coolify rejects unknown keys with
+ *      "This field is not allowed", so the body stays minimal.
+ *   2. PATCH /api/v1/applications/{uuid}     — attach the public domain.
+ *   3. POST /api/v1/applications/{uuid}/envs — push env vars one by one,
+ *      body kept to the minimum `{ key, value }`.
  *   4. GET  /api/v1/deploy?uuid={uuid}       — trigger the actual deploy.
  *      Returns immediately; the build runs async on the Coolify side.
  *
@@ -304,18 +330,20 @@ export async function deployApplication(
   await removeExistingApplications(cfg, appName);
 
   // ---------- Step 1 : create the application (minimal body) ----------
+  const dockerfile = buildCoolifyDockerfile(args.zipUrl);
   const createPayload = {
     project_uuid: cfg.projectUuid,
     server_uuid: cfg.serverUuid,
     ...envIdentifier(cfg),
     name: appName,
-    build_pack: "nixpacks",
+    build_pack: "dockerfile",
+    dockerfile,
     ports_exposes: "3000",
     instant_deploy: false,
   };
   console.log("[coolify] step 1/4 createApplication →", {
     apiSlug: args.apiSlug,
-    payload: createPayload,
+    payload: { ...createPayload, dockerfile: `<${dockerfile.length} bytes>` },
   });
   const created = await call<CreateAppResponse>(
     cfg,
