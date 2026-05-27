@@ -1,4 +1,5 @@
 import { Lock } from "lucide-react";
+import pluralize from "pluralize";
 import type { ResourceDefinition } from "@ludagg/zeroapi-runtime";
 
 type DerivedEndpoint = {
@@ -28,7 +29,7 @@ const CRUD: Record<string, { method: string; suffix: string; verb: string }> = {
 export function deriveEndpoints(resources: ResourceDefinition[]): DerivedEndpoint[] {
   const out: DerivedEndpoint[] = [];
   for (const r of resources) {
-    const slug = `${r.name.toLowerCase()}s`;
+    const slug = pluralize(r.name.toLowerCase());
     const ep = r.endpoints ?? ["list", "create", "read", "update", "delete"];
     for (const action of ep) {
       const cfg = CRUD[action];
