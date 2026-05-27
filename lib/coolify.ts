@@ -270,8 +270,6 @@ interface CreateAppResponse {
 interface EnvVar {
   key: string;
   value: string;
-  /** Use `is_literal: true` to disable Coolify's magic-string expansion. */
-  is_literal?: boolean;
 }
 
 /**
@@ -280,6 +278,9 @@ interface EnvVar {
  *  1. POST /api/v1/applications/dockerimage  (with `instant_deploy: false` —
  *     `environment_variables` is rejected at creation time)
  *  2. POST /api/v1/applications/{uuid}/envs  once per env var
+ *     (body kept to the minimum `{ key, value }` — Coolify rejects extras
+ *     like `is_build_time` / `is_preview` / `is_literal` with
+ *     "This field is not allowed")
  *  3. POST /api/v1/deploy?uuid={uuid}        to trigger the actual deploy
  *
  * Step 2 sends each variable individually (the API takes one key/value pair
@@ -321,11 +322,11 @@ export async function deployApplication(
 
   // ---------- Step 2 : push env vars one by one ----------
   const envVars: EnvVar[] = [
-    { key: "DATABASE_URL", value: args.databaseUrl, is_literal: true },
-    { key: "ZEROAPI_BUNDLE_URL", value: args.zipUrl, is_literal: true },
-    { key: "PORT", value: "3000", is_literal: true },
-    { key: "NODE_ENV", value: "production", is_literal: true },
-    ...args.envVars.map((e) => ({ key: e.key, value: e.value, is_literal: true })),
+    { key: "DATABASE_URL", value: args.databaseUrl },
+    { key: "ZEROAPI_BUNDLE_URL", value: args.zipUrl },
+    { key: "PORT", value: "3000" },
+    { key: "NODE_ENV", value: "production" },
+    ...args.envVars.map((e) => ({ key: e.key, value: e.value })),
   ];
   await pushEnvVars(cfg, created.uuid, envVars);
 
@@ -344,9 +345,12 @@ export async function deployApplication(
 /**
  * Adds each env var to a Coolify application.
  *
- * The endpoint accepts one variable per call. If a key already exists (e.g.
- * on a redeploy after a previous failed attempt), the POST returns 409 — we
- * fall back to PATCH so the value is updated in place.
+ * The endpoint accepts one variable per call with a minimal `{ key, value }`
+ * body — Coolify v4 rejects extra fields like `is_build_time`, `is_preview`,
+ * `is_literal` with "This field is not allowed".
+ *
+ * If a key already exists (409 — typically a re-deploy after a previous
+ * failure), the POST is retried as a PATCH so the value is updated in place.
  */
 async function pushEnvVars(
   cfg: CoolifyConfig,
@@ -359,29 +363,18 @@ async function pushEnvVars(
     keys: envVars.map((e) => e.key),
   });
   for (const ev of envVars) {
+    const body = JSON.stringify({ key: ev.key, value: ev.value });
     try {
       await call(cfg, `/api/v1/applications/${encodeURIComponent(uuid)}/envs`, {
         method: "POST",
-        body: JSON.stringify({
-          key: ev.key,
-          value: ev.value,
-          is_literal: ev.is_literal ?? true,
-          is_preview: false,
-          is_build_time: false,
-        }),
+        body,
       });
     } catch (err) {
-      if (err instanceof CoolifyError && (err.status === 409 || err.status === 422)) {
+      if (err instanceof CoolifyError && err.status === 409) {
         // Variable already exists — overwrite.
         await call(cfg, `/api/v1/applications/${encodeURIComponent(uuid)}/envs`, {
           method: "PATCH",
-          body: JSON.stringify({
-            key: ev.key,
-            value: ev.value,
-            is_literal: ev.is_literal ?? true,
-            is_preview: false,
-            is_build_time: false,
-          }),
+          body,
         });
       } else {
         throw err;
