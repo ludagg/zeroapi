@@ -24,8 +24,8 @@ importers:
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.76.1(react@18.3.1))
       '@ludagg/zeroapi-runtime':
-        specifier: ^0.1.1
-        version: 0.1.1
+        specifier: ^0.1.2
+        version: 0.1.2
       '@mistralai/mistralai':
         specifier: ^1.15.1
         version: 1.15.1
@@ -633,8 +633,8 @@ packages:
   '@jsonhero/path@1.0.21':
     resolution: {integrity: sha512-gVUDj/92acpVoJwsVJ/RuWOaHyG4oFzn898WNGQItLCTQ+hOaVlEaImhwE1WqOTf+l3dGOUkbSiVKlb3q1hd1Q==}
 
-  '@ludagg/zeroapi-runtime@0.1.1':
-    resolution: {integrity: sha512-4SUpmcXZD9pHpmeYf2lddBtFq9WCvaGz1uLA/ctfUFhN0l64klzQUXCg/jEIpRsnXImDm2i6gJJTAHF1Ks3WbQ==}
+  '@ludagg/zeroapi-runtime@0.1.2':
+    resolution: {integrity: sha512-XC6mhQANmtJh/PMbml6tNghvX44Wz759WTeK9UffeQuAI1LJq1kOo+aTBO587IBNOAP270quk2aH6UEU801B/Q==}
     engines: {node: '>=18.0.0'}
 
   '@microsoft/fetch-event-source@2.0.1':
@@ -4693,7 +4693,7 @@ snapshots:
 
   '@jsonhero/path@1.0.21': {}
 
-  '@ludagg/zeroapi-runtime@0.1.1':
+  '@ludagg/zeroapi-runtime@0.1.2':
     dependencies:
       hono: 4.12.23
       zod: 3.25.76
