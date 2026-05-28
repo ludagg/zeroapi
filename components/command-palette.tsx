@@ -9,12 +9,12 @@ import {
   GitBranch,
   Home,
   Moon,
-  Package,
   Plus,
   Search,
   Settings,
   Shield,
   Sun,
+  Terminal,
   Users,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -104,8 +104,8 @@ export function CommandPalette({
               <Item onSelect={() => go("/jobs")} icon={<Briefcase />}>
                 Jobs
               </Item>
-              <Item onSelect={() => go("/apis")} icon={<Package />}>
-                APIs
+              <Item onSelect={() => go("/apis")} icon={<Terminal />}>
+                Playground
               </Item>
               <Item onSelect={() => go("/deployments")} icon={<GitBranch />}>
                 Déploiements

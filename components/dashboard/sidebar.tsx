@@ -10,10 +10,10 @@ import {
   MessageCircle,
   MessagesSquare,
   MoreVertical,
-  Package,
   Search,
   Settings,
   Shield,
+  Terminal,
   Users,
   Briefcase,
 } from "lucide-react";
@@ -96,8 +96,8 @@ export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps)
         <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate}>
           Conversations
         </NavLink>
-        <NavLink href="/apis" icon={<Package />} onNavigate={onNavigate}>
-          APIs
+        <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate}>
+          Playground
         </NavLink>
         <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate}>
           Déploiements
