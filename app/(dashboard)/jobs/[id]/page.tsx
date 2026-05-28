@@ -16,7 +16,6 @@ import { CodeViewer } from "@/components/api-detail/code-viewer";
 import { TestsPanel } from "@/components/api-detail/tests-panel";
 import { LogsTimeline } from "@/components/api-detail/logs-timeline";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
-import { PlaygroundPanel } from "@/components/api-detail/playground-panel";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
 import {
   buildDeployConfigs,
@@ -71,8 +70,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
   const version = extractVersion(job);
 
   const sourceFiles = isCodeAvailable ? buildSourceFiles(spec) : [];
-  const openApiSpec = spec ? buildOpenApiSpec(spec) : null;
-  const openApiEndpoints = openApiSpec ? listEndpointsFromOpenApi(openApiSpec) : [];
+  const openApiEndpoints = spec ? listEndpointsFromOpenApi(buildOpenApiSpec(spec)) : [];
   const deployTargets = spec ? buildDeployConfigs(spec) : [];
   const endpointsList = spec ? deriveEndpoints(spec.resources) : [];
   const testSuite = isCodeAvailable ? generateTests(spec) : null;
@@ -81,8 +79,6 @@ export default async function JobDetailPage({ params }: { params: { id: string }
     job.deployment && job.deployment.status === "ONLINE"
       ? PLATFORM_TO_TARGET[job.deployment.platform]
       : null;
-  const deploymentUrl =
-    job.deployment?.status === "ONLINE" ? job.deployment.url ?? null : null;
 
   const rateLimit = spec?.rateLimit;
   const authStrategy = spec?.auth?.strategy?.toUpperCase();
@@ -174,7 +170,6 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               { id: "code", label: "Code source" },
               { id: "tests", label: "Tests", n: job.testsTotal ?? undefined },
               { id: "docs", label: "Docs OpenAPI", n: openApiEndpoints.length || undefined },
-              { id: "playground", label: "Playground" },
               { id: "logs", label: "Logs", n: job.agentLogs.length || undefined },
               { id: "agents", label: "Agents", n: job.agentLogs.length || undefined },
               { id: "deploy", label: "Déploiement" },
@@ -298,17 +293,6 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 />
               ),
               docs: <OpenApiEndpoints endpoints={openApiEndpoints} />,
-              playground: openApiSpec ? (
-                <PlaygroundPanel
-                  apiName={job.name}
-                  jobId={job.id}
-                  deploymentUrl={deploymentUrl}
-                  openApiSpec={openApiSpec as unknown as Record<string, unknown>}
-                  endpoints={openApiEndpoints}
-                />
-              ) : (
-                <EmptyHint label="Playground disponible après génération." />
-              ),
               logs: <LogsTimeline logs={job.agentLogs} />,
               agents: <AgentsProgress logs={job.agentLogs} />,
               deploy:
