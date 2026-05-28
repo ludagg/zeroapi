@@ -63,7 +63,7 @@ export function ConnectionString({ dbName }: { dbName: string }) {
       </div>
       <p className="mt-2 font-mono text-[10.5px] text-muted">
         Les identifiants sont régénérés à chaque rotation. Active la rotation auto dans
-        l&apos;onglet Paramètres de ton API.
+        l&apos;onglet Variables de ton API.
       </p>
     </div>
   );

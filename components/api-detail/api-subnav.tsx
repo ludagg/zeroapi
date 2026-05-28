@@ -8,7 +8,7 @@ export function ApiSubnav({ id }: { id: string }) {
   const pathname = usePathname() ?? "";
   const tabs = [
     { id: "overview", label: "Aperçu", href: `/apis/${id}` },
-    { id: "settings", label: "Paramètres", href: `/apis/${id}/settings` },
+    { id: "settings", label: "Variables", href: `/apis/${id}/settings` },
   ];
 
   return (
