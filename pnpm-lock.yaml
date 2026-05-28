@@ -24,8 +24,8 @@ importers:
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.76.1(react@18.3.1))
       '@ludagg/zeroapi-runtime':
-        specifier: ^0.1.4
-        version: 0.1.4
+        specifier: ^0.14.0
+        version: 0.14.0(@aws-sdk/client-s3@3.1053.0)
       '@mistralai/mistralai':
         specifier: ^1.15.1
         version: 1.15.1
@@ -672,9 +672,14 @@ packages:
   '@jsonhero/path@1.0.21':
     resolution: {integrity: sha512-gVUDj/92acpVoJwsVJ/RuWOaHyG4oFzn898WNGQItLCTQ+hOaVlEaImhwE1WqOTf+l3dGOUkbSiVKlb3q1hd1Q==}
 
-  '@ludagg/zeroapi-runtime@0.1.4':
-    resolution: {integrity: sha512-Dia9kMa+dQv8x8Q83ECE9wG8RUKQ8C9kpUCqOjcPs1fD6pY5gyWeNM60ZU16LHjLrDOF7oOOyOHKc4lTyj4MDg==}
+  '@ludagg/zeroapi-runtime@0.14.0':
+    resolution: {integrity: sha512-7gqsjp8SfvYdKlv9SxY2wE75C/Y+OSl6aMCZOTc8S0yJTJU6y6CNq8sOcrxFg4dVnBBzcouydqVr8uylEMDW0g==}
     engines: {node: '>=18.0.0'}
+    peerDependencies:
+      '@aws-sdk/client-s3': ^3.0.0
+    peerDependenciesMeta:
+      '@aws-sdk/client-s3':
+        optional: true
 
   '@microsoft/fetch-event-source@2.0.1':
     resolution: {integrity: sha512-W6CLUJ2eBMw3Rec70qrsEW0jOm/3twwJv21mrmj2yORiaVmVYGS4sSS5yUwvQc1ZlDLYGPnClVWmUUMagKNsfA==}
@@ -4842,10 +4847,12 @@ snapshots:
 
   '@jsonhero/path@1.0.21': {}
 
-  '@ludagg/zeroapi-runtime@0.1.4':
+  '@ludagg/zeroapi-runtime@0.14.0(@aws-sdk/client-s3@3.1053.0)':
     dependencies:
       hono: 4.12.23
       zod: 3.25.76
+    optionalDependencies:
+      '@aws-sdk/client-s3': 3.1053.0
 
   '@microsoft/fetch-event-source@2.0.1': {}
 

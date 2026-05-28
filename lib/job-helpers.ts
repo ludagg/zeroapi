@@ -34,13 +34,17 @@ function asPartialSpec(spec: Job["spec"]): Partial<ZeroAPISpec> | null {
 
 export function extractAuthMode(spec: Job["spec"]): string | null {
   const s = asPartialSpec(spec);
-  if (!s) return null;
-  if (s.auth?.strategy) {
-    const strat = s.auth.strategy.toUpperCase();
-    const hasRoles = (s.roles?.length ?? 0) > 0;
-    return hasRoles ? `${strat}+RBAC` : strat;
-  }
-  return null;
+  if (!s || !s.auth) return null;
+  const labels: string[] = [];
+  if (s.auth.jwt?.enabled === true || s.auth.strategy === "jwt") labels.push("JWT");
+  if (s.auth.apikey?.enabled === true || s.auth.strategy === "apikey") labels.push("API_KEY");
+  if ((s.auth.oauth?.providers?.length ?? 0) > 0) labels.push("OAUTH");
+  if (s.auth.strategy === "bearer" && labels.length === 0) labels.push("BEARER");
+  if (labels.length === 0) return null;
+  const hasRoles = (s.roles?.length ?? 0) > 0;
+  const hasRbac = (s.permissions?.length ?? 0) > 0;
+  const base = labels.join("+");
+  return hasRoles || hasRbac ? `${base}+RBAC` : base;
 }
 
 export function readSpec(spec: Job["spec"]): ZeroAPISpec | null {
