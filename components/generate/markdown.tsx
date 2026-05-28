@@ -44,7 +44,19 @@ function summarizeIfSpec(raw: string): SpecSummary | null {
       const custom = (r as { customEndpoints?: unknown }).customEndpoints;
       if (Array.isArray(custom)) endpointCount += custom.length;
     }
-    const auth = (parsed as { auth?: { strategy?: string } }).auth;
+    const auth = (parsed as {
+      auth?: {
+        strategy?: string;
+        jwt?: { enabled?: boolean };
+        apikey?: { enabled?: boolean };
+        oauth?: { providers?: unknown[] };
+      };
+    }).auth;
+    const labels: string[] = [];
+    if (auth?.jwt?.enabled === true || auth?.strategy === "jwt") labels.push("jwt");
+    if (auth?.apikey?.enabled === true || auth?.strategy === "apikey") labels.push("apikey");
+    if (Array.isArray(auth?.oauth?.providers) && auth.oauth.providers.length > 0) labels.push("oauth");
+    if (auth?.strategy === "bearer" && labels.length === 0) labels.push("bearer");
     const roles = (parsed as { roles?: unknown[] }).roles;
     const rateLimit = (parsed as { rateLimit?: unknown }).rateLimit;
     return {
@@ -53,7 +65,7 @@ function summarizeIfSpec(raw: string): SpecSummary | null {
         : undefined,
       resourceCount: resources.length,
       endpointCount,
-      authStrategy: auth?.strategy,
+      authStrategy: labels.length > 0 ? labels.join("+") : undefined,
       hasRoles: Array.isArray(roles) && roles.length > 0,
       hasRateLimit: Boolean(rateLimit),
     };

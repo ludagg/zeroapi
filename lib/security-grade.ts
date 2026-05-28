@@ -9,6 +9,8 @@ export interface SecurityReport {
   hasRoles: boolean;
   hasRateLimit: boolean;
   hasRbac: boolean;
+  /** True when at least one ownOnly permission rule scopes rows per user. */
+  hasOwnOnly: boolean;
 }
 
 export function gradeFromScore(score: number): SecurityGrade {
@@ -19,12 +21,32 @@ export function gradeFromScore(score: number): SecurityGrade {
   return "F";
 }
 
+/**
+ * True when ANY auth surface is configured — legacy `auth.strategy`, modern
+ * `auth.jwt.enabled` / `auth.apikey.enabled` / `auth.oauth.providers[]`, or the
+ * top-level `auth.enabled` flag.
+ */
+function hasAnyAuth(spec: ZeroAPISpec): boolean {
+  const a = spec.auth;
+  if (!a) return false;
+  if (typeof (a as { strategy?: string }).strategy === "string") return true;
+  if (a.enabled === true) return true;
+  if (a.jwt?.enabled === true) return true;
+  if (a.apikey?.enabled === true) return true;
+  if ((a.oauth?.providers?.length ?? 0) > 0) return true;
+  return false;
+}
+
 export function computeSecurity(spec: ZeroAPISpec): SecurityReport {
-  const hasAuth = Boolean(spec.auth?.strategy);
+  const hasAuth = hasAnyAuth(spec);
   const hasRoles = (spec.roles?.length ?? 0) > 0;
   const hasRateLimit = Boolean(spec.rateLimit);
-  const hasRbac = spec.resources.some(
-    (r) => r.rbac?.read?.length || r.rbac?.write?.length || r.rbac?.delete?.length,
+  const hasRbac =
+    spec.resources.some(
+      (r) => r.rbac?.read?.length || r.rbac?.write?.length || r.rbac?.delete?.length,
+    ) || (spec.permissions?.length ?? 0) > 0;
+  const hasOwnOnly = (spec.permissions ?? []).some((p) =>
+    p.rules.some((r) => r.ownOnly === true),
   );
 
   let score = 30;
@@ -32,14 +54,16 @@ export function computeSecurity(spec: ZeroAPISpec): SecurityReport {
   if (hasRoles) score += 15;
   if (hasRbac) score += 15;
   if (hasRateLimit) score += 10;
+  if (hasOwnOnly) score += 5;
 
   return {
-    grade: gradeFromScore(score),
-    score,
+    grade: gradeFromScore(Math.min(100, score)),
+    score: Math.min(100, score),
     hasAuth,
     hasRoles,
     hasRateLimit,
     hasRbac,
+    hasOwnOnly,
   };
 }
 

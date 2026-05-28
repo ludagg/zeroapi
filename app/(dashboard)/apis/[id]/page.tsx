@@ -10,8 +10,8 @@ import { DownloadButton } from "@/components/api-detail/download-button";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { SecurityCard, TestsCard } from "@/components/api-detail/security-test-cards";
 import { buildDeployConfigs, buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
-import { extractVersion, readSpec } from "@/lib/job-helpers";
-import type { JobStatus } from "@prisma/client";
+import { extractAuthMode, extractVersion, readSpec } from "@/lib/job-helpers";
+import type { Job, JobStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +113,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
               <aside className="space-y-4">
                 <SecurityCard
                   score={job.securityScore}
-                  authStrategy={spec.auth?.strategy?.toUpperCase()}
+                  authStrategy={extractAuthMode(spec as unknown as Job["spec"]) ?? undefined}
                   rbacRolesCount={spec.roles?.length}
                   rateLimit={spec.rateLimit}
                 />

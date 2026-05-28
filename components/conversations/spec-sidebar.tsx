@@ -2,13 +2,28 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, FileText, Gauge, RefreshCw, Shield, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  FileText,
+  Gauge,
+  GitBranch,
+  Image,
+  Key,
+  Lock,
+  RefreshCw,
+  Search,
+  Shield,
+  ShieldCheck,
+  Webhook,
+} from "lucide-react";
 import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import {
   computeInsights,
   confidenceTone,
   type ChatMessage,
+  type ConversationInsights,
 } from "@/lib/conversation-helpers";
 
 export function SpecSidebar({
@@ -92,12 +107,7 @@ export function SpecSidebar({
         <ConfidenceCard confidence={insights.confidence} tone={tone} />
 
         <SpecSection label="Sécurité détectée" count={insights.specReady ? "spec" : "auto"}>
-          <SpecRow
-            icon={<ShieldCheck className="h-3 w-3" />}
-            label="Auth"
-            meta={insights.authStrategy}
-            enabled={insights.authStrategy !== "Non précisé" && insights.authStrategy !== "Aucune"}
-          />
+          <AuthBadgeRow features={insights.authFeatures} />
           <SpecRow
             icon={<Shield className="h-3 w-3" />}
             label="RBAC"
@@ -106,9 +116,17 @@ export function SpecSidebar({
                 ? `${insights.roles.length} rôle${insights.roles.length > 1 ? "s" : ""} · ${insights.roles
                     .slice(0, 3)
                     .join(", ")}`
-                : "Pas de rôles"
+                : insights.hasPermissions
+                  ? "Permissions déclaratives"
+                  : "Pas de rôles"
             }
-            enabled={insights.roles.length > 0}
+            enabled={insights.roles.length > 0 || insights.hasPermissions}
+          />
+          <SpecRow
+            icon={<Lock className="h-3 w-3" />}
+            label="ownOnly"
+            meta={insights.ownOnly ? "Lignes privées par user" : "—"}
+            enabled={insights.ownOnly}
           />
           <SpecRow
             icon={<Gauge className="h-3 w-3" />}
@@ -117,6 +135,68 @@ export function SpecSidebar({
             enabled={Boolean(insights.rateLimit)}
           />
         </SpecSection>
+
+        {insights.relations.length > 0 ? (
+          <SpecSection
+            label="Relations"
+            count={`${insights.relations.length}`}
+          >
+            {insights.relations.slice(0, 6).map((r, idx) => (
+              <SpecRow
+                key={`${r.label}-${idx}`}
+                icon={<GitBranch className="h-3 w-3" />}
+                label={r.label}
+                meta={r.kind}
+                enabled
+              />
+            ))}
+            {insights.relations.length > 6 && (
+              <div className="px-0 pt-1 text-[11px] text-muted">
+                + {insights.relations.length - 6} autres…
+              </div>
+            )}
+          </SpecSection>
+        ) : null}
+
+        {insights.features.length > 0 ? (
+          <SpecSection
+            label="Features"
+            count={`${insights.features.length}`}
+          >
+            {insights.features.includes("fileUpload") && (
+              <SpecRow
+                icon={<Image className="h-3 w-3" aria-hidden />}
+                label="Upload fichiers"
+                meta="S3 · R2 · local"
+                enabled
+              />
+            )}
+            {insights.features.includes("webhooks") && (
+              <SpecRow
+                icon={<Webhook className="h-3 w-3" />}
+                label="Webhooks"
+                meta="inbound / outbound"
+                enabled
+              />
+            )}
+            {insights.features.includes("search") && (
+              <SpecRow
+                icon={<Search className="h-3 w-3" />}
+                label="Recherche"
+                meta="?q="
+                enabled
+              />
+            )}
+            {insights.features.includes("pagination") && (
+              <SpecRow
+                icon={<Gauge className="h-3 w-3" />}
+                label="Pagination"
+                meta="cursor + offset"
+                enabled
+              />
+            )}
+          </SpecSection>
+        ) : null}
 
         <SpecSection label="Extras inclus">
           <SpecRow label="Tests Vitest" meta="✓" enabled />
@@ -243,6 +323,42 @@ function SpecSection({
       </div>
       <div className="px-3.5 py-2.5">{children}</div>
     </div>
+  );
+}
+
+function AuthBadgeRow({ features }: { features: ConversationInsights["authFeatures"] }) {
+  const enabled = features.length > 0;
+  return (
+    <div className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-dashed border-line py-1.5 font-mono text-[12px] text-ink-2 last:border-b-0">
+      <span className="flex items-center gap-1.5">
+        <ShieldCheck className="h-3 w-3" />
+        Auth
+      </span>
+      <span className="flex flex-wrap items-center justify-end gap-1">
+        {enabled ? (
+          features.map((f) => <AuthBadge key={f} feature={f} />)
+        ) : (
+          <span className="text-[10.5px] text-muted">Aucune</span>
+        )}
+      </span>
+    </div>
+  );
+}
+
+function AuthBadge({ feature }: { feature: ConversationInsights["authFeatures"][number] }) {
+  const icon =
+    feature === "API Key" ? (
+      <Key className="h-2.5 w-2.5" strokeWidth={2.6} />
+    ) : feature === "OAuth" ? (
+      <ShieldCheck className="h-2.5 w-2.5" strokeWidth={2.6} />
+    ) : (
+      <Lock className="h-2.5 w-2.5" strokeWidth={2.6} />
+    );
+  return (
+    <span className="inline-flex items-center gap-1 rounded-full border border-accent/40 bg-accent-soft px-1.5 py-px text-[10px] text-accent-ink">
+      {icon}
+      {feature}
+    </span>
   );
 }
 

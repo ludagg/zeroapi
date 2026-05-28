@@ -23,7 +23,7 @@ import {
   buildSourceFiles,
   listEndpointsFromOpenApi,
 } from "@/lib/api-detail";
-import { extractVersion, readSpec } from "@/lib/job-helpers";
+import { extractVersion, readSpec, extractAuthMode } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
 import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
 import { coolifyConfigured } from "@/lib/coolify";
@@ -81,7 +81,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
       : null;
 
   const rateLimit = spec?.rateLimit;
-  const authStrategy = spec?.auth?.strategy?.toUpperCase();
+  const authStrategy = extractAuthMode(job.spec) ?? undefined;
   const roles = spec?.roles?.map((r) => r.name) ?? [];
   const security = spec ? computeSecurity(spec) : null;
   const securityGrade: SecurityGrade | null =

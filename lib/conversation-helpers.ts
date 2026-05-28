@@ -43,11 +43,23 @@ export function lastMessageExcerpt(messages: ChatMessage[], maxLen = 140): strin
 
 // ============ CONFIDENCE & SIDEBAR DATA ============
 
+export type AuthFeature = "JWT" | "API Key" | "OAuth" | "Bearer";
+export type EnabledFeature = "fileUpload" | "webhooks" | "search" | "pagination";
+
+export type RelationSummary = {
+  /** Display string e.g. "Order → User" */
+  label: string;
+  /** Kind: "manyToOne" / "oneToMany" / "manyToMany" / ... */
+  kind: string;
+};
+
 export type ConversationInsights = {
   /** 0–100. Computed from spec if available, else estimated from conversation. */
   confidence: number;
-  /** Authentication strategy detected. */
+  /** Legacy single-strategy field — kept for backwards compatibility. */
   authStrategy: "JWT" | "OAuth" | "API Key" | "Bearer" | "Aucune" | "Non précisé";
+  /** v0.14: every active auth feature (may combine JWT + OAuth, JWT + apikey, ...). */
+  authFeatures: AuthFeature[];
   /** Roles (RBAC) names. */
   roles: string[];
   /** Rate limit, e.g. "120 req / 60s". */
@@ -55,6 +67,14 @@ export type ConversationInsights = {
   /** Counts derived from the spec or estimated. */
   resourcesCount: number;
   endpointsCount: number;
+  /** Relations summary for the sidebar. */
+  relations: RelationSummary[];
+  /** Cross-cutting features explicitly enabled. */
+  features: EnabledFeature[];
+  /** True when at least one ownOnly permission rule is declared. */
+  ownOnly: boolean;
+  /** True when at least one permissions block is declared (RBAC moderne). */
+  hasPermissions: boolean;
   /** True once a spec is parsed and complete enough to ship. */
   specReady: boolean;
   /** Short tagline for the "Modèle détecté" card. */
@@ -127,6 +147,55 @@ export function estimateConfidence(messages: ChatMessage[]): number {
   return Math.min(94, score);
 }
 
+/**
+ * Reads every active auth surface from the spec — both the legacy
+ * `auth.strategy` shape and the modern v0.14 `auth.jwt`/`auth.apikey`/`auth.oauth`
+ * shape (which may combine).
+ */
+export function detectAuthFeatures(spec: ZeroAPISpec): AuthFeature[] {
+  const out: AuthFeature[] = [];
+  const auth = spec.auth;
+  if (!auth) return out;
+  const jwtModern = auth.jwt?.enabled === true;
+  const apikeyModern = auth.apikey?.enabled === true;
+  const oauthModern = (auth.oauth?.providers?.length ?? 0) > 0;
+  const legacy = (auth as { strategy?: string }).strategy;
+  if (jwtModern || legacy === "jwt") out.push("JWT");
+  if (apikeyModern || legacy === "apikey") out.push("API Key");
+  if (oauthModern) out.push("OAuth");
+  if (legacy === "bearer") out.push("Bearer");
+  return Array.from(new Set(out));
+}
+
+/** Returns the v0.14 features explicitly enabled on the spec. */
+export function detectFeatures(spec: ZeroAPISpec): EnabledFeature[] {
+  const out: EnabledFeature[] = [];
+  const f = spec.features;
+  if (!f) return out;
+  if (f.fileUpload?.enabled) out.push("fileUpload");
+  if (f.webhooks?.outbound?.length || f.webhooks?.inbound?.length) out.push("webhooks");
+  if (f.search?.enabled) out.push("search");
+  if (f.pagination) out.push("pagination");
+  return out;
+}
+
+/**
+ * Walks both per-resource and top-level relations to build a flat summary list
+ * the sidebar can render.
+ */
+export function summarizeRelations(spec: ZeroAPISpec): RelationSummary[] {
+  const out: RelationSummary[] = [];
+  for (const r of spec.resources) {
+    for (const rel of r.relations ?? []) {
+      out.push({ label: `${r.name} → ${rel.resource}`, kind: rel.type });
+    }
+  }
+  for (const rel of spec.relations ?? []) {
+    out.push({ label: `${rel.from} → ${rel.to}`, kind: rel.type });
+  }
+  return out;
+}
+
 export function computeInsights(
   messages: ChatMessage[],
   spec: ZeroAPISpec | null,
@@ -138,20 +207,42 @@ export function computeInsights(
       endpointsCount += (r.endpoints ?? ["list", "create", "read", "update", "delete"]).length;
       endpointsCount += r.customEndpoints?.length ?? 0;
     }
-    const auth = spec.auth?.strategy?.toUpperCase();
-    const authStrategy: ConversationInsights["authStrategy"] =
-      auth === "JWT" ? "JWT" : auth === "BEARER" ? "Bearer" : auth === "APIKEY" ? "API Key" : "Aucune";
+
+    const authFeatures = detectAuthFeatures(spec);
+    // Legacy field — pick the most prominent feature for the single-value display.
+    const authStrategy: ConversationInsights["authStrategy"] = authFeatures.includes("JWT")
+      ? "JWT"
+      : authFeatures.includes("OAuth")
+        ? "OAuth"
+        : authFeatures.includes("API Key")
+          ? "API Key"
+          : authFeatures.includes("Bearer")
+            ? "Bearer"
+            : "Aucune";
+
     const roles = spec.roles?.map((r) => r.name) ?? [];
     const rateLimit = spec.rateLimit
       ? `${spec.rateLimit.max} req / ${Math.round(spec.rateLimit.windowMs / 1000)}s`
       : null;
+
+    const relations = summarizeRelations(spec);
+    const features = detectFeatures(spec);
+    const permissions = spec.permissions ?? [];
+    const hasPermissions = permissions.length > 0;
+    const ownOnly = permissions.some((p) => p.rules.some((r) => r.ownOnly === true));
+
     return {
       confidence: 100,
       authStrategy,
+      authFeatures,
       roles,
       rateLimit,
       resourcesCount,
       endpointsCount,
+      relations,
+      features,
+      ownOnly,
+      hasPermissions,
       specReady: true,
       summary: buildSummary(resourcesCount, authStrategy, endpointsCount),
     };
@@ -165,13 +256,30 @@ export function computeInsights(
   const resourceMatches = text.match(/(?:resource|ressource|entit[ée]|model|table|fiche)/gi);
   const resourcesCount = Math.max(0, Math.min(8, Math.round((resourceMatches?.length ?? 0) / 2)));
   const endpointsCount = resourcesCount * 5;
+  // Best-effort feature detection from the raw conversation
+  const features: EnabledFeature[] = [];
+  if (/upload|photo|image|fichier|avatar|pi[èe]ce jointe|document/i.test(text)) features.push("fileUpload");
+  if (/webhook|stripe webhook|notifier|notification syst[eè]me/i.test(text)) features.push("webhooks");
+  if (/recherche|search|filtre|fuzzy/i.test(text)) features.push("search");
+  // Map detected single-strategy to multi-feature list
+  const authFeatures: AuthFeature[] = [];
+  if (authStrategy === "JWT") authFeatures.push("JWT");
+  if (authStrategy === "OAuth") authFeatures.push("OAuth", "JWT");
+  if (authStrategy === "API Key") authFeatures.push("API Key");
+  if (authStrategy === "Bearer") authFeatures.push("Bearer");
+
   return {
     confidence,
     authStrategy,
+    authFeatures,
     roles,
     rateLimit,
     resourcesCount,
     endpointsCount,
+    relations: [],
+    features,
+    ownOnly: /priv[ée]|propre|ses propres|own[A-Z]/i.test(text),
+    hasPermissions: false,
     specReady: false,
     summary:
       resourcesCount > 0
@@ -304,7 +412,7 @@ export function diffSpecs(prev: ZeroAPISpec | null, next: ZeroAPISpec): SpecDiff
       }
     }
     if (JSON.stringify(prev.auth) !== JSON.stringify(next.auth)) {
-      out.modified.push("Stratégie d'authentification");
+      out.modified.push("Authentification");
     }
     if (JSON.stringify(prev.roles) !== JSON.stringify(next.roles)) {
       out.modified.push("Rôles RBAC");
@@ -312,10 +420,22 @@ export function diffSpecs(prev: ZeroAPISpec | null, next: ZeroAPISpec): SpecDiff
     if (JSON.stringify(prev.rateLimit) !== JSON.stringify(next.rateLimit)) {
       out.modified.push("Rate limit");
     }
+    if (JSON.stringify(prev.relations ?? []) !== JSON.stringify(next.relations ?? [])) {
+      out.modified.push("Relations");
+    }
+    if (JSON.stringify(prev.permissions ?? []) !== JSON.stringify(next.permissions ?? [])) {
+      out.modified.push("Permissions (RBAC)");
+    }
+    if (JSON.stringify(prev.features ?? {}) !== JSON.stringify(next.features ?? {})) {
+      out.modified.push("Features");
+    }
   } else {
-    if (next.auth?.strategy) out.added.push("Stratégie d'authentification");
+    if (detectAuthFeatures(next).length > 0) out.added.push("Authentification");
     if (next.roles?.length) out.added.push("Rôles RBAC");
     if (next.rateLimit) out.added.push("Rate limit");
+    if (next.relations?.length) out.added.push("Relations");
+    if (next.permissions?.length) out.added.push("Permissions (RBAC)");
+    if (detectFeatures(next).length > 0) out.added.push("Features");
   }
 
   return out;

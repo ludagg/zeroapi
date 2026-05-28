@@ -62,7 +62,7 @@ function packageJson(spec: ZeroAPISpec): string {
       },
       dependencies: {
         "@hono/node-server": "^1.13.7",
-        "@ludagg/zeroapi-runtime": "^0.1.0",
+        "@ludagg/zeroapi-runtime": "^0.14.0",
         "@prisma/client": "^5.22.0",
         hono: "^4.6.13",
       },
@@ -83,9 +83,30 @@ function packageJson(spec: ZeroAPISpec): string {
 function envExample(spec: ZeroAPISpec): string {
   const required = validateEnv(spec);
   const keys = new Set<string>(["DATABASE_URL", "PORT", ...(spec.requiredEnv ?? [])]);
+  // Legacy auth.secret
   if (spec.auth?.strategy === "jwt" && spec.auth.secret) keys.add(spec.auth.secret);
+  // Modern auth.jwt.secretEnv
+  if (spec.auth?.jwt?.secretEnv) keys.add(spec.auth.jwt.secretEnv);
+  // OAuth provider env vars
+  for (const provider of spec.auth?.oauth?.providers ?? []) {
+    keys.add(provider.clientIdEnv);
+    keys.add(provider.clientSecretEnv);
+  }
+  // Declared env vars
+  for (const env of spec.env ?? []) {
+    keys.add(env.name);
+  }
   for (const m of required.missing) keys.add(m);
   return [...keys].map((k) => `${k}=`).join("\n") + "\n";
+}
+
+function describeAuth(spec: ZeroAPISpec): string {
+  const parts: string[] = [];
+  if (spec.auth?.jwt?.enabled === true || spec.auth?.strategy === "jwt") parts.push("JWT");
+  if (spec.auth?.apikey?.enabled === true || spec.auth?.strategy === "apikey") parts.push("API Key");
+  if ((spec.auth?.oauth?.providers?.length ?? 0) > 0) parts.push("OAuth");
+  if (spec.auth?.strategy === "bearer" && parts.length === 0) parts.push("Bearer");
+  return parts.length > 0 ? `Auth : ${parts.join(" + ")}` : "Pas d'auth";
 }
 
 function readme(spec: ZeroAPISpec): string {
@@ -98,7 +119,7 @@ ${spec.description ?? "Backend généré par ZeroAPI."}
 
 - Hono.js + @ludagg/zeroapi-runtime
 - Prisma (${resourceCount} ressources)
-- ${spec.auth?.strategy ? `Auth : ${spec.auth.strategy.toUpperCase()}` : "Pas d'auth"}
+- ${describeAuth(spec)}
 
 ## Démarrage
 
