@@ -72,13 +72,14 @@ RÈGLES :
 
 /**
  * System prompt for the spec_generation task.
- * Describes the v0.14.0 ZeroAPI DSL — keeps full backwards compatibility with the
+ * Describes the v0.15.0 ZeroAPI DSL — keeps full backwards compatibility with the
  * legacy single-strategy `auth.strategy` shape, while encouraging the modern
  * multi-strategy `auth.jwt`/`auth.apikey`/`auth.oauth` shape when justified by the
  * conversation. Also covers the new top-level blocks: `relations`, `permissions`,
- * `env`, `features`.
+ * `env`, `features`. Since v0.15.0, relations to the reserved `User` resource
+ * are forwarded as-is to the runtime (real FK + cascade + ?include=user).
  */
-export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.14.
+export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.15.
 Le framework cible est TOUJOURS Hono.js — ne mentionne jamais Express, FastAPI ou un autre framework.
 
 SHAPE EXACTE — tout écart sera rejeté :
@@ -189,9 +190,10 @@ PATTERN "appartient au user connecté" :
   \`userId: { "type": "uuid", "required": true }\` et une règle de permission
   \`ownOnly: true\` sur cette ressource. Le runtime pose automatiquement
   \`userId = identité.userId\` à la création et filtre les lectures sur ce champ.
-- Tu peux aussi déclarer la relation \`{ "type": "manyToOne", "resource": "User", "field": "userId" }\` —
-  le préprocesseur la nettoiera côté pipeline (le runtime ne modélise pas
-  encore explicitement les relations vers User). Le filtre ownOnly reste actif.
+- Déclare AUSSI la relation \`{ "type": "manyToOne", "resource": "User", "field": "userId", "onDelete": "Cascade" }\`
+  sur la ressource. Depuis le runtime v0.15.0, ces relations vers \`User\` sont
+  pleinement supportées : vraie clé étrangère Prisma, \`?include=user\` activable,
+  cascade au delete. Ne PAS les omettre.
 
 ENV :
 - \`env[]\` déclare les variables d'environnement custom (Stripe, Twilio, etc.).
@@ -273,6 +275,10 @@ export function estimateProgress(messages: ConversationMessage[]): number {
 // pass that produces French error messages BEFORE the runtime's parseSpec
 // kicks in — so /api/generate can surface "auth.strategy doit être 'jwt',
 // 'apikey' ou 'bearer'" instead of the raw Zod issue path.
+//
+// Note: since runtime v0.15.0 we no longer strip relations targeting reserved
+// auth resources (User, RefreshToken, OAuthAccount) — the runtime now models
+// them as real foreign keys with cascade behavior and ?include support.
 // ============================================================================
 
 const VALID_FIELD_TYPES = [
@@ -695,7 +701,7 @@ export function normalizeSpecCandidate(raw: unknown): unknown {
     out.features = normalizeFeatures(out.features);
   }
 
-  return stripReservedAuthRelations(out);
+  return out;
 }
 
 // Loose pre-validation: matches parseSpec's strict shape but with French
@@ -763,17 +769,10 @@ const LLMSpecSchema = z
 /**
  * Resource names the runtime auto-generates from the spec's auth config and
  * therefore CANNOT appear in `spec.resources[]` (the runtime rejects them as
- * reserved). The clarifier still wants the LLM to be ABLE to declare relations
- * to these names — typically `Order → User` when JWT is enabled — so we:
- *   1. accept them as valid relation targets in our pre-validation, AND
- *   2. strip the relation entries pointing to them BEFORE handing the spec to
- *      parseSpec (which would otherwise complain "unknown resource User").
- *
- * The FK field on the source side (e.g. `userId: uuid`) is left intact — the
- * runtime relies on a convention-named `userId` column for ownOnly filtering
- * (route handler at runtime/dist/index.js:1494). So even without a formal
- * relation entry, `Order.userId` + ownOnly permission rule scopes rows per user
- * exactly as expected.
+ * reserved). Used only by `validateSemanticRules` to accept these names as
+ * valid relation targets (e.g. `Order → User` when JWT is enabled). Starting
+ * with runtime v0.15.0, relations to `User` are forwarded as-is to the
+ * runtime, which generates the real FK, `?include=user`, and cascade behavior.
  */
 function getReservedAuthResources(spec: Record<string, unknown>): Set<string> {
   const out = new Set<string>();
@@ -793,40 +792,6 @@ function getReservedAuthResources(spec: Record<string, unknown>): Set<string> {
     auth.oauth && typeof auth.oauth === "object" ? (auth.oauth as Record<string, unknown>) : null;
   if (Array.isArray(oauth?.providers) && (oauth.providers as unknown[]).length > 0) {
     out.add("OAuthAccount");
-  }
-  return out;
-}
-
-/**
- * Drops `relations[]` entries whose target points to a system-reserved
- * resource (see {@link getReservedAuthResources}). The FK field on the source
- * side stays intact. Called inside `normalizeSpecCandidate` so the runtime
- * parseSpec never sees these entries.
- */
-function stripReservedAuthRelations(spec: Record<string, unknown>): Record<string, unknown> {
-  const reserved = getReservedAuthResources(spec);
-  if (reserved.size === 0) return spec;
-  const out: Record<string, unknown> = { ...spec };
-  if (Array.isArray(out.resources)) {
-    out.resources = (out.resources as unknown[]).map((r) => {
-      if (!r || typeof r !== "object" || Array.isArray(r)) return r;
-      const res = r as Record<string, unknown>;
-      if (!Array.isArray(res.relations)) return res;
-      const filtered = (res.relations as Array<Record<string, unknown>>).filter((rel) => {
-        const target = typeof rel.resource === "string" ? rel.resource : null;
-        return !target || !reserved.has(target);
-      });
-      return { ...res, relations: filtered };
-    });
-  }
-  if (Array.isArray(out.relations)) {
-    out.relations = (out.relations as Array<Record<string, unknown>>).filter((rel) => {
-      const from = typeof rel.from === "string" ? rel.from : null;
-      const to = typeof rel.to === "string" ? rel.to : null;
-      if (from && reserved.has(from)) return false;
-      if (to && reserved.has(to)) return false;
-      return true;
-    });
   }
   return out;
 }

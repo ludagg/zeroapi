@@ -333,7 +333,7 @@ const CASES: Case[] = [
   // Bug 2 — User comme cible de relation quand JWT est activé
   // ============================================================================
   {
-    label: "Bug2 · Order → User valide quand auth.jwt.enabled (relation stripée silencieusement)",
+    label: "Bug2 · Order → User valide quand auth.jwt.enabled (runtime v0.15+ génère la FK)",
     input: JSON.stringify({
       version: "1.0",
       name: "shop-api",
