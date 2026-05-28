@@ -124,6 +124,7 @@ model EnvVariable {
   value     String
   managed   Boolean  @default(false)
   createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 
   job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 

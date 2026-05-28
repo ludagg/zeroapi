@@ -17,6 +17,7 @@ import { TestsPanel } from "@/components/api-detail/tests-panel";
 import { LogsTimeline } from "@/components/api-detail/logs-timeline";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
+import { VariablesPanel } from "@/components/api-detail/variables-panel";
 import {
   buildDeployConfigs,
   buildOpenApiSpec,
@@ -172,6 +173,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               { id: "docs", label: "Docs OpenAPI", n: openApiEndpoints.length || undefined },
               { id: "logs", label: "Logs", n: job.agentLogs.length || undefined },
               { id: "agents", label: "Agents", n: job.agentLogs.length || undefined },
+              { id: "variables", label: "Variables" },
               { id: "deploy", label: "Déploiement" },
             ]}
             panels={{
@@ -295,6 +297,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               docs: <OpenApiEndpoints endpoints={openApiEndpoints} />,
               logs: <LogsTimeline logs={job.agentLogs} />,
               agents: <AgentsProgress logs={job.agentLogs} />,
+              variables: <VariablesPanel jobId={job.id} />,
               deploy:
                 deployTargets.length > 0 ? (
                   <JobDeployPanel

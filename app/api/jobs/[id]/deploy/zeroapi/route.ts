@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -13,7 +14,10 @@ import {
   removeExistingDatabases,
   type CoolifyEnvVar,
 } from "@/lib/coolify";
-import { decryptSecret } from "@/lib/crypto-secrets";
+import { decryptSecret, encryptSecret } from "@/lib/crypto-secrets";
+import { computeDeployReadiness } from "@/lib/env-vars";
+import { readSpec } from "@/lib/job-helpers";
+import { getRequiredEnvVars } from "@ludagg/zeroapi-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -70,6 +74,26 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     );
   }
 
+  // ---- Pre-deploy gate: every REQUIRED (non-AUTO) variable must be set ----
+  // Generation is NEVER blocked by this — the check only runs at deploy time.
+  // We surface the missing keys + a link to the Variables tab so the owner
+  // can act immediately. The deploy doesn't even reach Coolify.
+  const spec = readSpec(job.spec);
+  if (spec) {
+    const defined = new Set(job.envVariables.map((v) => v.key));
+    const readiness = computeDeployReadiness(spec, defined);
+    if (!readiness.ready) {
+      return NextResponse.json(
+        {
+          error: `Variables requises manquantes : ${readiness.missingRequired.join(", ")}. Renseigne-les dans l'onglet Variables avant de déployer.`,
+          missingRequired: readiness.missingRequired,
+          variablesUrl: `/apis/${job.id}/settings`,
+        },
+        { status: 422 },
+      );
+    }
+  }
+
   console.log("[deploy-zeroapi] start", { jobId: job.id, env: describeCoolifyEnv() });
 
   const cfgResult = readCoolifyConfigDetailed();
@@ -87,7 +111,8 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const cfg = cfgResult.config;
   const slug = apiSlugFor(job.name, job.id);
 
-  // Decrypt user-provided env vars.
+  // Decrypt user-provided env vars (everything that's not platform-managed).
+  // We re-fetch by key because we'll mutate managed rows below (JWT_SECRET).
   const envVars: Array<{ key: string; value: string }> = [];
   let decryptFailures = 0;
   for (const ev of job.envVariables) {
@@ -101,6 +126,47 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
   if (decryptFailures > 0) {
     console.warn("[deploy-zeroapi] decrypt failures", { decryptFailures, jobId: job.id });
+  }
+
+  // ---- AUTO vars: persisted-once secrets + URL-bound vars ----
+  // JWT_SECRET is generated once and reused across redeploys so existing
+  // access tokens keep working — regenerating it would silently invalidate
+  // every signed-in client. The value is stored encrypted with managed=true,
+  // matching the same chiffrement scheme as user vars.
+  const fqdn = `api-${slug}.${cfg.cloudDomain}`;
+  const oauthCallbackBaseUrl = `https://${fqdn}`;
+
+  if (spec) {
+    const required = getRequiredEnvVars(spec);
+    const needsJwt = required.some((v) => v.source === "auth.jwt");
+    const needsOAuthCallback = required.some((v) => v.name === "OAUTH_CALLBACK_BASE_URL");
+
+    if (needsJwt) {
+      const jwtKey = required.find((v) => v.source === "auth.jwt")!.name; // typically JWT_SECRET
+      const existing = job.envVariables.find((v) => v.key === jwtKey && v.managed);
+      let jwtValue: string | null = null;
+      if (existing) {
+        try {
+          jwtValue = await decryptSecret(existing.value);
+        } catch {
+          jwtValue = null; // tamper / key rotation → mint a new one
+        }
+      }
+      if (!jwtValue) {
+        jwtValue = randomBytes(48).toString("hex");
+        const encrypted = await encryptSecret(jwtValue);
+        await prisma.envVariable.upsert({
+          where: { jobId_key: { jobId: job.id, key: jwtKey } },
+          create: { jobId: job.id, key: jwtKey, value: encrypted, managed: true },
+          update: { value: encrypted, managed: true },
+        });
+      }
+      envVars.push({ key: jwtKey, value: jwtValue });
+    }
+
+    if (needsOAuthCallback) {
+      envVars.push({ key: "OAUTH_CALLBACK_BASE_URL", value: oauthCallbackBaseUrl });
+    }
   }
 
   const deployment = await prisma.deployment.upsert({
