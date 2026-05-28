@@ -1,4 +1,10 @@
-import { createRuntime, type RuntimeResult, type ZeroAPISpec } from "@ludagg/zeroapi-runtime";
+import {
+  generateOpenAPISpec,
+  generatePrismaSchema,
+  generateTests,
+  type OpenAPISpec,
+  type ZeroAPISpec,
+} from "@ludagg/zeroapi-runtime";
 import { prisma } from "@/lib/prisma";
 import { logAgent } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
@@ -14,7 +20,15 @@ type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
  *
  * Pipeline :
  *   1. `clarifier` — sanity-check the incoming spec.
- *   2. `code`      — run `createRuntime(spec)` to produce app + artefacts.
+ *   2. `code`      — emit prismaSchema / testSuite / openApiSpec from the
+ *                    pure generators. We deliberately do NOT call
+ *                    `createRuntime()` here: that would boot the runtime in
+ *                    the platform process and trigger the fail-closed env
+ *                    checks (`resolveJwtSecret`, `validateAndGenerateEnv`)
+ *                    against the platform's `process.env`. Those checks
+ *                    belong to the DEPLOY step where the user's env vars
+ *                    are actually injected — not to GENERATION, which is
+ *                    pure code emission.
  *   3. `bundle`    — `buildBundle()` zips spec / Prisma schema / tests / etc.
  *   4. `upload`    — `uploadJobBundle()` PUTs the ZIP on R2 and mints a
  *                    7-day signed URL persisted in `Job.zipUrl`.
@@ -38,14 +52,22 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
       if (!spec.name) throw new Error("Spec sans nom");
     });
 
-    const result = await runAgent<RuntimeResult>(jobId, "code", async () => {
-      return createRuntime(spec, {
-        enableLogging: false,
-        enableCors: true,
-        enableHelmet: true,
-        enableSanitize: true,
-        enableDocs: true,
-      });
+    // Pure code-generation only — no `createRuntime()` call. Booting the
+    // runtime here would call `resolveJwtSecret()` / `validateAndGenerateEnv()`
+    // against the PLATFORM's process.env in production, which fails closed
+    // when the API requires user-supplied variables (GOOGLE_CLIENT_ID, etc.).
+    // The generated code carries its own runtime — env checks belong to the
+    // deployment step, not the generation step.
+    const result = await runAgent<{
+      prismaSchema: string;
+      testSuite: string;
+      openApiSpec: OpenAPISpec;
+    }>(jobId, "code", async () => {
+      return {
+        prismaSchema: generatePrismaSchema(spec),
+        testSuite: generateTests(spec),
+        openApiSpec: generateOpenAPISpec(spec),
+      };
     });
 
     const bundle = await runAgent(jobId, "bundle", async () => {

@@ -18,6 +18,10 @@ import { LogsTimeline } from "@/components/api-detail/logs-timeline";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
 import {
+  JobVariablesPanel,
+  type JobEnvVariable,
+} from "@/components/api-detail/job-variables-panel";
+import {
   buildDeployConfigs,
   buildOpenApiSpec,
   buildSourceFiles,
@@ -27,6 +31,7 @@ import { extractVersion, readSpec, extractAuthMode } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
 import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
 import { coolifyConfigured } from "@/lib/coolify";
+import { listSpecEnvVars, missingRequiredEnvVars } from "@/lib/env-vars";
 import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +59,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
     include: {
       deployment: true,
       agentLogs: { orderBy: { createdAt: "asc" } },
+      envVariables: true,
     },
   });
   if (!job) notFound();
@@ -86,6 +92,27 @@ export default async function JobDetailPage({ params }: { params: { id: string }
   const security = spec ? computeSecurity(spec) : null;
   const securityGrade: SecurityGrade | null =
     (job.securityScore as SecurityGrade | null) ?? security?.grade ?? null;
+
+  const specVars = spec ? listSpecEnvVars(spec) : [];
+  const definedKeys = new Set(job.envVariables.map((v) => v.key));
+  const envVariablesView: JobEnvVariable[] = specVars.map((v) => {
+    const row = job.envVariables.find((e) => e.key === v.name);
+    return {
+      name: v.name,
+      category: v.category,
+      required: v.required,
+      description: v.description ?? null,
+      example: v.example ?? null,
+      source: v.source,
+      defined: Boolean(row),
+      managed: row?.managed ?? false,
+      updatedAt: row?.updatedAt.toISOString() ?? null,
+    };
+  });
+  const missingRequired = spec ? missingRequiredEnvVars(spec, definedKeys) : [];
+  const userActionableVars = envVariablesView.filter((v) => v.category !== "auto");
+  const hasReadyVarsBanner =
+    isReady && (missingRequired.length > 0 || userActionableVars.length > 0);
 
   return (
     <>
@@ -162,6 +189,22 @@ export default async function JobDetailPage({ params }: { params: { id: string }
             </div>
           )}
 
+          {hasReadyVarsBanner && missingRequired.length > 0 && (
+            <div className="mb-6 rounded-[12px] border border-accent/30 bg-accent-soft/40 px-4 py-3 text-[13px] text-ink">
+              <div className="font-medium">
+                ✅ API générée avec succès.
+              </div>
+              <p className="mt-1 text-muted">
+                Pour la déployer sur ZeroAPI Cloud, configure d&apos;abord les{" "}
+                {missingRequired.length === 1 ? "variable requise" : "variables requises"} :{" "}
+                <span className="font-mono text-[12px] text-ink">
+                  {missingRequired.join(", ")}
+                </span>{" "}
+                dans l&apos;onglet <strong>Variables</strong>.
+              </p>
+            </div>
+          )}
+
           <JobTabs
             tabs={[
               { id: "overview", label: "Aperçu" },
@@ -170,6 +213,11 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               { id: "code", label: "Code source" },
               { id: "tests", label: "Tests", n: job.testsTotal ?? undefined },
               { id: "docs", label: "Docs OpenAPI", n: openApiEndpoints.length || undefined },
+              {
+                id: "variables",
+                label: "Variables",
+                n: userActionableVars.length || undefined,
+              },
               { id: "logs", label: "Logs", n: job.agentLogs.length || undefined },
               { id: "agents", label: "Agents", n: job.agentLogs.length || undefined },
               { id: "deploy", label: "Déploiement" },
@@ -293,6 +341,11 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 />
               ),
               docs: <OpenApiEndpoints endpoints={openApiEndpoints} />,
+              variables: spec ? (
+                <JobVariablesPanel jobId={job.id} variables={envVariablesView} />
+              ) : (
+                <EmptyHint label="Variables disponibles après génération." />
+              ),
               logs: <LogsTimeline logs={job.agentLogs} />,
               agents: <AgentsProgress logs={job.agentLogs} />,
               deploy:
