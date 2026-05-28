@@ -298,7 +298,7 @@ function buildCoolifyDockerfile(zipUrl: string): string {
     " || npm install --include=dev",
     "RUN npx prisma generate",
     "RUN npm run build",
-    "EXPOSE 3000",
+    "EXPOSE 80",
     'CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npm start"]',
     "",
   ].join("\n");
@@ -346,7 +346,7 @@ export async function deployApplication(
     name: appName,
     build_pack: "dockerfile",
     dockerfile: dockerfileB64,
-    ports_exposes: "3000",
+    ports_exposes: "80",
     instant_deploy: false,
   };
   console.log("[coolify] step 1/4 createApplication →", {
@@ -381,7 +381,7 @@ export async function deployApplication(
   const envVars: EnvVar[] = [
     { key: "DATABASE_URL", value: args.databaseUrl },
     { key: "ZEROAPI_BUNDLE_URL", value: args.zipUrl },
-    { key: "PORT", value: "3000" },
+    { key: "PORT", value: "80" },
     { key: "NODE_ENV", value: "production" },
     ...args.envVars.map((e) => ({ key: e.key, value: e.value })),
   ];
