@@ -1,5 +1,15 @@
 import type { ResourceDefinition } from "@ludagg/zeroapi-runtime";
 
+type DisplayField = { type: string; required: boolean; auto?: boolean };
+
+const AUTO_FIELDS: Array<[string, DisplayField]> = [
+  ["id", { type: "uuid", required: true, auto: true }],
+  ["createdAt", { type: "datetime", required: true, auto: true }],
+  ["updatedAt", { type: "datetime", required: true, auto: true }],
+];
+
+const AUTO_FIELD_NAMES = new Set(AUTO_FIELDS.map(([name]) => name));
+
 export function ModelsList({ resources }: { resources: ResourceDefinition[] }) {
   if (!resources.length) {
     return (
@@ -11,7 +21,10 @@ export function ModelsList({ resources }: { resources: ResourceDefinition[] }) {
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
       {resources.map((r) => {
-        const entries = Object.entries(r.fields);
+        const userEntries = (Object.entries(r.fields) as Array<[string, DisplayField]>).filter(
+          ([name]) => !AUTO_FIELD_NAMES.has(name),
+        );
+        const entries: Array<[string, DisplayField]> = [...AUTO_FIELDS, ...userEntries];
         return (
           <div key={r.name} className="overflow-hidden rounded-[14px] border border-line bg-surface">
             <div className="border-b border-line bg-bg-2 px-4 py-2.5 font-mono text-[12px]">
@@ -24,9 +37,16 @@ export function ModelsList({ resources }: { resources: ResourceDefinition[] }) {
                   key={name}
                   className="grid grid-cols-[1fr_auto] items-center gap-2 border-b border-dashed border-line py-1.5 font-mono text-[12px] text-ink-2 last:border-b-0"
                 >
-                  <span>
-                    {name}
-                    {field.required && <span className="text-danger">*</span>}
+                  <span className="flex items-center gap-1.5">
+                    <span>
+                      {name}
+                      {field.required && <span className="text-danger">*</span>}
+                    </span>
+                    {field.auto && (
+                      <span className="rounded-full bg-accent-soft px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.06em] text-accent-ink">
+                        auto
+                      </span>
+                    )}
                   </span>
                   <span className="text-[10.5px] text-muted">{field.type}</span>
                 </div>
