@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
-import { createRuntime } from "@ludagg/zeroapi-runtime";
+import {
+  generateOpenAPISpec,
+  generatePrismaSchema,
+  generateTests,
+} from "@ludagg/zeroapi-runtime";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { readSpec } from "@/lib/job-helpers";
@@ -15,9 +19,14 @@ export const dynamic = "force-dynamic";
  * Fast path : if `Job.zipUrl` is set (the worker uploaded to R2 and persisted
  * a 7-day signed URL), redirect the client there directly.
  *
- * Fallback  : rebuild the bundle on-the-fly with `createRuntime + buildBundle`
- * and stream the bytes. This keeps downloads working when R2 isn't configured
- * or for older jobs whose signed URL has expired.
+ * Fallback  : rebuild the bundle on-the-fly with the pure generators
+ * (`generatePrismaSchema`, `generateTests`, `generateOpenAPISpec`) and stream
+ * the bytes. We deliberately do NOT call `createRuntime` here: it would boot
+ * the Hono app and run `validateAndGenerateEnv`, which is fail-closed in
+ * `NODE_ENV=production` (this route runs on Vercel) and would refuse to
+ * generate the bundle for any spec requiring deploy-time env vars
+ * (e.g. OAuth's `GOOGLE_CLIENT_ID`). Bundle rebuild must never depend on the
+ * generated API's runtime env.
  */
 export async function GET(_req: Request, { params }: { params: { id: string } }) {
   const session = await auth.api.getSession({ headers: headers() });
@@ -57,12 +66,11 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     );
   }
 
-  const result = createRuntime(spec, { enableLogging: false });
   const bundle = await buildBundle({
     spec,
-    prismaSchema: result.prismaSchema,
-    testSuite: result.testSuite,
-    openApiSpec: result.openApiSpec,
+    prismaSchema: generatePrismaSchema(spec),
+    testSuite: generateTests(spec),
+    openApiSpec: generateOpenAPISpec(spec),
   });
 
   return new Response(new Uint8Array(bundle.buffer), {
