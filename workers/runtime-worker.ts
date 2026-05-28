@@ -1,4 +1,11 @@
-import { createRuntime, type RuntimeResult, type ZeroAPISpec } from "@ludagg/zeroapi-runtime";
+import {
+  generateOpenAPISpec,
+  generatePrismaSchema,
+  generateTests,
+  getRequiredEnvVars,
+  type OpenAPISpec,
+  type ZeroAPISpec,
+} from "@ludagg/zeroapi-runtime";
 import { prisma } from "@/lib/prisma";
 import { logAgent } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
@@ -9,12 +16,25 @@ import { buildBundle } from "@/workers/zip-bundle";
 
 type WorkerPayload = { jobId: string; spec: ZeroAPISpec };
 
+type CodeArtifacts = {
+  prismaSchema: string;
+  testSuite: string;
+  openApiSpec: OpenAPISpec;
+};
+
 /**
  * Trigger.dev worker.
  *
  * Pipeline :
  *   1. `clarifier` — sanity-check the incoming spec.
- *   2. `code`      — run `createRuntime(spec)` to produce app + artefacts.
+ *   2. `code`      — pure generators (`generatePrismaSchema`, `generateTests`,
+ *                    `generateOpenAPISpec`) produce the artefacts. We do NOT
+ *                    call `createRuntime` here: it boots the Hono app and runs
+ *                    `validateAndGenerateEnv` which is fail-closed in
+ *                    `NODE_ENV=production` and would refuse to start as soon
+ *                    as the spec requires any env var (e.g. OAuth's
+ *                    `GOOGLE_CLIENT_ID`). Code generation must never depend on
+ *                    deploy-time env values.
  *   3. `bundle`    — `buildBundle()` zips spec / Prisma schema / tests / etc.
  *   4. `upload`    — `uploadJobBundle()` PUTs the ZIP on R2 and mints a
  *                    7-day signed URL persisted in `Job.zipUrl`.
@@ -38,14 +58,23 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
       if (!spec.name) throw new Error("Spec sans nom");
     });
 
-    const result = await runAgent<RuntimeResult>(jobId, "code", async () => {
-      return createRuntime(spec, {
-        enableLogging: false,
-        enableCors: true,
-        enableHelmet: true,
-        enableSanitize: true,
-        enableDocs: true,
-      });
+    const result = await runAgent<CodeArtifacts>(jobId, "code", async () => {
+      const required = getRequiredEnvVars(spec)
+        .filter((v) => v.required)
+        .map((v) => v.name);
+      if (required.length > 0) {
+        await logAgent(
+          jobId,
+          "code",
+          "running",
+          `Variables requises au déploiement (info, non bloquant) : ${required.join(", ")}`,
+        );
+      }
+      return {
+        prismaSchema: generatePrismaSchema(spec),
+        testSuite: generateTests(spec),
+        openApiSpec: generateOpenAPISpec(spec),
+      };
     });
 
     const bundle = await runAgent(jobId, "bundle", async () => {
