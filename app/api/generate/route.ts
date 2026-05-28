@@ -6,12 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { routeLLM } from "@/lib/llm-router";
 import {
   CONVERSATION_SYSTEM_PROMPT,
-  SPEC_SYSTEM_PROMPT,
   countEndpoints,
   estimateProgress,
-  safeParseSpec,
   type ConversationMessage,
 } from "@/lib/spec";
+import { generateAndParseSpec } from "@/lib/spec-generation";
 import { triggerGenerateJob } from "@/lib/jobs";
 
 const RequestSchema = z.discriminatedUnion("mode", [
@@ -99,22 +98,9 @@ export async function POST(req: Request) {
   let spec;
   let specGenInfo: { provider: string; model: string; latencyMs: number } | null = null;
   try {
-    const res = await routeLLM("spec_generation", user.plan, {
-      messages: [
-        { role: "system", content: SPEC_SYSTEM_PROMPT },
-        ...payload.messages,
-        {
-          role: "user",
-          content:
-            "Génère maintenant la spec JSON finale conforme au schéma. Réponds en JSON pur, sans markdown.",
-        },
-      ],
-      maxTokens: 4096,
-      temperature: 0.1,
-      json: true,
-    });
-    spec = safeParseSpec(res.content);
-    specGenInfo = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
+    const result = await generateAndParseSpec(user.plan, payload.messages);
+    spec = result.spec;
+    specGenInfo = result.info;
   } catch (err) {
     const detail = err instanceof Error ? err.message : null;
     return NextResponse.json(

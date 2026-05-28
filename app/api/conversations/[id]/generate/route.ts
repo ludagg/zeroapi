@@ -2,13 +2,12 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { routeLLM } from "@/lib/llm-router";
 import {
   SPEC_SYSTEM_PROMPT,
   buildModificationSystemPrompt,
   countEndpoints,
-  safeParseSpec,
 } from "@/lib/spec";
+import { generateAndParseSpec } from "@/lib/spec-generation";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
 
@@ -47,22 +46,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   let spec;
   let info: { provider: string; model: string; latencyMs: number };
   try {
-    const res = await routeLLM("spec_generation", user.plan, {
-      messages: [
-        { role: "system", content: systemPrompt },
-        ...messages.map((m) => ({ role: m.role, content: m.content })),
-        {
-          role: "user",
-          content:
-            "Génère maintenant la spec JSON finale conforme au schéma. Réponds en JSON pur, sans markdown.",
-        },
-      ],
-      maxTokens: 4096,
-      temperature: 0.1,
-      json: true,
-    });
-    spec = safeParseSpec(res.content);
-    info = { provider: res.provider, model: res.model, latencyMs: res.latencyMs };
+    const result = await generateAndParseSpec(
+      user.plan,
+      messages.map((m) => ({ role: m.role, content: m.content })),
+      { systemPrompt },
+    );
+    spec = result.spec;
+    info = result.info;
   } catch (err) {
     const detail = err instanceof Error ? err.message : null;
     return NextResponse.json(

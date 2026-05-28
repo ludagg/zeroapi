@@ -184,6 +184,15 @@ NOMS RÉSERVÉS quand \`auth.jwt.enabled: true\` :
 - \`User\`, \`RefreshToken\` ne peuvent PAS être des ressources spec (le runtime les gère).
 - \`OAuthAccount\` est réservé si OAuth est configuré.
 
+PATTERN "appartient au user connecté" :
+- Pour qu'une ressource appartienne au user authentifié, ajoute un champ
+  \`userId: { "type": "uuid", "required": true }\` et une règle de permission
+  \`ownOnly: true\` sur cette ressource. Le runtime pose automatiquement
+  \`userId = identité.userId\` à la création et filtre les lectures sur ce champ.
+- Tu peux aussi déclarer la relation \`{ "type": "manyToOne", "resource": "User", "field": "userId" }\` —
+  le préprocesseur la nettoiera côté pipeline (le runtime ne modélise pas
+  encore explicitement les relations vers User). Le filtre ownOnly reste actif.
+
 ENV :
 - \`env[]\` déclare les variables d'environnement custom (Stripe, Twilio, etc.).
 - \`generate: true\` → la valeur est créée automatiquement au déploiement.
@@ -686,7 +695,7 @@ export function normalizeSpecCandidate(raw: unknown): unknown {
     out.features = normalizeFeatures(out.features);
   }
 
-  return out;
+  return stripReservedAuthRelations(out);
 }
 
 // Loose pre-validation: matches parseSpec's strict shape but with French
@@ -751,18 +760,175 @@ const LLMSpecSchema = z
  * friendly French error messages so the clarifier can correct them BEFORE
  * surfacing the spec.
  */
+/**
+ * Resource names the runtime auto-generates from the spec's auth config and
+ * therefore CANNOT appear in `spec.resources[]` (the runtime rejects them as
+ * reserved). The clarifier still wants the LLM to be ABLE to declare relations
+ * to these names — typically `Order → User` when JWT is enabled — so we:
+ *   1. accept them as valid relation targets in our pre-validation, AND
+ *   2. strip the relation entries pointing to them BEFORE handing the spec to
+ *      parseSpec (which would otherwise complain "unknown resource User").
+ *
+ * The FK field on the source side (e.g. `userId: uuid`) is left intact — the
+ * runtime relies on a convention-named `userId` column for ownOnly filtering
+ * (route handler at runtime/dist/index.js:1494). So even without a formal
+ * relation entry, `Order.userId` + ownOnly permission rule scopes rows per user
+ * exactly as expected.
+ */
+function getReservedAuthResources(spec: Record<string, unknown>): Set<string> {
+  const out = new Set<string>();
+  const auth =
+    spec.auth && typeof spec.auth === "object" && !Array.isArray(spec.auth)
+      ? (spec.auth as Record<string, unknown>)
+      : null;
+  if (!auth) return out;
+  const jwtBlock =
+    auth.jwt && typeof auth.jwt === "object" ? (auth.jwt as Record<string, unknown>) : null;
+  const jwtEnabled = jwtBlock?.enabled === true || auth.strategy === "jwt";
+  if (jwtEnabled) {
+    out.add("User");
+    out.add("RefreshToken");
+  }
+  const oauth =
+    auth.oauth && typeof auth.oauth === "object" ? (auth.oauth as Record<string, unknown>) : null;
+  if (Array.isArray(oauth?.providers) && (oauth.providers as unknown[]).length > 0) {
+    out.add("OAuthAccount");
+  }
+  return out;
+}
+
+/**
+ * Drops `relations[]` entries whose target points to a system-reserved
+ * resource (see {@link getReservedAuthResources}). The FK field on the source
+ * side stays intact. Called inside `normalizeSpecCandidate` so the runtime
+ * parseSpec never sees these entries.
+ */
+function stripReservedAuthRelations(spec: Record<string, unknown>): Record<string, unknown> {
+  const reserved = getReservedAuthResources(spec);
+  if (reserved.size === 0) return spec;
+  const out: Record<string, unknown> = { ...spec };
+  if (Array.isArray(out.resources)) {
+    out.resources = (out.resources as unknown[]).map((r) => {
+      if (!r || typeof r !== "object" || Array.isArray(r)) return r;
+      const res = r as Record<string, unknown>;
+      if (!Array.isArray(res.relations)) return res;
+      const filtered = (res.relations as Array<Record<string, unknown>>).filter((rel) => {
+        const target = typeof rel.resource === "string" ? rel.resource : null;
+        return !target || !reserved.has(target);
+      });
+      return { ...res, relations: filtered };
+    });
+  }
+  if (Array.isArray(out.relations)) {
+    out.relations = (out.relations as Array<Record<string, unknown>>).filter((rel) => {
+      const from = typeof rel.from === "string" ? rel.from : null;
+      const to = typeof rel.to === "string" ? rel.to : null;
+      if (from && reserved.has(from)) return false;
+      if (to && reserved.has(to)) return false;
+      return true;
+    });
+  }
+  return out;
+}
+
+/**
+ * Best-effort repair of JSON returned by an LLM. Handles the two failure modes
+ * we see in practice when a spec gets large:
+ *   - Prose around the JSON object → extract the first balanced \`{...}\` block.
+ *   - Output cut off mid-string / mid-value → close the open string, drop
+ *     a dangling trailing comma, then close the open structures innermost-first.
+ *
+ * Returns the repaired JSON string, or null when no plausible object can be
+ * salvaged (so the caller can keep the original parse error in the surfaced
+ * message).
+ */
+export function tryRepairJson(raw: string): string | null {
+  const stripped = raw
+    .trim()
+    .replace(/^```(?:json)?\s*/i, "")
+    .replace(/```\s*$/, "")
+    .trim();
+  const start = stripped.indexOf("{");
+  if (start < 0) return null;
+  const body = stripped.slice(start);
+
+  const stack: Array<"{" | "["> = [];
+  let inString = false;
+  let escape = false;
+  let lastBalancedEnd = -1;
+
+  for (let i = 0; i < body.length; i++) {
+    const ch = body[i];
+    if (escape) {
+      escape = false;
+      continue;
+    }
+    if (inString && ch === "\\") {
+      escape = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) continue;
+    if (ch === "{" || ch === "[") {
+      stack.push(ch);
+    } else if (ch === "}") {
+      if (stack[stack.length - 1] === "{") stack.pop();
+      if (stack.length === 0) lastBalancedEnd = i;
+    } else if (ch === "]") {
+      if (stack[stack.length - 1] === "[") stack.pop();
+      if (stack.length === 0) lastBalancedEnd = i;
+    }
+  }
+
+  // Case A — fully balanced object: return up to its closing brace.
+  if (lastBalancedEnd > 0) {
+    const candidate = body.slice(0, lastBalancedEnd + 1);
+    try {
+      JSON.parse(candidate);
+      return candidate;
+    } catch {
+      /* fall through to repair */
+    }
+  }
+
+  // Case B — truncated: close the open string, then close every open structure.
+  let repaired = body;
+  if (escape) repaired = repaired.slice(0, -1); // drop a dangling backslash
+  if (inString) repaired += '"';
+  // Drop trailing whitespace + dangling comma + dangling key like `"foo":`
+  repaired = repaired.replace(/[\s,]+$/, "");
+  repaired = repaired.replace(/"[^"]*"\s*:\s*$/, "");
+  repaired = repaired.replace(/[\s,]+$/, "");
+  while (stack.length > 0) {
+    const open = stack.pop();
+    repaired += open === "{" ? "}" : "]";
+  }
+
+  try {
+    JSON.parse(repaired);
+    return repaired;
+  } catch {
+    return null;
+  }
+}
+
 function validateSemanticRules(spec: Record<string, unknown>): string | null {
   const resources = Array.isArray(spec.resources) ? (spec.resources as Array<Record<string, unknown>>) : [];
   const resourceNames = new Set(
     resources.map((r) => (typeof r.name === "string" ? r.name : "")).filter(Boolean),
   );
+  const reserved = getReservedAuthResources(spec);
+  const allValidTargets = new Set([...resourceNames, ...reserved]);
 
-  // Per-resource relations: target must exist, manyToMany needs through
+  // Per-resource relations: target must exist (incl. reserved), manyToMany needs through
   for (const r of resources) {
     const rels = Array.isArray(r.relations) ? (r.relations as Array<Record<string, unknown>>) : [];
     for (const rel of rels) {
       const target = typeof rel.resource === "string" ? rel.resource : null;
-      if (!target || !resourceNames.has(target)) {
+      if (!target || !allValidTargets.has(target)) {
         return `relation dans "${r.name}" → "${target ?? "?"}" : ressource cible inconnue`;
       }
       if (rel.type === "manyToMany" && (typeof rel.through !== "string" || rel.through.length === 0)) {
@@ -771,15 +937,15 @@ function validateSemanticRules(spec: Record<string, unknown>): string | null {
     }
   }
 
-  // Top-level relations: from/to exist, many-to-many needs through
+  // Top-level relations: from/to exist (incl. reserved), many-to-many needs through
   const topRelations = Array.isArray(spec.relations) ? (spec.relations as Array<Record<string, unknown>>) : [];
   for (const rel of topRelations) {
     const from = typeof rel.from === "string" ? rel.from : null;
     const to = typeof rel.to === "string" ? rel.to : null;
-    if (!from || !resourceNames.has(from)) {
+    if (!from || !allValidTargets.has(from)) {
       return `relation top-level "from" inconnue : "${from ?? "?"}"`;
     }
-    if (!to || !resourceNames.has(to)) {
+    if (!to || !allValidTargets.has(to)) {
       return `relation top-level "${from}" → "${to ?? "?"}" : ressource cible inconnue`;
     }
     if (rel.type === "many-to-many" && (typeof rel.through !== "string" || rel.through.length === 0)) {
@@ -864,9 +1030,22 @@ export function safeParseSpec(jsonText: string): ZeroAPISpec {
   try {
     raw = JSON.parse(cleaned);
   } catch (e) {
-    throw new Error(
-      `Le JSON renvoyé par le LLM est invalide: ${e instanceof Error ? e.message : String(e)}`,
-    );
+    // Common LLM failure mode: output truncated mid-string when the spec
+    // grows long. Attempt a best-effort repair before surrendering.
+    const repaired = tryRepairJson(jsonText);
+    if (repaired) {
+      try {
+        raw = JSON.parse(repaired);
+      } catch {
+        throw new Error(
+          `Le JSON renvoyé par le LLM est invalide: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+    } else {
+      throw new Error(
+        `Le JSON renvoyé par le LLM est invalide: ${e instanceof Error ? e.message : String(e)}`,
+      );
+    }
   }
   const normalized = normalizeSpecCandidate(raw);
   validateSpecCandidate(normalized);

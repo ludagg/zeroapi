@@ -13,7 +13,7 @@
  * Et que les erreurs sortent un message français lisible.
  */
 
-import { safeParseSpec } from "../lib/spec.js";
+import { safeParseSpec, tryRepairJson } from "../lib/spec.js";
 import {
   detectAuthFeatures,
   detectFeatures,
@@ -329,6 +329,136 @@ const CASES: Case[] = [
     }),
     expect: "fail",
   },
+  // ============================================================================
+  // Bug 2 — User comme cible de relation quand JWT est activé
+  // ============================================================================
+  {
+    label: "Bug2 · Order → User valide quand auth.jwt.enabled (relation stripée silencieusement)",
+    input: JSON.stringify({
+      version: "1.0",
+      name: "shop-api",
+      auth: { enabled: true, strategies: ["jwt"], jwt: { enabled: true } },
+      resources: [
+        {
+          name: "Order",
+          fields: {
+            userId: { type: "uuid", required: true },
+            totalCfa: { type: "integer", required: true, min: 0 },
+          },
+          relations: [
+            { type: "manyToOne", resource: "User", field: "userId", onDelete: "Cascade" },
+          ],
+        },
+      ],
+      permissions: [
+        {
+          resource: "Order",
+          rules: [{ role: "user", actions: ["create", "read", "update"], ownOnly: true }],
+        },
+      ],
+    }),
+    expect: "ok",
+  },
+  {
+    label: "Bug2 · e-commerce complet (Order → User + Review → Product) avec OAuth Google",
+    input: JSON.stringify({
+      version: "1.0",
+      name: "shop-api",
+      description: "E-commerce avec auth Google",
+      auth: {
+        enabled: true,
+        strategies: ["jwt", "oauth"],
+        jwt: { enabled: true, secretEnv: "JWT_SECRET" },
+        oauth: {
+          providers: [
+            {
+              name: "google",
+              clientIdEnv: "GOOGLE_CLIENT_ID",
+              clientSecretEnv: "GOOGLE_CLIENT_SECRET",
+            },
+          ],
+        },
+      },
+      roles: [{ name: "admin" }, { name: "user" }],
+      resources: [
+        {
+          name: "Product",
+          fields: {
+            title: { type: "string", required: true },
+            priceCfa: { type: "integer", required: true, min: 0 },
+          },
+        },
+        {
+          name: "Order",
+          fields: {
+            userId: { type: "uuid", required: true },
+            productId: { type: "uuid", required: true },
+            quantity: { type: "integer", required: true, min: 1 },
+          },
+          relations: [
+            { type: "manyToOne", resource: "User", field: "userId", onDelete: "Cascade" },
+            { type: "manyToOne", resource: "Product", field: "productId", onDelete: "Restrict" },
+          ],
+        },
+        {
+          name: "Review",
+          fields: {
+            userId: { type: "uuid", required: true },
+            productId: { type: "uuid", required: true },
+            rating: { type: "integer", required: true, min: 1, max: 5 },
+            body: { type: "text" },
+          },
+          relations: [
+            { type: "manyToOne", resource: "User", field: "userId", onDelete: "Cascade" },
+            { type: "manyToOne", resource: "Product", field: "productId", onDelete: "Cascade" },
+          ],
+        },
+      ],
+      permissions: [
+        {
+          resource: "Order",
+          rules: [
+            { role: "user", actions: ["create", "read", "update"], ownOnly: true },
+            { role: "admin", actions: ["create", "read", "update", "delete"] },
+          ],
+        },
+        {
+          resource: "Review",
+          rules: [
+            { role: "user", actions: ["create", "read", "update", "delete"], ownOnly: true },
+          ],
+        },
+      ],
+    }),
+    expect: "ok",
+  },
+  // ============================================================================
+  // Bug 1 — JSON malformé du LLM
+  // ============================================================================
+  {
+    label: "Bug1 · JSON tronqué mid-string réparé par tryRepairJson",
+    input:
+      `{"version":"1.0","name":"shop","resources":[{"name":"Product","fields":{"title":{"type":"string","required":true,"description":"Le titre du produit qui peut être très long et`,
+    expect: "ok",
+  },
+  {
+    label: "Bug1 · JSON tronqué mid-object réparé par tryRepairJson",
+    input:
+      `{"version":"1.0","name":"shop","resources":[{"name":"Product","fields":{"title":{"type":"string","required":true},"price":{"type":"integer"`,
+    expect: "ok",
+  },
+  {
+    label: "Bug1 · JSON avec prose avant et après → bloc {...} extrait",
+    input:
+      `Voici la spec demandée :\n\n` +
+      JSON.stringify({
+        version: "1.0",
+        name: "todo",
+        resources: [{ name: "Todo", fields: { title: { type: "string" } } }],
+      }) +
+      `\n\nVoilà, c'est tout !`,
+    expect: "ok",
+  },
 ];
 
 let failed = 0;
@@ -365,8 +495,56 @@ for (const c of CASES) {
   }
 }
 
+// Direct tryRepairJson tests — purely covers the helper, independent of the
+// full normalize/parse pipeline.
+console.log(`\n→ tryRepairJson :`);
+const REPAIR_CASES: Array<{ label: string; input: string; expectKey?: string }> = [
+  {
+    label: "JSON tronqué mid-string",
+    input: `{"name":"shop","desc":"très long titre`,
+    expectKey: "name",
+  },
+  {
+    label: "JSON tronqué après comma",
+    input: `{"name":"shop","resources":[{"name":"X"},`,
+    expectKey: "resources",
+  },
+  {
+    label: "JSON tronqué après key:",
+    input: `{"name":"shop","auth":`,
+    expectKey: "name",
+  },
+  {
+    label: "JSON avec prose autour",
+    input: `Voici : {"a":1,"b":2}\n— bonne journée`,
+    expectKey: "a",
+  },
+];
+for (const c of REPAIR_CASES) {
+  const repaired = tryRepairJson(c.input);
+  if (!repaired) {
+    failed++;
+    console.error(`  ✗ ${c.label} — pas de réparation`);
+    continue;
+  }
+  try {
+    const parsed = JSON.parse(repaired);
+    if (c.expectKey && typeof parsed === "object" && parsed !== null && c.expectKey in parsed) {
+      console.log(`  ✓ ${c.label} → ${repaired.length} bytes (clé "${c.expectKey}" présente)`);
+    } else if (!c.expectKey) {
+      console.log(`  ✓ ${c.label} → ${repaired.length} bytes`);
+    } else {
+      failed++;
+      console.error(`  ✗ ${c.label} — clé "${c.expectKey}" absente : ${repaired}`);
+    }
+  } catch (e) {
+    failed++;
+    console.error(`  ✗ ${c.label} — réparation invalide : ${e}`);
+  }
+}
+
 if (failed > 0) {
   console.error(`\n❌ ${failed} cas en échec`);
   process.exit(1);
 }
-console.log(`\n✅ ${CASES.length} cas OK`);
+console.log(`\n✅ ${CASES.length} cas de pipeline + ${REPAIR_CASES.length} cas de réparation`);
