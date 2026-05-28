@@ -336,9 +336,10 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
   const responsePretty = response ? prettyJson(response.body) : null;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+    <div className="grid gap-3 sm:gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="space-y-3 lg:sticky lg:top-3 lg:self-start">
-        <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
+        {/* APIs — vertical list on desktop */}
+        <div className="hidden overflow-hidden rounded-[12px] border border-line bg-surface lg:block">
           <div className="border-b border-line px-3 py-2.5">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
               APIs ({apis.length})
@@ -384,6 +385,41 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
           </div>
         </div>
 
+        {/* APIs — horizontal chip scroll on mobile */}
+        <div className="lg:hidden">
+          <div className="mb-1.5 flex items-baseline justify-between px-1">
+            <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
+              APIs ({apis.length})
+            </div>
+          </div>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-thin">
+            {apis.map((api) => {
+              const active = api.id === selectedApiId;
+              return (
+                <button
+                  key={api.id}
+                  type="button"
+                  onClick={() => setSelectedApiId(api.id)}
+                  className={cn(
+                    "flex flex-shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] transition",
+                    active
+                      ? "border-ink bg-ink text-bg"
+                      : "border-line bg-surface text-ink hover:border-line-2",
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "inline-block h-1.5 w-1.5 flex-shrink-0 rounded-full",
+                      api.isOnline ? "bg-accent" : "bg-line-2",
+                    )}
+                  />
+                  <span className="font-medium">{api.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {selectedApi && (
           <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
             <div className="border-b border-line px-3 py-2.5">
@@ -391,7 +427,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                 Endpoints ({selectedApi.endpoints.length})
               </div>
             </div>
-            <div className="max-h-[460px] overflow-y-auto scrollbar-thin">
+            <div className="max-h-[200px] overflow-y-auto scrollbar-thin lg:max-h-[460px]">
               {selectedApi.endpoints.length === 0 ? (
                 <div className="px-3 py-6 text-center text-[12.5px] text-muted">
                   Aucun endpoint dans la spec.
@@ -412,7 +448,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     >
                       <span
                         className={
-                          "inline-flex w-12 justify-center rounded-[5px] px-1 py-0.5 font-mono text-[10px] font-semibold " +
+                          "inline-flex w-12 flex-shrink-0 justify-center rounded-[5px] px-1 py-0.5 font-mono text-[10px] font-semibold " +
                           METHOD_TONE[ep.method]
                         }
                       >
@@ -453,45 +489,77 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
         {selectedEndpoint && selectedApi ? (
           <>
             <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
-              <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
-                <span
-                  className={
-                    "inline-flex justify-center rounded-[6px] px-2 py-0.5 font-mono text-[11.5px] font-semibold " +
-                    METHOD_TONE[selectedEndpoint.method]
-                  }
-                >
-                  {selectedEndpoint.method}
-                </span>
-                <code className="min-w-0 flex-1 truncate font-mono text-[13px] text-ink">
-                  {builtUrl}
-                </code>
-                <CopyButton text={builtUrl} label="copier URL" />
-                <button
-                  type="button"
-                  onClick={send}
-                  disabled={!canSend}
-                  className={cn(
-                    "inline-flex h-9 items-center gap-1.5 rounded-[9px] px-4 text-[13px] font-medium transition",
-                    canSend
-                      ? "bg-accent text-accent-ink hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
-                      : "bg-bg-2 text-muted cursor-not-allowed",
-                  )}
-                >
-                  {sending ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      Envoi…
-                    </>
-                  ) : (
-                    <>
-                      <Play className="h-3.5 w-3.5 fill-current" />
-                      Envoyer
-                    </>
-                  )}
-                </button>
+              <div className="border-b border-line px-3 py-2.5">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={
+                      "inline-flex flex-shrink-0 justify-center rounded-[6px] px-2 py-0.5 font-mono text-[11.5px] font-semibold " +
+                      METHOD_TONE[selectedEndpoint.method]
+                    }
+                  >
+                    {selectedEndpoint.method}
+                  </span>
+                  <code className="min-w-0 flex-1 break-all font-mono text-[12px] text-ink sm:truncate sm:text-[13px]">
+                    {builtUrl}
+                  </code>
+                  <div className="hidden sm:block">
+                    <CopyButton text={builtUrl} label="copier URL" />
+                  </div>
+                </div>
+                <div className="mt-2.5 flex items-center gap-2 sm:hidden">
+                  <CopyButton text={builtUrl} label="copier" />
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={!canSend}
+                    className={cn(
+                      "inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[9px] px-4 text-[13.5px] font-medium transition",
+                      canSend
+                        ? "bg-accent text-accent-ink active:scale-[0.99]"
+                        : "bg-bg-2 text-muted cursor-not-allowed",
+                    )}
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Envoi…
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3.5 w-3.5 fill-current" />
+                        Envoyer
+                      </>
+                    )}
+                  </button>
+                </div>
+                <div className="mt-2 hidden justify-end sm:flex">
+                  <button
+                    type="button"
+                    onClick={send}
+                    disabled={!canSend}
+                    className={cn(
+                      "inline-flex h-9 items-center gap-1.5 rounded-[9px] px-4 text-[13px] font-medium transition",
+                      canSend
+                        ? "bg-accent text-accent-ink hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+                        : "bg-bg-2 text-muted cursor-not-allowed",
+                    )}
+                  >
+                    {sending ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Envoi…
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-3.5 w-3.5 fill-current" />
+                        Envoyer
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
-              <div className="flex gap-1 border-b border-line px-3">
+              <div className="flex gap-1 overflow-x-auto border-b border-line px-3 scrollbar-thin">
                 {(
                   [
                     { id: "params", label: "Paramètres" },
@@ -535,7 +603,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                               key={p}
                               className="flex items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5"
                             >
-                              <span className="min-w-[80px] font-mono text-[12px] text-accent-ink">
+                              <span className="min-w-[56px] flex-shrink-0 font-mono text-[12px] text-accent-ink sm:min-w-[80px]">
                                 {p}
                               </span>
                               <span className="text-muted-2">=</span>
@@ -545,7 +613,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                                   setPathValues((v) => ({ ...v, [p]: e.target.value }))
                                 }
                                 placeholder={`valeur de ${p}`}
-                                className="h-8 flex-1 bg-transparent font-mono text-[12.5px] text-ink outline-none placeholder:text-muted-2"
+                                className="h-8 min-w-0 flex-1 bg-transparent font-mono text-[12.5px] text-ink outline-none placeholder:text-muted-2"
                               />
                             </div>
                           ))}
@@ -648,7 +716,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
               </div>
 
               {response && (
-                <div className="flex gap-1 border-b border-line px-3">
+                <div className="flex gap-1 overflow-x-auto border-b border-line px-3 scrollbar-thin">
                   {(["body", "headers"] as const).map((t) => {
                     const isOn = responseTab === t;
                     return (
@@ -695,11 +763,11 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                       <div
                         key={k}
                         className={cn(
-                          "grid grid-cols-[200px_1fr] gap-3 px-3 py-2 font-mono text-[12px]",
+                          "flex flex-col gap-1 px-3 py-2 font-mono text-[12px] sm:grid sm:grid-cols-[200px_1fr] sm:gap-3",
                           i > 0 && "border-t border-line",
                         )}
                       >
-                        <span className="truncate text-muted">{k}</span>
+                        <span className="break-all text-muted">{k}</span>
                         <span className="break-all text-ink">{v}</span>
                       </div>
                     ))}

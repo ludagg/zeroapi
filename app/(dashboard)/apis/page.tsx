@@ -68,18 +68,18 @@ export default async function PlaygroundPage() {
     <>
       <DashboardHeader crumbs={[{ label: "Workspace", href: "/dashboard" }, { label: "Playground" }]} />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
+        <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
+          <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-5">
             <div className="min-w-0">
-              <h1 className="font-serif text-[30px] italic leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none">
+              <h1 className="font-serif text-[26px] italic leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none">
                 Playground
               </h1>
-              <p className="mt-2 max-w-2xl text-[14.5px] text-muted">
+              <p className="mt-1.5 max-w-2xl text-[13.5px] text-muted sm:mt-2 sm:text-[14.5px]">
                 Choisis une API, sélectionne un endpoint, ajuste les paramètres et lance la
                 requête. Le résultat s&apos;affiche sous le formulaire.
               </p>
             </div>
-            <div className="flex items-center gap-3 rounded-[10px] border border-line bg-surface px-3 py-2 font-mono text-[11px] text-muted">
+            <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2.5 py-1.5 font-mono text-[10.5px] text-muted sm:gap-3 sm:px-3 sm:py-2 sm:text-[11px]">
               <span className="inline-flex items-center gap-1.5">
                 <span
                   className="inline-block h-2 w-2 rounded-full bg-accent"
