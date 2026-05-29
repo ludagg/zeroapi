@@ -47,6 +47,18 @@ CMD ["npm", "start"]
 `;
 
 function packageJson(spec: ZeroAPISpec): string {
+  const dependencies: Record<string, string> = {
+    "@hono/node-server": "^1.13.7",
+    "@ludagg/zeroapi-runtime": "^0.16.1",
+    "@prisma/client": "^5.22.0",
+    hono: "^4.6.13",
+  };
+
+  const uploadProvider = spec.features?.fileUpload?.provider;
+  if (uploadProvider === "s3" || uploadProvider === "r2") {
+    dependencies["@aws-sdk/client-s3"] = "^3.0.0";
+  }
+
   return JSON.stringify(
     {
       name: spec.name,
@@ -60,12 +72,7 @@ function packageJson(spec: ZeroAPISpec): string {
         "prisma:generate": "prisma generate",
         "prisma:push": "prisma db push",
       },
-      dependencies: {
-        "@hono/node-server": "^1.13.7",
-        "@ludagg/zeroapi-runtime": "^0.14.0",
-        "@prisma/client": "^5.22.0",
-        hono: "^4.6.13",
-      },
+      dependencies,
       devDependencies: {
         "@types/node": "^20.17.10",
         prisma: "^5.22.0",
