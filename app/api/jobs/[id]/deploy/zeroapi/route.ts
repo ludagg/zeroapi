@@ -15,9 +15,8 @@ import {
   type CoolifyEnvVar,
 } from "@/lib/coolify";
 import { decryptSecret, encryptSecret } from "@/lib/crypto-secrets";
-import { computeDeployReadiness } from "@/lib/env-vars";
+import { computeDeployReadiness, getNormalizedEnvVars } from "@/lib/env-vars";
 import { readSpec } from "@/lib/job-helpers";
-import { getRequiredEnvVars } from "@ludagg/zeroapi-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -137,7 +136,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   const oauthCallbackBaseUrl = `https://${fqdn}`;
 
   if (spec) {
-    const required = getRequiredEnvVars(spec);
+    const required = getNormalizedEnvVars(spec);
     const needsJwt = required.some((v) => v.source === "auth.jwt");
     const needsOAuthCallback = required.some((v) => v.name === "OAUTH_CALLBACK_BASE_URL");
 
