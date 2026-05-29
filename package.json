@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "test:pipeline": "tsx scripts/test-pipeline.ts",
     "test:env-vars": "tsx scripts/test-env-vars.ts",
-    "test:crypto": "tsx scripts/test-crypto.ts"
+    "test:crypto": "tsx scripts/test-crypto.ts",
+    "test:operations": "tsx scripts/test-operations.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
