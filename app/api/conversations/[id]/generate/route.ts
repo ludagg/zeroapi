@@ -2,14 +2,12 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import {
-  SPEC_SYSTEM_PROMPT,
-  buildModificationSystemPrompt,
-  countEndpoints,
-} from "@/lib/spec";
+import { SPEC_SYSTEM_PROMPT, countEndpoints } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
+import { modifySpecWithAgent } from "@/lib/agent";
 import { triggerGenerateJob } from "@/lib/jobs";
+import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 
 export const dynamic = "force-dynamic";
 
@@ -37,33 +35,68 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   const previousSpec = readSpec(conv.spec ?? null);
 
-  // If we have a previous spec + job, this is a modification. The system prompt
-  // anchors the LLM to the existing spec; otherwise it's a new spec from scratch.
-  const systemPrompt = previousSpec && conv.job
-    ? `${buildModificationSystemPrompt(conv.job.name, previousSpec)}\n\n${SPEC_SYSTEM_PROMPT}`
-    : SPEC_SYSTEM_PROMPT;
-
-  let spec;
+  let spec: ZeroAPISpec;
   let info: { provider: string; model: string; latencyMs: number };
-  try {
-    const result = await generateAndParseSpec(
-      user.plan,
-      messages.map((m) => ({ role: m.role, content: m.content })),
-      { systemPrompt },
-    );
-    spec = result.spec;
-    info = result.info;
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : null;
-    return NextResponse.json(
-      {
-        error: detail
-          ? `Impossible de générer une spec valide — ${detail}`
-          : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
-        details: detail,
-      },
-      { status: 502 },
-    );
+
+  if (previousSpec) {
+    // MODIFICATION — drive incremental, validated operations through the agent
+    // instead of regenerating the whole spec (which caused field/relation
+    // drift). The model never rewrites the spec; the tested engine applies the
+    // operations it chooses.
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    if (!lastUser) {
+      return NextResponse.json({ error: "Aucune instruction de modification." }, { status: 400 });
+    }
+    try {
+      const result = await modifySpecWithAgent({ spec: previousSpec, userMessage: lastUser.content });
+      if (result.status === "needs_confirmation") {
+        return NextResponse.json(
+          {
+            error: "Cette modification est destructive et requiert une confirmation.",
+            status: "needs_confirmation",
+            impact: result.confirmation,
+            pendingOperations: result.confirmation?.pendingOperations ?? [],
+          },
+          { status: 409 },
+        );
+      }
+      if (result.status === "error" || result.status === "max_iterations") {
+        return NextResponse.json(
+          { error: result.error ?? "L'agent n'a pas pu appliquer la modification." },
+          { status: 502 },
+        );
+      }
+      // "applied" or "no_change" → deploy the (possibly unchanged) current spec.
+      spec = result.spec;
+      info = { provider: "agent", model: "operations", latencyMs: 0 };
+    } catch (err) {
+      return NextResponse.json(
+        { error: err instanceof Error ? err.message : "Erreur de l'agent de modification." },
+        { status: 502 },
+      );
+    }
+  } else {
+    // FIRST GENERATION — build the spec from scratch (unchanged path).
+    try {
+      const result = await generateAndParseSpec(
+        user.plan,
+        messages.map((m) => ({ role: m.role, content: m.content })),
+        { systemPrompt: SPEC_SYSTEM_PROMPT },
+      );
+      spec = result.spec;
+      info = result.info;
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : null;
+      return NextResponse.json(
+        {
+          error: detail
+            ? `Impossible de générer une spec valide — ${detail}`
+            : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
+          details: detail,
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const job = await prisma.$transaction(async (tx) => {

@@ -15,7 +15,8 @@
     "test:pipeline": "tsx scripts/test-pipeline.ts",
     "test:env-vars": "tsx scripts/test-env-vars.ts",
     "test:crypto": "tsx scripts/test-crypto.ts",
-    "test:operations": "tsx scripts/test-operations.ts"
+    "test:operations": "tsx scripts/test-operations.ts",
+    "test:agent": "tsx scripts/test-spec-agent.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
