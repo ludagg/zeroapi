@@ -22,6 +22,52 @@ import {
 
 export type VarCategory = "auto" | "required" | "optional";
 
+/**
+ * S3 fileUpload env-var name reconciliation.
+ *
+ * The runtime is internally inconsistent for `feature.fileUpload` (s3/r2):
+ *   - `getRequiredEnvVars()` advertises AWS_*-style names
+ *     (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION, AWS_BUCKET,
+ *     R2_ENDPOINT) — this is what the dashboard would otherwise show and the
+ *     user would fill in;
+ *   - but the *deployed* API reads its config via `readS3ConfigFromEnv()`,
+ *     which looks up S3_BUCKET, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY,
+ *     S3_ENDPOINT and S3_REGION.
+ *
+ * Result: the user fills AWS_*, the container boots, finds no S3_* and crashes
+ * with "S3 storage is enabled but required env vars are missing".
+ *
+ * The deployed reader is the source of truth — those are the names the bucket
+ * client actually consumes. We reconcile the advertised names to it here so the
+ * dashboard lists, validation and deploy injection all speak S3_*. The remap is
+ * scoped to `source === "feature.fileUpload"` so an unrelated user-declared var
+ * that happens to be named e.g. AWS_BUCKET is never touched.
+ */
+const S3_ENV_NAME_REMAP: Readonly<Record<string, string>> = {
+  AWS_ACCESS_KEY_ID: "S3_ACCESS_KEY_ID",
+  AWS_SECRET_ACCESS_KEY: "S3_SECRET_ACCESS_KEY",
+  AWS_REGION: "S3_REGION",
+  AWS_BUCKET: "S3_BUCKET",
+  R2_ENDPOINT: "S3_ENDPOINT",
+};
+
+/**
+ * Wraps the runtime's `getRequiredEnvVars` and rewrites the fileUpload S3 var
+ * names to the ones the deployed runtime actually reads. Every helper in this
+ * module goes through this instead of calling `getRequiredEnvVars` directly, so
+ * the whole platform (dashboard list, `canUserSet`, deploy readiness, deploy
+ * injection) stays aligned with `readS3ConfigFromEnv`.
+ */
+export function getNormalizedEnvVars(spec: ZeroAPISpec): AggregatedEnvVar[] {
+  return getRequiredEnvVars(spec).map((v) => {
+    if (v.source === "feature.fileUpload") {
+      const renamed = S3_ENV_NAME_REMAP[v.name];
+      if (renamed) return { ...v, name: renamed };
+    }
+    return v;
+  });
+}
+
 export interface CategorizedEnvVar {
   name: string;
   required: boolean;
@@ -64,7 +110,7 @@ export function buildCategorizedList(
   spec: ZeroAPISpec,
   definedKeys: ReadonlySet<string>,
 ): CategorizedEnvVar[] {
-  return getRequiredEnvVars(spec).map<CategorizedEnvVar>((v) => ({
+  return getNormalizedEnvVars(spec).map<CategorizedEnvVar>((v) => ({
     name: v.name,
     required: v.required,
     description: v.description,
@@ -81,7 +127,7 @@ export function buildCategorizedList(
  * platform, manual override would be a footgun).
  */
 export function canUserSet(spec: ZeroAPISpec, key: string): boolean {
-  const v = getRequiredEnvVars(spec).find((x) => x.name === key);
+  const v = getNormalizedEnvVars(spec).find((x) => x.name === key);
   if (!v) return false;
   return !isAutoVar(v);
 }
@@ -104,7 +150,7 @@ export function computeDeployReadiness(
   const setRequired: string[] = [];
   const autoVars: string[] = [];
 
-  for (const v of getRequiredEnvVars(spec)) {
+  for (const v of getNormalizedEnvVars(spec)) {
     if (isAutoVar(v)) {
       autoVars.push(v.name);
       continue;

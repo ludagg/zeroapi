@@ -2,11 +2,11 @@ import {
   generateOpenAPISpec,
   generatePrismaSchema,
   generateTests,
-  getRequiredEnvVars,
   type OpenAPISpec,
   type ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
 import { prisma } from "@/lib/prisma";
+import { getNormalizedEnvVars } from "@/lib/env-vars";
 import { logAgent } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
 import { countTables, ensureDatabaseForJob } from "@/lib/databases";
@@ -59,7 +59,7 @@ export async function runGenerationWorker({ jobId, spec }: WorkerPayload): Promi
     });
 
     const result = await runAgent<CodeArtifacts>(jobId, "code", async () => {
-      const required = getRequiredEnvVars(spec)
+      const required = getNormalizedEnvVars(spec)
         .filter((v) => v.required)
         .map((v) => v.name);
       if (required.length > 0) {

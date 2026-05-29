@@ -121,6 +121,40 @@ async function main() {
   // OPTIONNELLE bucket
   assert(byName.get("ANALYTICS_KEY")?.category === "optional", "ANALYTICS_KEY = optional");
 
+  // file upload (R2) → noms S3_* alignés sur readS3ConfigFromEnv du runtime.
+  // Le runtime annonce des noms AWS_*/R2_ENDPOINT dans getRequiredEnvVars mais
+  // lit S3_* au démarrage : la plateforme doit exposer les noms RÉELLEMENT lus.
+  assert(
+    byName.get("S3_BUCKET")?.category === "required",
+    "S3_BUCKET = required (utilisateur)",
+  );
+  assert(
+    byName.get("S3_ACCESS_KEY_ID")?.category === "required",
+    "S3_ACCESS_KEY_ID = required",
+  );
+  assert(
+    byName.get("S3_SECRET_ACCESS_KEY")?.category === "required",
+    "S3_SECRET_ACCESS_KEY = required",
+  );
+  assert(
+    byName.get("S3_REGION")?.category === "required",
+    "S3_REGION = required",
+  );
+  assert(
+    byName.get("S3_ENDPOINT")?.category === "required",
+    "S3_ENDPOINT = required (R2)",
+  );
+  // Les noms AWS_*/R2_ENDPOINT ne doivent JAMAIS fuiter côté plateforme.
+  for (const stale of [
+    "AWS_BUCKET",
+    "AWS_ACCESS_KEY_ID",
+    "AWS_SECRET_ACCESS_KEY",
+    "AWS_REGION",
+    "R2_ENDPOINT",
+  ]) {
+    assert(!byName.has(stale), `${stale} ne doit pas être exposé (renommé en S3_*)`);
+  }
+
   console.log("  ✓ catégorisation conforme");
 
   // ── Validation des clés ──────────────────────────────────────────────────
@@ -128,6 +162,10 @@ async function main() {
   assert(canUserSet(rich, "STRIPE_SECRET_KEY"), "Stripe doit être modifiable");
   assert(canUserSet(rich, "GOOGLE_CLIENT_ID"), "OAuth client id modifiable");
   assert(canUserSet(rich, "ANALYTICS_KEY"), "Optionnelle modifiable");
+  assert(canUserSet(rich, "S3_BUCKET"), "S3_BUCKET (file upload) modifiable");
+  assert(canUserSet(rich, "S3_ACCESS_KEY_ID"), "S3_ACCESS_KEY_ID modifiable");
+  assert(!canUserSet(rich, "AWS_BUCKET"), "AWS_BUCKET refusé (nom obsolète)");
+  assert(!canUserSet(rich, "R2_ENDPOINT"), "R2_ENDPOINT refusé (renommé S3_ENDPOINT)");
   assert(!canUserSet(rich, "JWT_SECRET"), "JWT_SECRET non modifiable (auto)");
   assert(!canUserSet(rich, "DATABASE_URL"), "DATABASE_URL non modifiable");
   assert(!canUserSet(rich, "OAUTH_CALLBACK_BASE_URL"), "Callback base URL non modifiable");
@@ -159,11 +197,11 @@ async function main() {
     "GOOGLE_CLIENT_ID",
     "GOOGLE_CLIENT_SECRET",
     "STRIPE_SECRET_KEY",
-    "AWS_ACCESS_KEY_ID",
-    "AWS_SECRET_ACCESS_KEY",
-    "AWS_REGION",
-    "AWS_BUCKET",
-    "R2_ENDPOINT",
+    "S3_ACCESS_KEY_ID",
+    "S3_SECRET_ACCESS_KEY",
+    "S3_REGION",
+    "S3_BUCKET",
+    "S3_ENDPOINT",
   ]);
   const rOk = computeDeployReadiness(rich, defined);
   assert(rOk.ready, "ready=true attendu");
