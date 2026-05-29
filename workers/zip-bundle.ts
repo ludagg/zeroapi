@@ -30,8 +30,33 @@ const { app } = createRuntime(spec as ZeroAPISpec, {
   validateEnv: true,
 });
 
+// Force \`charset=utf-8\` sur les réponses JSON/texte. Le runtime sert
+// /openapi.json (et les autres réponses JSON) en \`application/json\` tout court :
+// les octets sont du bon UTF-8, mais un client/proxy qui retombe sur Latin-1
+// affiche « tÃ¢ches » au lieu de « tâches ». On déclare l'encodage à la source
+// au lieu de réécrire les caractères.
+const baseFetch = app.fetch.bind(app);
+const fetch = (...args: Parameters<typeof app.fetch>): Promise<Response> =>
+  Promise.resolve(baseFetch(...args)).then((res) => {
+    const ct = res.headers.get("content-type");
+    if (
+      ct &&
+      /^(application\\/([\\w.+-]*\\+)?json|text\\/[\\w.+-]+)\\s*(;|$)/i.test(ct) &&
+      !/charset/i.test(ct)
+    ) {
+      const headers = new Headers(res.headers);
+      headers.set("content-type", \`\${ct}; charset=utf-8\`);
+      return new Response(res.body, {
+        status: res.status,
+        statusText: res.statusText,
+        headers,
+      });
+    }
+    return res;
+  });
+
 const port = Number(process.env.PORT ?? 3000);
-serve({ fetch: app.fetch, port });
+serve({ fetch, port });
 console.log(\`API listening on http://localhost:\${port}\`);
 `;
 
