@@ -24,8 +24,8 @@ importers:
         specifier: ^3.10.0
         version: 3.10.0(react-hook-form@7.76.1(react@18.3.1))
       '@ludagg/zeroapi-runtime':
-        specifier: ^0.16.0
-        version: 0.16.0(@aws-sdk/client-s3@3.1053.0)
+        specifier: ^0.16.1
+        version: 0.16.1(@aws-sdk/client-s3@3.1053.0)
       '@mistralai/mistralai':
         specifier: ^1.15.1
         version: 1.15.1
@@ -672,8 +672,8 @@ packages:
   '@jsonhero/path@1.0.21':
     resolution: {integrity: sha512-gVUDj/92acpVoJwsVJ/RuWOaHyG4oFzn898WNGQItLCTQ+hOaVlEaImhwE1WqOTf+l3dGOUkbSiVKlb3q1hd1Q==}
 
-  '@ludagg/zeroapi-runtime@0.16.0':
-    resolution: {integrity: sha512-isI3t5TbZ5UCONQzlD6saSMn0xVXdyGoPi20I90Z1AD4quzLwUXvb4c9rPMl6IQk43HHQZ98VXlsJ0HWuS2aFQ==}
+  '@ludagg/zeroapi-runtime@0.16.1':
+    resolution: {integrity: sha512-3GnD8L10rULsC6V9K9Q58x5+ebErph3EvCWvZaw0djJKTHKLnuCmTpON5Bm9dqzgvzMYd6OOyqnz9ECfxLoOCg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       '@aws-sdk/client-s3': ^3.0.0
@@ -4847,7 +4847,7 @@ snapshots:
 
   '@jsonhero/path@1.0.21': {}
 
-  '@ludagg/zeroapi-runtime@0.16.0(@aws-sdk/client-s3@3.1053.0)':
+  '@ludagg/zeroapi-runtime@0.16.1(@aws-sdk/client-s3@3.1053.0)':
     dependencies:
       hono: 4.12.23
       zod: 3.25.76
