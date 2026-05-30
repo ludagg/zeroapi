@@ -20,6 +20,8 @@ import * as features from "./features";
 import * as authflows from "./authflows";
 import * as env from "./env";
 import * as custom from "./custom";
+import * as statemachine from "./statemachine";
+import * as aggregates from "./aggregates";
 
 /** Apply a single operation's pure mutation (no validation gate here). */
 export function dispatch(spec: ZeroAPISpec, op: Operation): ZeroAPISpec {
@@ -70,6 +72,8 @@ export function dispatch(spec: ZeroAPISpec, op: Operation): ZeroAPISpec {
     case "setPermissionRule": return permissions.setPermissionRule(spec, op);
     case "removePermissionRule": return permissions.removePermissionRule(spec, op);
     case "removeResourcePermissions": return permissions.removeResourcePermissions(spec, op);
+    case "setPermissionScope": return permissions.setPermissionScope(spec, op);
+    case "removePermissionScope": return permissions.removePermissionScope(spec, op);
     // features
     case "enableFileUpload": return features.enableFileUpload(spec, op);
     case "disableFileUpload": return features.disableFileUpload(spec, op);
@@ -89,6 +93,18 @@ export function dispatch(spec: ZeroAPISpec, op: Operation): ZeroAPISpec {
     // custom endpoints
     case "addCustomEndpoint": return custom.addCustomEndpoint(spec, op);
     case "removeCustomEndpoint": return custom.removeCustomEndpoint(spec, op);
+    // state machine
+    case "setStateMachine": return statemachine.setStateMachine(spec, op);
+    case "addStateTransition": return statemachine.addStateTransition(spec, op);
+    case "removeStateTransition": return statemachine.removeStateTransition(spec, op);
+    case "removeStateMachine": return statemachine.removeStateMachine(spec, op);
+    // aggregates
+    case "addAggregate": return aggregates.addAggregate(spec, op);
+    case "removeAggregate": return aggregates.removeAggregate(spec, op);
+    // resource flags / transactions
+    case "setSoftDelete": return resources.setSoftDelete(spec, op);
+    case "setTimestamps": return resources.setTimestamps(spec, op);
+    case "setTransactions": return resources.setTransactions(spec, op);
     default: {
       const _exhaustive: never = op;
       throw new OperationError(
@@ -155,6 +171,21 @@ export const OPERATION_DANGER: Record<OperationType, Danger> = {
   removeEnvVar: "guarded",
   addCustomEndpoint: "guarded",
   removeCustomEndpoint: "guarded",
+  // roles & permissions (scope)
+  setPermissionScope: "guarded",
+  removePermissionScope: "guarded",
+  // state machine
+  setStateMachine: "guarded",
+  addStateTransition: "safe",
+  removeStateTransition: "guarded",
+  removeStateMachine: "destructive",
+  // aggregates
+  addAggregate: "safe",
+  removeAggregate: "safe",
+  // resource flags / transactions
+  setSoftDelete: "guarded",
+  setTimestamps: "guarded",
+  setTransactions: "guarded",
 };
 
 /** Number of operations the engine implements. */

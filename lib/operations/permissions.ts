@@ -6,13 +6,16 @@ import type {
   PermissionRule,
   ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
+import type { PermissionScope } from "../spec";
 import type {
   RemovePermissionRuleOp,
+  RemovePermissionScopeOp,
   RemoveResourcePermissionsOp,
   SetPermissionRuleOp,
+  SetPermissionScopeOp,
 } from "./types";
 import { OperationError } from "./types";
-import { clone, getResource } from "./helpers";
+import { clone, getResource, requireNonEmpty } from "./helpers";
 
 const VALID_ACTIONS = ["create", "read", "update", "delete"] as const;
 
@@ -82,5 +85,57 @@ export function removeResourcePermissions(
   const next = clone(spec);
   next.permissions = (next.permissions ?? []).filter((p) => p.resource !== op.resource);
   if (next.permissions.length === 0) delete next.permissions;
+  return next;
+}
+
+/** Find the (resource, role) rule or throw. Scope must attach to an existing rule. */
+function findRule(
+  spec: ZeroAPISpec,
+  resource: string,
+  role: string,
+): PermissionRule {
+  const entry = (spec.permissions ?? []).find((p) => p.resource === resource);
+  const rule = entry?.rules.find((r) => r.role === role);
+  if (!rule) {
+    throw new OperationError(
+      `Aucune règle de permission pour le rôle "${role}" sur "${resource}" — déclarez-la d'abord avec setPermissionRule`,
+    );
+  }
+  return rule;
+}
+
+/**
+ * setPermissionScope — attach a multi-tenant row scope to an existing rule.
+ * The JWT requirement (scope reads a claim) is enforced by the validation gate.
+ */
+export function setPermissionScope(
+  spec: ZeroAPISpec,
+  op: SetPermissionScopeOp,
+): ZeroAPISpec {
+  getResource(spec, op.resource); // resource must exist
+  requireNonEmpty(op.column, "column");
+  findRule(spec, op.resource, op.role); // rule must exist
+
+  const scope: PermissionScope = { column: op.column };
+  if (op.claim !== undefined && op.claim !== "") scope.claim = op.claim;
+
+  const next = clone(spec);
+  findRule(next, op.resource, op.role).scope = scope;
+  return next;
+}
+
+/** removePermissionScope — drop the scope from a rule (error if none). */
+export function removePermissionScope(
+  spec: ZeroAPISpec,
+  op: RemovePermissionScopeOp,
+): ZeroAPISpec {
+  const rule = findRule(spec, op.resource, op.role);
+  if (!rule.scope) {
+    throw new OperationError(
+      `La règle "${op.role}" sur "${op.resource}" n'a pas de scope`,
+    );
+  }
+  const next = clone(spec);
+  delete findRule(next, op.resource, op.role).scope;
   return next;
 }
