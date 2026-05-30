@@ -258,6 +258,57 @@ test("éditeur — removeField référencé exige confirmation, puis s'applique"
   assert(!order.fields.some((f) => f.name === "userId"), "userId doit être retiré après confirmation");
 });
 
+// ── Renommer / supprimer une ressource ──────────────────────────────────────
+
+/** Gate-valid spec where Product has an inbound reference (Review → Product). */
+function refSpec(): ZeroAPISpec {
+  return structuredClone({
+    version: "1.0",
+    name: "shop",
+    auth: { enabled: true, strategies: ["jwt"], jwt: { enabled: true, secretEnv: "JWT_SECRET" } },
+    env: [{ name: "JWT_SECRET", required: true, generate: true, managedByCloud: true }],
+    resources: [
+      { name: "Product", fields: { title: { type: "string", required: true } } },
+      {
+        name: "Review",
+        fields: { rating: { type: "integer", required: true }, productId: { type: "uuid", required: true } },
+        relations: [{ type: "manyToOne", resource: "Product", field: "productId", onDelete: "Cascade" }],
+      },
+    ],
+  }) as unknown as ZeroAPISpec;
+}
+
+test("éditeur — renameResource propage aux relations (Review → Product devient → Item)", () => {
+  const after = okSpec(applyOperation(refSpec(), { type: "renameResource", oldName: "Product", newName: "Item" }));
+  const g = buildSpecGraph(after);
+  assert(g.nodes.some((n) => n.name === "Item") && !g.nodes.some((n) => n.name === "Product"), "le nœud doit être renommé");
+  assert(g.edges.some((e) => e.source === "Review" && e.target === "Item"), "la relation doit pointer vers Item");
+  assert(!g.edges.some((e) => e.target === "Product"), "plus aucune arête vers Product");
+});
+
+test("éditeur — renameResource vers un nom existant rejeté, spec préservée", () => {
+  const before = refSpec();
+  const snap = JSON.stringify(before);
+  const res = applyOperation(before, { type: "renameResource", oldName: "Review", newName: "Product" });
+  assert(!res.ok, "renommer vers un nom existant doit échouer");
+  assert(JSON.stringify(before) === snap, "spec d'origine préservée");
+});
+
+test("éditeur — removeResource référencé exige confirmation, puis supprime + nettoie", () => {
+  const before = refSpec();
+  // Product est référencé par Review → confirmation requise.
+  const guard = applyOperation(before, { type: "removeResource", name: "Product" });
+  assert(!guard.ok, "removeResource référencé ne doit pas s'appliquer sans confirmation");
+  assert(guard.requiresConfirmation?.operation === "removeResource", "doit demander confirmation");
+  assert((guard.requiresConfirmation?.impact.length ?? 0) > 0, "l'impact doit lister les références");
+
+  const after = okSpec(applyOperation(before, { type: "removeResource", name: "Product", confirmed: true }));
+  const g = buildSpecGraph(after);
+  assert(!g.nodes.some((n) => n.name === "Product"), "Product doit disparaître");
+  assert(!g.edges.some((e) => e.target === "Product"), "les relations vers Product doivent être nettoyées");
+  assert(g.nodes.some((n) => n.name === "Review"), "Review (la source) doit rester");
+});
+
 console.log(`\nspec → graphe — ${passed} passés, ${failed} échoués, ${assertions} assertions.`);
 if (failures.length) {
   console.log("\n" + failures.join("\n\n"));
