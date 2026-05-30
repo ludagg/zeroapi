@@ -49,7 +49,7 @@ CMD ["npm", "start"]
 function packageJson(spec: ZeroAPISpec): string {
   const dependencies: Record<string, string> = {
     "@hono/node-server": "^1.13.7",
-    "@ludagg/zeroapi-runtime": "^0.16.5",
+    "@ludagg/zeroapi-runtime": "^0.20.0",
     "@prisma/client": "^5.22.0",
     hono: "^4.6.13",
   };
