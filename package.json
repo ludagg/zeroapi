@@ -15,7 +15,8 @@
     "test:pipeline": "tsx scripts/test-pipeline.ts",
     "test:env-vars": "tsx scripts/test-env-vars.ts",
     "test:crypto": "tsx scripts/test-crypto.ts",
-    "test:operations": "tsx scripts/test-operations.ts"
+    "test:operations": "tsx scripts/test-operations.ts",
+    "test:ops020": "tsx scripts/test-ops-runtime020.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",

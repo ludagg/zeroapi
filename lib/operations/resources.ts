@@ -3,6 +3,8 @@
 import type {
   FieldDefinition,
   ResourceDefinition,
+  TransactionConfig,
+  TxOperation,
   ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
 import type {
@@ -13,6 +15,9 @@ import type {
   SetResourceEndpointsOp,
   SetResourceRbacOp,
   SetSearchableFieldsOp,
+  SetSoftDeleteOp,
+  SetTimestampsOp,
+  SetTransactionsOp,
 } from "./types";
 import { ConfirmationRequiredError, OperationError } from "./types";
 import {
@@ -215,5 +220,75 @@ export function setSearchableFields(
   }
   const next = clone(spec);
   getResource(next, op.name).searchable = [...op.fields];
+  return next;
+}
+
+/** setSoftDelete — toggle soft-delete (keep rows + deletedAt) on a resource. */
+export function setSoftDelete(
+  spec: ZeroAPISpec,
+  op: SetSoftDeleteOp,
+): ZeroAPISpec {
+  getResource(spec, op.resource);
+  const next = clone(spec);
+  getResource(next, op.resource).softDelete = op.enabled;
+  return next;
+}
+
+/** setTimestamps — toggle auto-managed createdAt/updatedAt (default: true). */
+export function setTimestamps(
+  spec: ZeroAPISpec,
+  op: SetTimestampsOp,
+): ZeroAPISpec {
+  getResource(spec, op.resource);
+  const next = clone(spec);
+  getResource(next, op.resource).timestamps = op.enabled;
+  return next;
+}
+
+const VALID_TX_TRIGGERS = ["POST", "PUT", "DELETE", "PATCH"] as const;
+const VALID_TX_ACTIONS = ["create", "update", "delete", "decrement", "increment"] as const;
+
+/** setTransactions — declare multi-step transactional operations on a resource. */
+export function setTransactions(
+  spec: ZeroAPISpec,
+  op: SetTransactionsOp,
+): ZeroAPISpec {
+  getResource(spec, op.resource);
+  if (!Array.isArray(op.transactions)) {
+    throw new OperationError("transactions doit être un tableau");
+  }
+  for (const tx of op.transactions) {
+    if (!tx || typeof tx !== "object") {
+      throw new OperationError("chaque transaction doit être un objet { trigger, operations }");
+    }
+    if (!(VALID_TX_TRIGGERS as readonly string[]).includes(tx.trigger)) {
+      throw new OperationError(
+        `trigger invalide "${tx.trigger}" (autorisés : ${VALID_TX_TRIGGERS.join(", ")})`,
+      );
+    }
+    if (!Array.isArray(tx.operations) || tx.operations.length === 0) {
+      throw new OperationError("transaction.operations doit être un tableau non vide");
+    }
+    for (const o of tx.operations) {
+      if (!(VALID_TX_ACTIONS as readonly string[]).includes(o.action)) {
+        throw new OperationError(
+          `action invalide "${o.action}" (autorisées : ${VALID_TX_ACTIONS.join(", ")})`,
+        );
+      }
+      if (typeof o.resource !== "string" || o.resource.length === 0) {
+        throw new OperationError("transaction.operations[].resource est requis");
+      }
+    }
+  }
+
+  const transactions: TransactionConfig[] = op.transactions.map((tx) => ({
+    trigger: tx.trigger,
+    operations: tx.operations.map((o) => ({ ...o }) as TxOperation),
+  }));
+
+  const next = clone(spec);
+  const r = getResource(next, op.resource);
+  if (transactions.length === 0) delete r.transactions;
+  else r.transactions = transactions;
   return next;
 }

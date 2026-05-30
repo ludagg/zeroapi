@@ -25,8 +25,16 @@ import type {
   FieldType,
   OAuthProviderName,
   ResourceRBAC,
+  TransactionConfig,
   ZeroAPISpec,
 } from "@ludagg/zeroapi-runtime";
+// Runtime 0.18–0.20 shapes. `StateTransition`, `AggregateOp` and
+// `PermissionScope` are NOT re-exported by the runtime barrel, so we consume the
+// copies mirrored in lib/spec.ts (source of truth: dist/index.d.ts).
+import type {
+  AggregateOp,
+  StateTransition,
+} from "../spec";
 
 // ── Shared parameter sub-types ──────────────────────────────────────────────
 
@@ -180,6 +188,16 @@ export interface SetPermissionRuleOp {
 }
 export interface RemovePermissionRuleOp { type: "removePermissionRule"; resource: string; role: string }
 export interface RemoveResourcePermissionsOp { type: "removeResourcePermissions"; resource: string }
+/** Multi-tenant row scope on a permission rule (runtime 0.18.0+). */
+export interface SetPermissionScopeOp {
+  type: "setPermissionScope";
+  resource: string;
+  role: string;
+  column: string;
+  /** JWT claim carrying the tenant value. Defaults to 'sub' on the runtime. */
+  claim?: string;
+}
+export interface RemovePermissionScopeOp { type: "removePermissionScope"; resource: string; role: string }
 
 // 2.7 Features
 export interface EnableFileUploadOp {
@@ -223,6 +241,40 @@ export interface RemoveEnvVarOp { type: "removeEnvVar"; name: string; confirmed?
 export interface AddCustomEndpointOp { type: "addCustomEndpoint"; resource: string; definition: CustomEndpointDef }
 export interface RemoveCustomEndpointOp { type: "removeCustomEndpoint"; resource: string; path: string; method?: CustomEndpointDef["method"] }
 
+// 2.11 State machine (ResourceDefinition.stateMachine, runtime 0.19.0+)
+export interface SetStateMachineOp {
+  type: "setStateMachine";
+  resource: string;
+  field: string;
+  initial: string;
+  transitions: StateTransition[];
+}
+export interface AddStateTransitionOp {
+  type: "addStateTransition";
+  resource: string;
+  from: string;
+  to: string;
+  roles?: string[];
+}
+export interface RemoveStateTransitionOp { type: "removeStateTransition"; resource: string; from: string; to: string }
+export interface RemoveStateMachineOp { type: "removeStateMachine"; resource: string; confirmed?: boolean }
+
+// 2.12 Aggregates (ResourceDefinition.aggregates, runtime 0.20.0+)
+export interface AddAggregateOp {
+  type: "addAggregate";
+  resource: string;
+  name: string;
+  op: AggregateOp;
+  relation: string;
+  field?: string;
+}
+export interface RemoveAggregateOp { type: "removeAggregate"; resource: string; name: string }
+
+// 2.13 Resource flags / transactions (runtime 0.16.5)
+export interface SetSoftDeleteOp { type: "setSoftDelete"; resource: string; enabled: boolean }
+export interface SetTimestampsOp { type: "setTimestamps"; resource: string; enabled: boolean }
+export interface SetTransactionsOp { type: "setTransactions"; resource: string; transactions: TransactionConfig[] }
+
 export type Operation =
   // meta
   | SetApiNameOp | SetApiDescriptionOp | SetGlobalRateLimitOp | ClearGlobalRateLimitOp
@@ -242,6 +294,7 @@ export type Operation =
   // roles & permissions
   | AddRoleOp | RemoveRoleOp | RenameRoleOp
   | SetPermissionRuleOp | RemovePermissionRuleOp | RemoveResourcePermissionsOp
+  | SetPermissionScopeOp | RemovePermissionScopeOp
   // features
   | EnableFileUploadOp | DisableFileUploadOp | AddOutboundWebhookOp | RemoveOutboundWebhookOp
   | AddInboundWebhookOp | RemoveInboundWebhookOp | SetSearchOp | SetPaginationOp | SetFeatureRateLimitOp
@@ -250,7 +303,13 @@ export type Operation =
   // env
   | AddEnvVarOp | ModifyEnvVarOp | RemoveEnvVarOp
   // custom endpoints
-  | AddCustomEndpointOp | RemoveCustomEndpointOp;
+  | AddCustomEndpointOp | RemoveCustomEndpointOp
+  // state machine
+  | SetStateMachineOp | AddStateTransitionOp | RemoveStateTransitionOp | RemoveStateMachineOp
+  // aggregates
+  | AddAggregateOp | RemoveAggregateOp
+  // resource flags / transactions
+  | SetSoftDeleteOp | SetTimestampsOp | SetTransactionsOp;
 
 export type OperationType = Operation["type"];
 
