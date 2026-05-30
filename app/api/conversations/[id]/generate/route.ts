@@ -2,12 +2,9 @@ import { NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import {
-  SPEC_SYSTEM_PROMPT,
-  buildModificationSystemPrompt,
-  countEndpoints,
-} from "@/lib/spec";
+import { SPEC_SYSTEM_PROMPT, countEndpoints, type ZeroAPISpec } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
+import { runSpecAgent } from "@/lib/agent/spec-agent";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
 
@@ -36,34 +33,76 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const previousSpec = readSpec(conv.spec ?? null);
+  const isModification = Boolean(previousSpec && conv.job);
 
-  // If we have a previous spec + job, this is a modification. The system prompt
-  // anchors the LLM to the existing spec; otherwise it's a new spec from scratch.
-  const systemPrompt = previousSpec && conv.job
-    ? `${buildModificationSystemPrompt(conv.job.name, previousSpec)}\n\n${SPEC_SYSTEM_PROMPT}`
-    : SPEC_SYSTEM_PROMPT;
-
-  let spec;
+  let spec: ZeroAPISpec;
   let info: { provider: string; model: string; latencyMs: number };
-  try {
-    const result = await generateAndParseSpec(
-      user.plan,
-      messages.map((m) => ({ role: m.role, content: m.content })),
-      { systemPrompt },
-    );
+  let agentLabel = "spec_generation";
+  let agentMessage: string;
+
+  if (isModification) {
+    // Incremental modification: the Kia agent emits targeted operation calls on
+    // the existing spec (no full regeneration → no drift). Destructive ops are
+    // surfaced for confirmation instead of being executed.
+    const t0 = Date.now();
+    const result = await runSpecAgent({
+      spec: previousSpec as ZeroAPISpec,
+      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      plan: user.plan,
+    });
+
+    if (result.status === "needs_confirmation") {
+      return NextResponse.json(
+        {
+          needsConfirmation: true,
+          confirmations: result.pendingConfirmations,
+          appliedOperations: result.appliedOperations.map((o) => o.type),
+          message: result.message,
+        },
+        { status: 200 },
+      );
+    }
+    if (result.status === "error") {
+      return NextResponse.json(
+        { error: result.message, details: result.error ?? null },
+        { status: 502 },
+      );
+    }
+    if (result.status === "no_change") {
+      return NextResponse.json(
+        { noChange: true, message: result.message },
+        { status: 200 },
+      );
+    }
+
     spec = result.spec;
-    info = result.info;
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : null;
-    return NextResponse.json(
-      {
-        error: detail
-          ? `Impossible de générer une spec valide — ${detail}`
-          : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
-        details: detail,
-      },
-      { status: 502 },
-    );
+    info = { provider: result.provider, model: result.model, latencyMs: Date.now() - t0 };
+    agentLabel = "spec_modification";
+    agentMessage =
+      `${result.provider}/${result.model} · ops=[${result.appliedOperations.map((o) => o.type).join(", ")}]`;
+  } else {
+    // First generation (blank spec from a prompt): unchanged full generation.
+    try {
+      const result = await generateAndParseSpec(
+        user.plan,
+        messages.map((m) => ({ role: m.role, content: m.content })),
+        { systemPrompt: SPEC_SYSTEM_PROMPT },
+      );
+      spec = result.spec;
+      info = result.info;
+      agentMessage = `${info.provider}/${info.model}`;
+    } catch (err) {
+      const detail = err instanceof Error ? err.message : null;
+      return NextResponse.json(
+        {
+          error: detail
+            ? `Impossible de générer une spec valide — ${detail}`
+            : "Impossible de générer une spec valide. Réessaie en précisant ta description.",
+          details: detail,
+        },
+        { status: 502 },
+      );
+    }
   }
 
   const job = await prisma.$transaction(async (tx) => {
@@ -85,9 +124,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     await tx.agentLog.create({
       data: {
         jobId: created.id,
-        agent: "spec_generation",
+        agent: agentLabel,
         status: "done",
-        message: `${info.provider}/${info.model}`,
+        message: agentMessage,
         duration: info.latencyMs,
       },
     });
