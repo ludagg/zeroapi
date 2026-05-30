@@ -4,6 +4,72 @@ import { parseSpec, ParseError, type ZeroAPISpec } from "@ludagg/zeroapi-runtime
 export type { ZeroAPISpec };
 export { parseSpec, ParseError };
 
+// ============================================================================
+// Runtime 0.20.0 shapes recopied locally
+// ----------------------------------------------------------------------------
+// The following types are part of the runtime's `ResourceDefinition` /
+// `PermissionRule` (see @ludagg/zeroapi-runtime/dist/index.d.ts) but are NOT
+// re-exported by the package barrel — only the runtime consumes them internally.
+// We mirror them verbatim so our normalization/validation stays type-checked
+// against the exact runtime shape.
+//
+// (`TransactionConfig`, `TxOperation` and `PermissionRule` ARE exported by the
+// barrel, so they are not recopied here.)
+// ============================================================================
+
+/** One allowed state transition, optionally gated by RBAC roles. */
+export interface StateTransition {
+  /** Source state (must be a value of the enum field). */
+  from: string;
+  /** Target state (must be a value of the enum field). */
+  to: string;
+  /** Roles allowed to perform this transition. Omitted/empty = any role. */
+  roles?: string[];
+}
+
+/**
+ * Declarative state machine over an existing enum field. The runtime forces the
+ * field to `initial` on create and, on update, only allows `from → to` changes
+ * listed in `transitions` (and only for the listed `roles`).
+ */
+export interface StateMachineDef {
+  /** Name of the enum field this machine governs. */
+  field: string;
+  /** State assigned at creation. Must be a value of the enum field. */
+  initial: string;
+  /** Whitelisted transitions; anything not listed is rejected (409). */
+  transitions: StateTransition[];
+}
+
+/** Closed set of aggregate operators (no custom expressions). */
+export type AggregateOp = "count" | "sum" | "avg" | "min" | "max";
+
+/**
+ * A read-only aggregate over a to-many relation. `field` is required for
+ * sum/avg/min/max and forbidden for count.
+ */
+export interface AggregateDef {
+  /** Field name added to the response (e.g. 'orderCount'). */
+  name: string;
+  op: AggregateOp;
+  /** A to-many relation of this resource. */
+  relation: string;
+  /** Child field to aggregate — required for sum/avg/min/max, omitted for count. */
+  field?: string;
+}
+
+/**
+ * Row-level scope for a permission rule (multi-tenant). A row is in scope when
+ * its `column` equals the value carried by the requester's JWT `claim`
+ * (defaults to 'sub').
+ */
+export interface PermissionScope {
+  /** Resource column to match against the claim value (e.g. 'organizationId'). */
+  column: string;
+  /** JWT claim carrying the tenant value. Defaults to 'sub'. */
+  claim?: string;
+}
+
 export const CONVERSATION_SYSTEM_PROMPT = `Tu es l'assistant de génération de ZeroAPI.
 Tu aides l'utilisateur à définir son backend API en français.
 
@@ -555,6 +621,79 @@ function normalizeTopLevelRelation(raw: unknown): unknown {
   return out;
 }
 
+// Runtime 0.20.0 resource-level closed sets.
+const VALID_AGGREGATE_OPS = ["count", "sum", "avg", "min", "max"] as const;
+const AGGREGATE_OP_ALIASES: Record<string, (typeof VALID_AGGREGATE_OPS)[number]> = {
+  count: "count",
+  sum: "sum",
+  total: "sum",
+  avg: "avg",
+  average: "avg",
+  mean: "avg",
+  min: "min",
+  minimum: "min",
+  max: "max",
+  maximum: "max",
+};
+
+const VALID_TX_TRIGGERS = ["POST", "PUT", "DELETE", "PATCH"] as const;
+const VALID_TX_ACTIONS = ["create", "update", "delete", "decrement", "increment"] as const;
+const TX_ACTION_ALIASES: Record<string, (typeof VALID_TX_ACTIONS)[number]> = {
+  create: "create",
+  update: "update",
+  delete: "delete",
+  decrement: "decrement",
+  decr: "decrement",
+  increment: "increment",
+  incr: "increment",
+};
+
+function normalizeAggregate(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  if (typeof out.op === "string") {
+    out.op = AGGREGATE_OP_ALIASES[canonKey(out.op)] ?? out.op;
+  }
+  return out;
+}
+
+function normalizeTransactionOperation(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  if (typeof out.action === "string") {
+    out.action = TX_ACTION_ALIASES[canonKey(out.action)] ?? out.action;
+  }
+  return out;
+}
+
+function normalizeTransaction(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object") return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  if (typeof out.trigger === "string") {
+    const upper = out.trigger.toUpperCase().trim();
+    if ((VALID_TX_TRIGGERS as readonly string[]).includes(upper)) out.trigger = upper;
+  }
+  if (Array.isArray(out.operations)) {
+    out.operations = (out.operations as unknown[]).map(normalizeTransactionOperation);
+  }
+  return out;
+}
+
+function normalizeStateMachine(raw: unknown): unknown {
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
+  const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
+  // Common drift: `transitions` provided as an object map { from: to } — leave
+  // arrays as-is, only coerce the obvious case where each transition entry is an
+  // object (nothing to rewrite). Kept light to avoid over-constraining.
+  if (Array.isArray(out.transitions)) {
+    out.transitions = (out.transitions as unknown[]).map((t) => {
+      if (!t || typeof t !== "object") return t;
+      return { ...(t as Record<string, unknown>) };
+    });
+  }
+  return out;
+}
+
 function normalizeResource(raw: unknown): unknown {
   if (!raw || typeof raw !== "object") return raw;
   const out: Record<string, unknown> = { ...(raw as Record<string, unknown>) };
@@ -566,6 +705,16 @@ function normalizeResource(raw: unknown): unknown {
   }
   if (Array.isArray(out.relations)) {
     out.relations = out.relations.map(normalizeResourceRelation);
+  }
+  // Runtime 0.20.0 resource extensions — recognize & lightly normalize.
+  if (out.stateMachine !== undefined) {
+    out.stateMachine = normalizeStateMachine(out.stateMachine);
+  }
+  if (Array.isArray(out.aggregates)) {
+    out.aggregates = (out.aggregates as unknown[]).map(normalizeAggregate);
+  }
+  if (Array.isArray(out.transactions)) {
+    out.transactions = (out.transactions as unknown[]).map(normalizeTransaction);
   }
   return out;
 }
@@ -766,6 +915,101 @@ const FieldSchema = z
   })
   .passthrough();
 
+// ---- Runtime 0.20.0 resource extensions (base-structure validation only) ----
+
+const StateTransitionSchema = z
+  .object({
+    from: z
+      .string({ required_error: "stateMachine.transitions[].from est requis" })
+      .min(1, "stateMachine.transitions[].from ne peut pas être vide"),
+    to: z
+      .string({ required_error: "stateMachine.transitions[].to est requis" })
+      .min(1, "stateMachine.transitions[].to ne peut pas être vide"),
+    roles: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+const StateMachineSchema = z
+  .object({
+    field: z
+      .string({ required_error: "stateMachine.field est requis" })
+      .min(1, "stateMachine.field ne peut pas être vide"),
+    initial: z
+      .string({ required_error: "stateMachine.initial est requis" })
+      .min(1, "stateMachine.initial ne peut pas être vide"),
+    transitions: z
+      .array(StateTransitionSchema, {
+        required_error: "stateMachine.transitions est requis",
+        invalid_type_error: "stateMachine.transitions doit être un tableau",
+      }),
+  })
+  .passthrough();
+
+const AggregateSchema = z
+  .object({
+    name: z
+      .string({ required_error: "aggregate.name est requis" })
+      .min(1, "aggregate.name ne peut pas être vide"),
+    op: z.enum(VALID_AGGREGATE_OPS, {
+      errorMap: () => ({
+        message: `aggregate.op doit être l'un de: ${VALID_AGGREGATE_OPS.join(", ")}`,
+      }),
+    }),
+    relation: z
+      .string({ required_error: "aggregate.relation est requis" })
+      .min(1, "aggregate.relation ne peut pas être vide"),
+    field: z.string().optional(),
+  })
+  .passthrough()
+  .superRefine((agg, ctx) => {
+    // `field` is required for sum/avg/min/max and forbidden for count.
+    if (agg.op === "count") {
+      if (typeof agg.field === "string" && agg.field.length > 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `aggregate "${agg.name}" : op "count" ne prend pas de "field"`,
+        });
+      }
+    } else if (typeof agg.field !== "string" || agg.field.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `aggregate "${agg.name}" : op "${agg.op}" exige un "field" (champ numérique de la relation)`,
+      });
+    }
+  });
+
+const TxOperationSchema = z
+  .object({
+    action: z.enum(VALID_TX_ACTIONS, {
+      errorMap: () => ({
+        message: `transaction.operations[].action doit être l'un de: ${VALID_TX_ACTIONS.join(", ")}`,
+      }),
+    }),
+    resource: z
+      .string({ required_error: "transaction.operations[].resource est requis" })
+      .min(1, "transaction.operations[].resource ne peut pas être vide"),
+    idFrom: z.string().optional(),
+    field: z.string().optional(),
+    amount: z.number().optional(),
+    amountFrom: z.string().optional(),
+  })
+  .passthrough();
+
+const TransactionSchema = z
+  .object({
+    trigger: z.enum(VALID_TX_TRIGGERS, {
+      errorMap: () => ({
+        message: `transaction.trigger doit être l'un de: ${VALID_TX_TRIGGERS.join(", ")}`,
+      }),
+    }),
+    operations: z
+      .array(TxOperationSchema, {
+        required_error: "transaction.operations est requis",
+        invalid_type_error: "transaction.operations doit être un tableau",
+      }),
+  })
+  .passthrough();
+
 const ResourceSchema = z
   .object({
     name: z
@@ -777,6 +1021,36 @@ const ResourceSchema = z
         (f) => Object.keys(f).length > 0,
         "chaque ressource doit définir au moins un champ",
       ),
+    // Runtime 0.20.0 — optional; absent on legacy specs (full backwards-compat).
+    stateMachine: StateMachineSchema.optional(),
+    aggregates: z.array(AggregateSchema).optional(),
+    transactions: z.array(TransactionSchema).optional(),
+    softDelete: z.boolean().optional(),
+    timestamps: z.boolean().optional(),
+    searchable: z.array(z.string()).optional(),
+  })
+  .passthrough();
+
+// Permission rule scope (multi-tenant RBAC, runtime 0.18.0+). Validated loosely:
+// only the structure is checked when present; everything else passes through.
+const PermissionScopeSchema = z
+  .object({
+    column: z
+      .string({ required_error: "permission.scope.column est requis" })
+      .min(1, "permission.scope.column ne peut pas être vide"),
+    claim: z.string().optional(),
+  })
+  .passthrough();
+
+const PermissionRuleSchema = z
+  .object({
+    scope: PermissionScopeSchema.optional(),
+  })
+  .passthrough();
+
+const PermissionDefSchema = z
+  .object({
+    rules: z.array(PermissionRuleSchema).optional(),
   })
   .passthrough();
 
@@ -807,6 +1081,8 @@ const LLMSpecSchema = z
         invalid_type_error: "Le champ 'resources' doit être un tableau",
       })
       .min(1, "Le champ 'resources' doit contenir au moins une ressource"),
+    // Runtime 0.18.0+ — validate `scope` structure when present (otherwise passthrough).
+    permissions: z.array(PermissionDefSchema).optional(),
   })
   .passthrough();
 
@@ -949,6 +1225,45 @@ function validateSemanticRules(spec: Record<string, unknown>): string | null {
         return `relation manyToMany dans "${r.name}" → "${target}" : un champ "through" est requis (nom de la table de jonction)`;
       }
     }
+
+    // stateMachine: field must reference an enum field; initial + transition
+    // endpoints must be values of that enum (mirrors the runtime's checks).
+    const sm =
+      r.stateMachine && typeof r.stateMachine === "object" && !Array.isArray(r.stateMachine)
+        ? (r.stateMachine as Record<string, unknown>)
+        : null;
+    if (sm) {
+      const fields =
+        r.fields && typeof r.fields === "object" ? (r.fields as Record<string, unknown>) : {};
+      const fieldName = typeof sm.field === "string" ? sm.field : null;
+      const fieldDef =
+        fieldName && fields[fieldName] && typeof fields[fieldName] === "object"
+          ? (fields[fieldName] as Record<string, unknown>)
+          : null;
+      if (!fieldDef) {
+        return `stateMachine de "${r.name}" : le champ "${fieldName ?? "?"}" n'existe pas sur la ressource`;
+      }
+      if (fieldDef.type !== "enum") {
+        return `stateMachine de "${r.name}" : le champ "${fieldName}" doit être de type enum`;
+      }
+      const values = Array.isArray(fieldDef.values)
+        ? (fieldDef.values as unknown[]).filter((v): v is string => typeof v === "string")
+        : [];
+      if (typeof sm.initial === "string" && !values.includes(sm.initial)) {
+        return `stateMachine de "${r.name}" : initial "${sm.initial}" n'est pas une valeur de l'enum "${fieldName}"`;
+      }
+      const transitions = Array.isArray(sm.transitions)
+        ? (sm.transitions as Array<Record<string, unknown>>)
+        : [];
+      for (const t of transitions) {
+        if (typeof t.from === "string" && !values.includes(t.from)) {
+          return `stateMachine de "${r.name}" : transition depuis "${t.from}" — valeur absente de l'enum "${fieldName}"`;
+        }
+        if (typeof t.to === "string" && !values.includes(t.to)) {
+          return `stateMachine de "${r.name}" : transition vers "${t.to}" — valeur absente de l'enum "${fieldName}"`;
+        }
+      }
+    }
   }
 
   // Top-level relations: from/to exist (incl. reserved), many-to-many needs through
@@ -989,6 +1304,19 @@ function validateSemanticRules(spec: Record<string, unknown>): string | null {
         }
         if (!jwtEnabled) {
           return `permission ownOnly sur "${perm.resource}" : nécessite auth.jwt.enabled = true`;
+        }
+      }
+      // scope (multi-tenant, runtime 0.18.0+) — reads a JWT claim, so requires JWT.
+      const scope =
+        rule.scope && typeof rule.scope === "object" && !Array.isArray(rule.scope)
+          ? (rule.scope as Record<string, unknown>)
+          : null;
+      if (scope) {
+        if (rule.role === "public") {
+          return `permission sur "${perm.resource}" : scope + role "public" n'a pas de sens (pas d'identité)`;
+        }
+        if (!jwtEnabled) {
+          return `permission scope sur "${perm.resource}" : nécessite auth.jwt.enabled = true`;
         }
       }
     }
