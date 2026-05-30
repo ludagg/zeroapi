@@ -12,6 +12,7 @@ import { EditableTitle } from "@/components/conversations/editable-title";
 import { SpecPanel } from "@/components/conversations/spec-sidebar";
 import { computeInsights, type ChatMessage } from "@/lib/conversation-helpers";
 import { describeOperation } from "@/lib/agent/operation-descriptions";
+import type { ApplyOperationResult } from "@/components/conversations/spec-graph";
 import type { ConfirmationImpact, OperationType } from "@/lib/operations/types";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -230,7 +231,8 @@ export function ConversationChat({
   async function applyGraphOperation(op: {
     type: string;
     params: Record<string, unknown>;
-  }): Promise<{ ok: boolean; error?: string }> {
+    confirmed?: boolean;
+  }): Promise<ApplyOperationResult> {
     try {
       const res = await fetch(`/api/conversations/${conversationId}/operation`, {
         method: "POST",
@@ -243,12 +245,21 @@ export function ConversationChat({
         assistant?: string;
         meta?: string;
         error?: string;
+        requiresConfirmation?: ConfirmationImpact[];
       };
+
+      // Destructive op (e.g. removeField referenced) — bubble the impact up to
+      // the graph so it can show a confirmation card. No toast here.
+      if (res.status === 409 && data.requiresConfirmation) {
+        return { ok: false, requiresConfirmation: data.requiresConfirmation };
+      }
+
       if (!res.ok || !data.spec) {
         const error = data.error ?? "Opération rejetée.";
         toast.error(error);
         return { ok: false, error };
       }
+
       // Same anti-drift guarantee as the chat: the server applied the operation
       // through applyOperation and returned the validated spec.
       setSpec(data.spec);
@@ -268,7 +279,7 @@ export function ConversationChat({
           ops,
         },
       ]);
-      toast.success("Relation ajoutée.");
+      toast.success("Spec mise à jour.");
       return { ok: true };
     } catch (err) {
       const error = err instanceof Error ? err.message : "Erreur réseau.";

@@ -26,11 +26,14 @@ export const dynamic = "force-dynamic";
  * Allow-list: only the operations the graph UI currently supports are accepted.
  * It grows as graph editing expands (relations now; fields/rename/remove later).
  */
-const GRAPH_OPERATIONS = new Set<OperationType>(["addRelation"]);
+const GRAPH_OPERATIONS = new Set<OperationType>(["addRelation", "addField", "removeField"]);
 
 const RequestSchema = z.object({
   type: z.string(),
   params: z.record(z.string(), z.unknown()).optional(),
+  /** User approval for a destructive op (e.g. removeField). Injected as
+   *  `confirmed: true` only when true — the UI never confirms on its own. */
+  confirmed: z.boolean().optional(),
 });
 
 function jsonError(message: string, status: number) {
@@ -73,6 +76,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const opParams = parsed.data as Record<string, unknown>;
   const op = { type, ...opParams } as Operation;
+  // The UI can never self-confirm: `confirmed` is injected only when the user
+  // explicitly approved the impact (re-sent with confirmed:true).
+  if (body.confirmed === true) {
+    (op as { confirmed?: boolean }).confirmed = true;
+  }
   const res = applyOperation(spec, op);
 
   if (!res.ok) {

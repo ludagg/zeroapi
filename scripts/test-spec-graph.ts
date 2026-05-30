@@ -211,6 +211,53 @@ test("éditeur — relation invalide rejetée proprement, spec préservée", () 
   assert(JSON.stringify(before) === snapshot, "la spec d'origine doit être préservée après rejet");
 });
 
+// ── Édition des champs : addField / removeField (+ confirmation) ─────────────
+
+function okSpec(res: ApplyResult): ZeroAPISpec {
+  assert(res.ok, `opération devait réussir: ${res.ok ? "" : res.error}`);
+  return (res as Extract<ApplyResult, { ok: true }>).spec;
+}
+
+test("éditeur — addField ajoute un champ, visible dans le nœud + anti-dérive", () => {
+  const before = validSpec();
+  const snap = JSON.stringify(before);
+  const after = okSpec(
+    applyOperation(before, { type: "addField", resource: "Product", field: "sku", fieldType: "string", options: { unique: true } }),
+  );
+  assert(JSON.stringify(before) === snap, "spec d'origine non mutée");
+  const product = buildSpecGraph(after).nodes.find((n) => n.name === "Product")!;
+  assert(product.fields.some((f) => f.name === "sku"), "le champ sku doit apparaître dans le nœud Product");
+});
+
+test("éditeur — addField dupliqué rejeté proprement, spec préservée", () => {
+  const before = validSpec();
+  const snap = JSON.stringify(before);
+  const res = applyOperation(before, { type: "addField", resource: "Product", field: "title", fieldType: "string" });
+  assert(!res.ok, "ajouter un champ déjà existant doit échouer");
+  assert(JSON.stringify(before) === snap, "spec d'origine préservée après rejet");
+});
+
+test("éditeur — removeField non référencé s'applique sans confirmation", () => {
+  const s = okSpec(applyOperation(validSpec(), { type: "addField", resource: "Product", field: "sku", fieldType: "string" }));
+  const res = applyOperation(s, { type: "removeField", resource: "Product", field: "sku" });
+  assert(res.ok, "removeField d'un champ non référencé doit s'appliquer directement");
+  const product = buildSpecGraph((res as Extract<ApplyResult, { ok: true }>).spec).nodes.find((n) => n.name === "Product")!;
+  assert(!product.fields.some((f) => f.name === "sku"), "sku doit être retiré");
+});
+
+test("éditeur — removeField référencé exige confirmation, puis s'applique", () => {
+  const s = validSpec();
+  // Order.userId porte la relation manyToOne → User : référencé → confirmation.
+  const guard = applyOperation(s, { type: "removeField", resource: "Order", field: "userId" });
+  assert(!guard.ok, "removeField référencé ne doit pas s'appliquer sans confirmation");
+  assert(guard.requiresConfirmation?.operation === "removeField", "doit demander confirmation pour removeField");
+  assert(JSON.stringify(buildSpecGraph(s)) === JSON.stringify(buildSpecGraph(validSpec())), "spec inchangée sans confirmation");
+
+  const after = okSpec(applyOperation(s, { type: "removeField", resource: "Order", field: "userId", confirmed: true }));
+  const order = buildSpecGraph(after).nodes.find((n) => n.name === "Order")!;
+  assert(!order.fields.some((f) => f.name === "userId"), "userId doit être retiré après confirmation");
+});
+
 console.log(`\nspec → graphe — ${passed} passés, ${failed} échoués, ${assertions} assertions.`);
 if (failures.length) {
   console.log("\n" + failures.join("\n\n"));
