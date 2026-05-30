@@ -26,7 +26,13 @@ export const dynamic = "force-dynamic";
  * Allow-list: only the operations the graph UI currently supports are accepted.
  * It grows as graph editing expands (relations now; fields/rename/remove later).
  */
-const GRAPH_OPERATIONS = new Set<OperationType>(["addRelation", "addField", "removeField"]);
+const GRAPH_OPERATIONS = new Set<OperationType>([
+  "addRelation",
+  "addField",
+  "removeField",
+  "renameResource",
+  "removeResource",
+]);
 
 const RequestSchema = z.object({
   type: z.string(),

@@ -28,6 +28,7 @@ import {
   Plus,
   Share2,
   Sigma,
+  Trash2,
   Workflow,
   X,
 } from "lucide-react";
@@ -58,11 +59,15 @@ type GraphActions = {
   editable: boolean;
   onAddField: (resource: string) => void;
   onRemoveField: (resource: string, field: string) => void;
+  onRenameResource: (resource: string) => void;
+  onRemoveResource: (resource: string) => void;
 };
 const GraphActionsContext = createContext<GraphActions>({
   editable: false,
   onAddField: () => {},
   onRemoveField: () => {},
+  onRenameResource: () => {},
+  onRemoveResource: () => {},
 });
 
 const FIELD_TYPES = [
@@ -133,19 +138,39 @@ function ResourceNode({ data }: NodeProps) {
         >
           {node.system ? <Share2 className="h-3 w-3" /> : <span className="font-mono text-[11px] font-bold">{node.name[0]}</span>}
         </span>
-        <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{node.name}</span>
+        {editable ? (
+          <span
+            onDoubleClick={() => actions.onRenameResource(node.name)}
+            title="Double-cliquer pour renommer"
+            className="nodrag min-w-0 flex-1 cursor-text truncate text-[13px] font-semibold text-ink"
+          >
+            {node.name}
+          </span>
+        ) : (
+          <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{node.name}</span>
+        )}
         {node.system ? (
           <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted">système</span>
         ) : (
           editable && (
-            <button
-              type="button"
-              title="Ajouter un champ"
-              onClick={() => actions.onAddField(node.name)}
-              className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
+            <span className="flex items-center gap-1">
+              <button
+                type="button"
+                title="Ajouter un champ"
+                onClick={() => actions.onAddField(node.name)}
+                className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
+                title="Supprimer la ressource"
+                onClick={() => actions.onRemoveResource(node.name)}
+                className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger"
+              >
+                <Trash2 className="h-3 w-3" />
+              </button>
+            </span>
           )
         )}
       </div>
@@ -248,6 +273,32 @@ const RELATION_CHOICES: Array<{ kebab: string; short: string; label: string }> =
 ];
 
 /**
+ * Client-side impact preview for removing a resource. Mirrors the engine's
+ * cascade (top-level + per-resource relations dropped, permissions removed) so
+ * the confirmation can list what will be affected WITHOUT a probe that would
+ * auto-delete an unreferenced resource.
+ */
+function computeRemoveImpact(spec: ZeroAPISpec | null, name: string): string[] {
+  const lines: string[] = [];
+  if (!spec) return lines;
+  const rels: string[] = [];
+  for (const r of spec.relations ?? []) {
+    if (r.from === name || r.to === name) rels.push(`${r.from} → ${r.to}`);
+  }
+  for (const res of spec.resources ?? []) {
+    for (const rel of res.relations ?? []) {
+      if (rel.resource === name) rels.push(`${res.name} → ${name}`);
+    }
+  }
+  if (rels.length > 0) lines.push(`${rels.length} relation(s) supprimée(s) : ${rels.join(", ")}`);
+  if ((spec.permissions ?? []).some((p) => p.resource === name)) {
+    lines.push(`Permissions de ${name} supprimées`);
+  }
+  lines.push("Action irréversible.");
+  return lines;
+}
+
+/**
  * Read-only visual schema of the spec — and, when `onApplyOperation` is given,
  * an EDITOR. Dragging node→node creates a relation (`addRelation`); the "+" on a
  * card adds a field (`addField`); the "×" on a row removes one (`removeField`,
@@ -274,6 +325,8 @@ export default function SpecGraph({
     field: string;
     impacts: ConfirmationImpact[];
   } | null>(null);
+  const [renameFor, setRenameFor] = useState<string | null>(null);
+  const [removeResourceFor, setRemoveResourceFor] = useState<{ name: string; lines: string[] } | null>(null);
   const [relField, setRelField] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -288,17 +341,20 @@ export default function SpecGraph({
     setPending(null);
     setAddFieldFor(null);
     setRemoveConfirm(null);
+    setRenameFor(null);
+    setRemoveResourceFor(null);
     setErr(null);
   }, []);
 
-  const onConnect = useCallback((c: Connection) => {
-    if (!c.source || !c.target) return;
-    setAddFieldFor(null);
-    setRemoveConfirm(null);
-    setErr(null);
-    setRelField("");
-    setPending({ source: c.source, target: c.target });
-  }, []);
+  const onConnect = useCallback(
+    (c: Connection) => {
+      if (!c.source || !c.target) return;
+      closeAll();
+      setRelField("");
+      setPending({ source: c.source, target: c.target });
+    },
+    [closeAll],
+  );
 
   const requestAddField = useCallback(
     (resource: string) => {
@@ -323,9 +379,33 @@ export default function SpecGraph({
     [onApplyOperation, closeAll],
   );
 
+  const requestRenameResource = useCallback(
+    (resource: string) => {
+      closeAll();
+      setRenameFor(resource);
+    },
+    [closeAll],
+  );
+
+  // removeResource ALWAYS confirms (never auto-deletes), so we never probe the
+  // engine — we compute the impact from the current spec and ask first.
+  const requestRemoveResource = useCallback(
+    (resource: string) => {
+      closeAll();
+      setRemoveResourceFor({ name: resource, lines: computeRemoveImpact(spec, resource) });
+    },
+    [closeAll, spec],
+  );
+
   const actions = useMemo<GraphActions>(
-    () => ({ editable, onAddField: requestAddField, onRemoveField: requestRemoveField }),
-    [editable, requestAddField, requestRemoveField],
+    () => ({
+      editable,
+      onAddField: requestAddField,
+      onRemoveField: requestRemoveField,
+      onRenameResource: requestRenameResource,
+      onRemoveResource: requestRemoveResource,
+    }),
+    [editable, requestAddField, requestRemoveField, requestRenameResource, requestRemoveResource],
   );
 
   async function chooseRelationType(kebab: string) {
@@ -393,6 +473,33 @@ export default function SpecGraph({
     else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
   }
 
+  async function submitRename(newName: string) {
+    if (!renameFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const res = await onApplyOperation({
+      type: "renameResource",
+      params: { oldName: renameFor, newName: newName.trim() },
+    });
+    setBusy(false);
+    if (res.ok) setRenameFor(null);
+    else setErr("error" in res ? res.error ?? "Renommage rejeté." : "Renommage rejeté.");
+  }
+
+  async function confirmRemoveResource() {
+    if (!removeResourceFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const res = await onApplyOperation({
+      type: "removeResource",
+      params: { name: removeResourceFor.name },
+      confirmed: true,
+    });
+    setBusy(false);
+    if (res.ok) setRemoveResourceFor(null);
+    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+  }
+
   if (flow.nodes.length === 0) {
     return (
       <div className="grid h-full place-items-center p-8 text-center">
@@ -427,10 +534,10 @@ export default function SpecGraph({
           }}
         />
 
-        {editable && !pending && !addFieldFor && !removeConfirm && (
+        {editable && !pending && !addFieldFor && !removeConfirm && !renameFor && !removeResourceFor && (
           <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[10px] text-muted backdrop-blur">
             <Link2 className="h-3 w-3 text-accent-ink" />
-            Glisse pour relier · + pour ajouter un champ
+            Glisse pour relier · + champ · double-clic = renommer
           </div>
         )}
 
@@ -457,14 +564,44 @@ export default function SpecGraph({
           />
         )}
 
+        {renameFor && (
+          <RenamePopover
+            resource={renameFor}
+            busy={busy}
+            error={err}
+            onSubmit={submitRename}
+            onCancel={closeAll}
+          />
+        )}
+
         {removeConfirm && (
-          <RemoveFieldCard
-            resource={removeConfirm.resource}
-            field={removeConfirm.field}
-            impacts={removeConfirm.impacts}
+          <ConfirmDeleteCard
+            title={
+              <>
+                Supprimer <span className="font-mono">{removeConfirm.resource}.{removeConfirm.field}</span> ?
+              </>
+            }
+            lines={removeConfirm.impacts.flatMap((im) => [im.reason, ...im.impact])}
+            confirmLabel="Supprimer le champ"
             busy={busy}
             error={err}
             onConfirm={confirmRemoveField}
+            onCancel={closeAll}
+          />
+        )}
+
+        {removeResourceFor && (
+          <ConfirmDeleteCard
+            title={
+              <>
+                Supprimer la ressource <span className="font-mono">{removeResourceFor.name}</span> ?
+              </>
+            }
+            lines={removeResourceFor.lines}
+            confirmLabel="Supprimer la ressource"
+            busy={busy}
+            error={err}
+            onConfirm={confirmRemoveResource}
             onCancel={closeAll}
           />
         )}
@@ -665,45 +802,93 @@ function AddFieldPopover({
   );
 }
 
-function RemoveFieldCard({
+function RenamePopover({
   resource,
-  field,
-  impacts,
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  resource: string;
+  busy: boolean;
+  error: string | null;
+  onSubmit: (newName: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(resource);
+  const canSubmit = name.trim().length > 0 && name.trim() !== resource && !busy;
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          Renommer <b className="text-ink">{resource}</b>
+        </>
+      }
+    >
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        disabled={busy}
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && canSubmit) onSubmit(name);
+        }}
+        placeholder="nouveau nom"
+        className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+      />
+      <button
+        type="button"
+        disabled={!canSubmit}
+        onClick={() => onSubmit(name)}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+        Renommer
+      </button>
+      <p className="mt-2 text-[10.5px] leading-snug text-muted">
+        Le moteur propage le renommage (relations, permissions, FK).
+      </p>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+/** Generic destructive-confirmation card (field or resource removal). */
+function ConfirmDeleteCard({
+  title,
+  lines,
+  confirmLabel,
   busy,
   error,
   onConfirm,
   onCancel,
 }: {
-  resource: string;
-  field: string;
-  impacts: ConfirmationImpact[];
+  title: React.ReactNode;
+  lines: string[];
+  confirmLabel: string;
   busy: boolean;
   error: string | null;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   return (
-    <div className="absolute left-1/2 top-3 z-20 w-[290px] -translate-x-1/2 overflow-hidden rounded-[12px] border border-warn/40 bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
+    <div className="absolute left-1/2 top-3 z-20 w-[300px] -translate-x-1/2 overflow-hidden rounded-[12px] border border-warn/40 bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
       <div className="flex items-center gap-2 border-b border-warn/30 bg-warn-soft/40 px-3 py-2 text-[12px] font-medium text-warn-ink">
-        <AlertTriangle className="h-3.5 w-3.5" />
-        Supprimer <span className="font-mono">{resource}.{field}</span> ?
+        <AlertTriangle className="h-3.5 w-3.5 flex-shrink-0" />
+        {title}
       </div>
       <div className="space-y-2.5 p-3">
-        {impacts.map((impact, i) => (
-          <div key={i}>
-            <div className="text-[12.5px] text-ink">{impact.reason}</div>
-            {impact.impact.length > 0 && (
-              <ul className="mt-1.5 space-y-1">
-                {impact.impact.map((line, j) => (
-                  <li key={j} className="flex items-start gap-1.5 text-[12px] text-muted">
-                    <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-muted-2" />
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ))}
+        {lines.length > 0 && (
+          <ul className="space-y-1">
+            {lines.map((line, j) => (
+              <li key={j} className="flex items-start gap-1.5 text-[12px] text-ink-2">
+                <span className="mt-1.5 h-1 w-1 flex-shrink-0 rounded-full bg-muted-2" />
+                {line}
+              </li>
+            ))}
+          </ul>
+        )}
         <div className="flex items-center gap-2 pt-0.5">
           <button
             type="button"
@@ -711,8 +896,8 @@ function RemoveFieldCard({
             onClick={onConfirm}
             className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-danger px-3 text-[13px] font-medium text-white transition hover:-translate-y-px disabled:opacity-50"
           >
-            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
-            Supprimer
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+            {confirmLabel}
           </button>
           <button
             type="button"
