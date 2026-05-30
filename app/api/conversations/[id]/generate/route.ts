@@ -6,21 +6,10 @@ import { countEndpoints, type ZeroAPISpec } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
-import { runKiaModification } from "@/lib/agent/run-modification";
-import { OPERATION_DANGER } from "@/lib/operations/registry";
-import type { OperationType } from "@/lib/operations/types";
 
 export const dynamic = "force-dynamic";
 
-/** Operation types the user explicitly approved for this run (destructive ops). */
-function parseApproved(value: unknown): OperationType[] {
-  if (!Array.isArray(value)) return [];
-  return value.filter(
-    (v): v is OperationType => typeof v === "string" && v in OPERATION_DANGER,
-  );
-}
-
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
 
@@ -29,15 +18,6 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       { error: `Limite atteinte (${user.generationsLimit} générations sur ton plan ${user.plan}).` },
       { status: 402 },
     );
-  }
-
-  // Optional body: { confirm?: string[] } — operation types the user approved.
-  let approvedConfirmations: OperationType[] = [];
-  try {
-    const body = await req.json();
-    approvedConfirmations = parseApproved((body as { confirm?: unknown })?.confirm);
-  } catch {
-    // No / empty body — fine, this is the common case.
   }
 
   const conv = await prisma.conversation.findFirst({
@@ -58,67 +38,15 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   let info: { provider: string; model: string; latencyMs: number };
 
   if (isModification && previousSpec && conv.job) {
-    // ── MODIFICATION via the KIA agent (operation calls, no full regen) ──────
-    // The model emits operation calls; the engine applies + validates them. The
-    // spec is never rewritten by the model, so unrelated parts can't drift.
-    const startedAt = Date.now();
-    let result;
-    try {
-      result = await runKiaModification({
-        plan: user.plan,
-        spec: previousSpec,
-        apiName: conv.job.name,
-        messages: messages.map((m) => ({ role: m.role, content: m.content })),
-        approvedConfirmations,
-      });
-    } catch (err) {
-      const detail = err instanceof Error ? err.message : null;
-      return NextResponse.json(
-        { error: detail ? `L'agent KIA a échoué — ${detail}` : "L'agent KIA a échoué.", details: detail },
-        { status: 502 },
-      );
-    }
-
-    // A destructive operation needs explicit user confirmation: surface the
-    // impact and stop. Nothing is applied; the original spec is preserved.
-    if (result.pendingConfirmations.length > 0) {
-      return NextResponse.json(
-        {
-          error: "Confirmation requise pour une opération destructive.",
-          requiresConfirmation: result.pendingConfirmations,
-          assistant: result.assistantText,
-          // Operation types to re-send in `{ confirm: [...] }` to proceed.
-          confirm: result.pendingConfirmations.map((c) => c.operation),
-        },
-        { status: 409 },
-      );
-    }
-
-    if (result.error) {
-      return NextResponse.json(
-        { error: `L'agent KIA a échoué — ${result.error}`, details: result.error },
-        { status: 502 },
-      );
-    }
-
-    if (!result.changed) {
-      return NextResponse.json(
-        {
-          error: "Aucun changement à appliquer — précise ta demande.",
-          assistant: result.assistantText,
-        },
-        { status: 422 },
-      );
-    }
-
-    spec = result.spec;
-    info = {
-      provider: result.provider,
-      model: result.model,
-      latencyMs: Date.now() - startedAt,
-    };
+    // ── MODIFICATION — ship the CURRENT spec as a build. ─────────────────────
+    // Incremental edits are applied live in the chat by the Kia agent
+    // (POST …/agent), which keeps `conv.spec` (and the job's spec) up to date.
+    // "Régénérer" therefore just rebuilds from that already-modified spec — no
+    // LLM call, no risk of re-deriving / drifting the whole spec.
+    spec = previousSpec;
+    info = { provider: "kia", model: "incremental", latencyMs: 0 };
   } else {
-    // ── FIRST GENERATION (blank spec) — unchanged full-spec generation ───────
+    // ── FIRST GENERATION (blank spec) — full-spec generation. ────────────────
     try {
       const result = await generateAndParseSpec(
         user.plan,

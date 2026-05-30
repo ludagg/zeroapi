@@ -33,6 +33,10 @@ import {
 import { runKiaAgent } from "../lib/agent/kia-agent";
 import { OPERATION_COUNT, OPERATION_DANGER } from "../lib/operations/registry";
 import type { ConfirmationImpact, OperationType } from "../lib/operations/types";
+import {
+  describeOperation,
+  summarizeAppliedOperations,
+} from "../lib/agent/operation-descriptions";
 
 // ── Harness ──────────────────────────────────────────────────────────────────
 
@@ -401,6 +405,47 @@ test("boucle — appel MALFORMÉ (zod rejette) → erreur + RETRY → op valide 
   assert(result.appliedCount === 1, "exactement 1 opération valide appliquée");
   const sku = (result.spec.resources[0].fields as Record<string, { type: string }>).sku;
   assert(sku?.type === "string", "le champ sku valide doit être appliqué après retry");
+});
+
+// ════════════════════════════════════════════════════════════════════════════
+// C. Contrat d'affichage du chat — opérations rendues LISIBLES (pas de JSON)
+// ════════════════════════════════════════════════════════════════════════════
+
+test("describeOperation — phrases lisibles en français (pas de JSON brut)", () => {
+  assert(
+    describeOperation("addResource", { name: "Avis" }) === "Ajouté la ressource Avis",
+    "addResource doit se lire « Ajouté la ressource Avis »",
+  );
+  assert(
+    describeOperation("addField", { resource: "Avis", field: "note" }) === "Ajouté le champ note à Avis",
+    "addField doit se lire « Ajouté le champ note à Avis »",
+  );
+  assert(
+    describeOperation("setPermissionScope", { resource: "Order", role: "user", column: "orgId" }).startsWith("Activé le multi-tenant"),
+    "setPermissionScope doit parler de multi-tenant",
+  );
+  assert(
+    describeOperation("setStateMachine", { resource: "Product", field: "status" }).startsWith("Ajouté un workflow d'états"),
+    "setStateMachine doit parler de workflow d'états",
+  );
+});
+
+test("flux chat — la boucle produit des opérations rendues en résumé lisible", async () => {
+  const result = await runKiaAgent({
+    model: mockModel([
+      { tool: "addResource", input: { name: "Avis", fields: { note: { type: "integer" } } } },
+      { tool: "addField", input: { resource: "Avis", field: "comment", fieldType: "text" } },
+      { text: "Fait." },
+    ]),
+    spec: baseSpec(),
+    messages: [{ role: "user", content: "Ajoute une ressource Avis avec une note et un commentaire." }],
+    maxSteps: 8,
+  });
+  // C'est exactement ce que le chat affiche (chips) et persiste (markdown).
+  const summary = summarizeAppliedOperations(result.operations);
+  assert(summary.includes("✓ Ajouté la ressource Avis"), "résumé doit lister l'ajout de la ressource");
+  assert(summary.includes("✓ Ajouté le champ comment à Avis"), "résumé doit lister l'ajout du champ");
+  assert(!summary.includes("{") && !summary.includes('"type"'), "le résumé ne doit JAMAIS contenir de JSON brut");
 });
 
 // ── Run ──────────────────────────────────────────────────────────────────────
