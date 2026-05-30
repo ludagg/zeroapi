@@ -225,6 +225,58 @@ export function ConversationChat({
     );
   }
 
+  // ── Graph editor (emits operations, same engine path as the agent) ─────────
+
+  async function applyGraphOperation(op: {
+    type: string;
+    params: Record<string, unknown>;
+  }): Promise<{ ok: boolean; error?: string }> {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/operation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(op),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        spec?: ZeroAPISpec;
+        operations?: Array<{ type: OperationType; danger: string; params: Record<string, unknown> }>;
+        assistant?: string;
+        meta?: string;
+        error?: string;
+      };
+      if (!res.ok || !data.spec) {
+        const error = data.error ?? "Opération rejetée.";
+        toast.error(error);
+        return { ok: false, error };
+      }
+      // Same anti-drift guarantee as the chat: the server applied the operation
+      // through applyOperation and returned the validated spec.
+      setSpec(data.spec);
+      const ops: AppliedOp[] = (data.operations ?? []).map((o) => ({
+        type: o.type,
+        danger: o.danger,
+        text: describeOperation(o.type, o.params),
+      }));
+      setMessages((m) => [
+        ...m,
+        {
+          id: `g-${Date.now()}`,
+          role: "assistant",
+          content: data.assistant ?? "",
+          ts: Date.now(),
+          meta: data.meta,
+          ops,
+        },
+      ]);
+      toast.success("Relation ajoutée.");
+      return { ok: true };
+    } catch (err) {
+      const error = err instanceof Error ? err.message : "Erreur réseau.";
+      toast.error(error);
+      return { ok: false, error };
+    }
+  }
+
   // ── Conversational stream (creation mode, unchanged) ───────────────────────
 
   async function runStream({
@@ -463,6 +515,7 @@ export function ConversationChat({
         jobId={job?.id ?? null}
         variant="desktop"
         pending={pending}
+        onApplyOperation={isModification ? applyGraphOperation : undefined}
       />
 
       <MobileDrawer
@@ -481,6 +534,7 @@ export function ConversationChat({
           variant="drawer"
           pending={pending}
           onLaunch={() => setSpecOpen(false)}
+          onApplyOperation={isModification ? applyGraphOperation : undefined}
         />
       </MobileDrawer>
     </div>
