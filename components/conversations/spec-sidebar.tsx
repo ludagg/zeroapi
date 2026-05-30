@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   ArrowRight,
   Check,
@@ -30,6 +31,16 @@ import {
   type ChatMessage,
   type ConversationInsights,
 } from "@/lib/conversation-helpers";
+
+// React Flow is client-only and heavy — load it lazily, only for the Graph tab.
+const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"), {
+  ssr: false,
+  loading: () => (
+    <div className="grid h-full place-items-center text-[12px] text-muted">
+      Chargement du graphe…
+    </div>
+  ),
+});
 
 type TabKey = "summary" | "spec" | "endpoints" | "graph";
 
@@ -144,19 +155,25 @@ export function SpecPanel({
         })}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4.5 scrollbar-thin">
-        {tab === "summary" && (
-          <SummaryTab
-            insights={insights}
-            generate={generate}
-            submitting={submitting}
-            canLaunch={canLaunch}
-            isModification={isModification}
-          />
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        {tab === "graph" ? (
+          // Full-bleed: the canvas owns its own scroll/pan, no padding.
+          <SpecGraph spec={spec} />
+        ) : (
+          <div className="flex-1 overflow-y-auto p-4.5 scrollbar-thin">
+            {tab === "summary" && (
+              <SummaryTab
+                insights={insights}
+                generate={generate}
+                submitting={submitting}
+                canLaunch={canLaunch}
+                isModification={isModification}
+              />
+            )}
+            {tab === "spec" && <SpecJsonTab spec={spec} />}
+            {tab === "endpoints" && <EndpointsTab spec={spec} />}
+          </div>
         )}
-        {tab === "spec" && <SpecJsonTab spec={spec} />}
-        {tab === "endpoints" && <EndpointsTab spec={spec} />}
-        {tab === "graph" && <GraphPlaceholder />}
       </div>
 
       <div className="flex flex-col gap-2.5 border-t border-line bg-surface px-4.5 py-4">
@@ -389,28 +406,6 @@ function EndpointsTab({ spec }: { spec: ZeroAPISpec | null }) {
           </div>
         </div>
       ))}
-    </div>
-  );
-}
-
-// ── Graphe tab (placeholder for the next step) ───────────────────────────────
-
-function GraphPlaceholder() {
-  return (
-    <div className="grid h-full place-items-center rounded-[12px] border border-dashed border-line-2 bg-surface p-8 text-center">
-      <div>
-        <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[12px] border border-line bg-bg-2 text-muted">
-          <Share2 className="h-5 w-5" />
-        </div>
-        <div className="text-[13px] font-medium text-ink-2">Graphe des ressources</div>
-        <p className="mx-auto mt-1.5 max-w-[220px] text-[12px] leading-snug text-muted">
-          Une vue visuelle des ressources et de leurs relations arrive bientôt.
-        </p>
-        <span className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-accent/40 bg-accent-soft px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-accent-ink">
-          <Sparkles className="h-3 w-3" />
-          Bientôt
-        </span>
-      </div>
     </div>
   );
 }
