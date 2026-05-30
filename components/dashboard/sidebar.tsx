@@ -3,242 +3,295 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard,
-  Boxes,
-  Sparkles,
   Database,
-  Settings,
-  Webhook,
-  Shield,
-  LogOut,
+  GitBranch,
+  Home,
+  MessageCircle,
+  MessagesSquare,
+  MoreVertical,
   PanelLeftClose,
   PanelLeftOpen,
-  type LucideIcon,
+  Search,
+  Settings,
+  Shield,
+  Terminal,
+  Users,
+  Briefcase,
 } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
-import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export type SidebarUser = {
   name: string | null;
   email: string;
   role: "USER" | "ADMIN";
-  plan: string;
+  plan: "FREE" | "STARTER" | "PRO" | "BUSINESS";
   generationsUsed: number;
   generationsLimit: number;
   initials: string;
 };
 
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string };
-
-const MAIN_NAV: NavItem[] = [
-  { href: "/dashboard", label: "Vue d'ensemble", icon: LayoutDashboard },
-  { href: "/jobs", label: "Jobs", icon: Boxes },
-  { href: "/conversations", label: "Conversations", icon: Sparkles },
-  { href: "/databases", label: "Bases de données", icon: Database },
-  { href: "/playground", label: "Playground", icon: Webhook },
-];
-
-const ACCOUNT_NAV: NavItem[] = [
-  { href: "/settings", label: "Paramètres", icon: Settings },
-];
-
-const ADMIN_NAV: NavItem[] = [
-  { href: "/admin", label: "Admin", icon: Shield },
-];
-
-export function Sidebar({
-  user,
-  variant,
-  onNavigate,
-  collapsed = false,
-  onToggleCollapse,
-}: {
+type SidebarProps = {
   user: SidebarUser;
-  variant: "desktop" | "drawer";
+  variant?: "desktop" | "drawer";
   onNavigate?: () => void;
   /** Desktop only: render the narrow icon-rail. */
   collapsed?: boolean;
   /** Desktop only: show the collapse/expand toggle. */
   onToggleCollapse?: () => void;
-}) {
-  const pathname = usePathname();
-  const router = useRouter();
+};
 
-  const isActive = (href: string) =>
-    pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+export function Sidebar({
+  user,
+  variant = "desktop",
+  onNavigate,
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarProps) {
+  const pct = Math.min(
+    100,
+    Math.round((user.generationsUsed / Math.max(1, user.generationsLimit)) * 100),
+  );
 
-  // Collapsed rail only applies on the desktop variant (the drawer is full-width).
+  const isDrawer = variant === "drawer";
+  // The collapsed rail only applies to the desktop variant.
   const rail = variant === "desktop" && collapsed;
 
   return (
     <aside
-      className={
-        variant === "desktop"
-          ? "hidden h-screen flex-col border-r border-line bg-bg lg:flex"
-          : "flex h-full flex-col bg-bg"
-      }
+      className={cn(
+        "flex-col overflow-y-auto bg-bg",
+        rail ? "p-2" : "p-3.5",
+        isDrawer ? "flex h-full pt-14" : "hidden border-r border-line lg:flex",
+      )}
     >
-      <div
-        className={
-          "flex h-[60px] flex-shrink-0 items-center border-b border-line " +
-          (rail ? "justify-center px-2" : "gap-2.5 px-5")
-        }
-      >
-        <div className="brand-mark h-7 w-7 flex-shrink-0 text-[13px]">
-          <span>0</span>
+      {rail ? (
+        <div className="mb-3 flex flex-col items-center gap-2 border-b border-line pb-3">
+          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
+            <span>0</span>
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Déplier la navigation"
+              title="Déplier la navigation"
+              className="grid h-7 w-7 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        {!rail && <span className="text-[15px] font-semibold tracking-tight">ZeroAPI</span>}
-        {variant === "desktop" && onToggleCollapse && !rail && (
-          <button
-            type="button"
-            onClick={onToggleCollapse}
-            aria-label="Réduire la navigation"
-            title="Réduire la navigation"
-            className="ml-auto grid h-7 w-7 place-items-center rounded-[8px] text-muted transition hover:bg-surface hover:text-ink"
-          >
-            <PanelLeftClose className="h-4 w-4" />
-          </button>
-        )}
-      </div>
+      ) : (
+        <div className="mb-3 flex items-center gap-2.5 border-b border-line px-2 pb-3.5">
+          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
+            <span>0</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold">
+              {user.name ?? user.email.split("@")[0]}
+            </div>
+            <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+              <b className="rounded-[3px] bg-accent px-1.5 py-px font-medium text-accent-ink">
+                {user.plan}
+              </b>
+            </div>
+          </div>
+          {variant === "desktop" && onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Réduire la navigation"
+              title="Réduire la navigation"
+              className="grid h-6 w-6 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
-      {rail && onToggleCollapse && (
+      {rail ? (
         <button
           type="button"
-          onClick={onToggleCollapse}
-          aria-label="Déplier la navigation"
-          title="Déplier la navigation"
-          className="mx-auto mt-2 grid h-8 w-8 place-items-center rounded-[8px] text-muted transition hover:bg-surface hover:text-ink"
+          onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
+          aria-label="Rechercher"
+          title="Rechercher, sauter à…"
+          className="mx-auto mb-3.5 grid h-9 w-9 place-items-center rounded-[8px] border border-line bg-bg-2 text-muted transition hover:border-line-2 hover:text-ink"
         >
-          <PanelLeftOpen className="h-4 w-4" />
+          <Search className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
+          className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span>Rechercher, sauter à…</span>
+          <span className="ml-auto rounded-[4px] border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px]">
+            ⌘ K
+          </span>
         </button>
       )}
 
-      <nav className={"flex-1 space-y-0.5 overflow-y-auto scrollbar-thin " + (rail ? "p-2" : "p-3")}>
-        <NavSection items={MAIN_NAV} isActive={isActive} onNavigate={onNavigate} rail={rail} />
-        <div className="my-2 border-t border-line" />
-        <NavSection items={ACCOUNT_NAV} isActive={isActive} onNavigate={onNavigate} rail={rail} />
+      <nav className="mb-5 flex flex-col gap-0.5">
+        <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate} rail={rail}>
+          Vue d&apos;ensemble
+        </NavLink>
+        <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate} rail={rail}>
+          Jobs
+        </NavLink>
+        <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate} rail={rail}>
+          Conversations
+        </NavLink>
+        <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate} rail={rail}>
+          Playground
+        </NavLink>
+        <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate} rail={rail}>
+          Déploiements
+        </NavLink>
+        <NavLink href="/databases" icon={<Database />} onNavigate={onNavigate} rail={rail}>
+          Bases de données
+        </NavLink>
+
+        <SectionLabel rail={rail}>Équipe</SectionLabel>
+        <NavLink href="/members" icon={<Users />} onNavigate={onNavigate} rail={rail}>
+          Membres
+        </NavLink>
+        <NavLink href="/discussions" icon={<MessageCircle />} onNavigate={onNavigate} rail={rail}>
+          Discussions
+        </NavLink>
+        <NavLink href="/settings" icon={<Settings />} onNavigate={onNavigate} rail={rail}>
+          Paramètres
+        </NavLink>
+
         {user.role === "ADMIN" && (
           <>
-            <div className="my-2 border-t border-line" />
-            <NavSection items={ADMIN_NAV} isActive={isActive} onNavigate={onNavigate} rail={rail} />
+            <SectionLabel rail={rail}>Plateforme</SectionLabel>
+            <NavLink href="/admin" icon={<Shield />} onNavigate={onNavigate} rail={rail}>
+              Admin
+            </NavLink>
           </>
         )}
       </nav>
 
       {rail ? (
-        <div className="flex flex-shrink-0 flex-col items-center gap-2 border-t border-line p-2">
-          <div
+        <div className="mt-auto flex flex-col items-center gap-2 border-t border-line pt-3">
+          <Link
+            href="/settings"
+            onClick={onNavigate}
             title={user.name ?? user.email}
-            className="grid h-8 w-8 place-items-center rounded-full bg-gradient-to-br from-accent to-[#7CFFB2] font-mono text-[12px] font-semibold text-bg"
+            className="grid h-[30px] w-[30px] place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink"
           >
             {user.initials}
-          </div>
-          <button
-            type="button"
-            onClick={async () => {
-              await authClient.signOut();
-              router.push("/login");
-            }}
-            aria-label="Se déconnecter"
-            title="Se déconnecter"
-            className="grid h-8 w-8 place-items-center rounded-[8px] text-muted transition hover:bg-bg-3 hover:text-ink"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-          </button>
+          </Link>
         </div>
       ) : (
-        <div className="flex-shrink-0 border-t border-line p-3">
-          <div className="mb-2 rounded-[10px] border border-line bg-surface p-3">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                Plan {user.plan}
+        <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3">
+          <div className="rounded-[10px] border border-line bg-bg-2 p-3">
+            <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+              <span>Générations</span>
+              <span>
+                <b className="font-medium text-ink">{user.generationsUsed}</b>/{user.generationsLimit}
               </span>
-              <Link
-                href="/settings"
-                onClick={onNavigate}
-                className="text-[11px] text-accent-ink hover:underline"
-              >
-                Gérer
-              </Link>
             </div>
-            <div className="mb-1 flex items-baseline justify-between">
-              <span className="text-[13px] font-medium">{user.generationsUsed} générations</span>
-              <span className="text-[11px] text-muted">/ {user.generationsLimit}</span>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-bg-3">
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-line">
               <div
-                className="h-full rounded-full bg-accent transition-all"
-                style={{
-                  width: `${Math.min(100, (user.generationsUsed / user.generationsLimit) * 100)}%`,
-                }}
+                className="h-full bg-accent transition-[width] duration-700 ease-out"
+                style={{ width: `${pct}%` }}
               />
             </div>
+            <Link
+              href="/settings"
+              onClick={onNavigate}
+              className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
+            >
+              Passer Business →
+            </Link>
           </div>
 
-          <div className="flex items-center gap-2.5 rounded-[10px] p-2 transition hover:bg-surface">
-            <div className="grid h-8 w-8 flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-accent to-[#7CFFB2] font-mono text-[12px] font-semibold text-bg">
+          <Link
+            href="/settings"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-[9px] p-2 transition hover:bg-bg-2"
+          >
+            <div className="grid h-[30px] w-[30px] flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink">
               {user.initials}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="truncate text-[12.5px] font-medium">{user.name ?? "Utilisateur"}</div>
-              <div className="truncate text-[11px] text-muted">{user.email}</div>
+              <div className="truncate text-[13px] font-medium">{user.name ?? "—"}</div>
+              <div className="truncate font-mono text-[11px] text-muted">{user.email}</div>
             </div>
-            <button
-              type="button"
-              onClick={async () => {
-                await authClient.signOut();
-                router.push("/login");
-              }}
-              aria-label="Se déconnecter"
-              className="grid h-7 w-7 flex-shrink-0 place-items-center rounded-[8px] text-muted transition hover:bg-bg-3 hover:text-ink"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-            </button>
-          </div>
+            <MoreVertical className="h-3.5 w-3.5 text-muted" />
+          </Link>
         </div>
       )}
     </aside>
   );
 }
 
-function NavSection({
-  items,
-  isActive,
-  onNavigate,
-  rail,
-}: {
-  items: NavItem[];
-  isActive: (href: string) => boolean;
-  onNavigate?: () => void;
-  rail: boolean;
-}) {
+function SectionLabel({ children, rail }: { children: React.ReactNode; rail: boolean }) {
+  if (rail) return <div className="my-1.5 border-t border-line" />;
   return (
-    <>
-      {items.map((item) => {
-        const Icon = item.icon;
-        const active = isActive(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={onNavigate}
-            title={rail ? item.label : undefined}
-            className={
-              "group flex items-center rounded-[10px] text-[13.5px] transition " +
-              (rail ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2") +
-              " " +
-              (active
-                ? "bg-surface font-medium text-ink"
-                : "text-muted hover:bg-surface hover:text-ink")
-            }
-          >
-            <Icon className="h-4 w-4 flex-shrink-0" />
-            {!rail && <span>{item.label}</span>}
-          </Link>
-        );
-      })}
-    </>
+    <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
+      {children}
+    </div>
   );
 }
 
-export default Sidebar;
+function NavLink({
+  href,
+  icon,
+  children,
+  count,
+  hasDot,
+  onNavigate,
+  rail,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+  count?: number;
+  hasDot?: boolean;
+  onNavigate?: () => void;
+  rail?: boolean;
+}) {
+  const pathname = usePathname();
+  const active = pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
+
+  return (
+    <Link
+      href={href}
+      onClick={onNavigate}
+      title={rail && typeof children === "string" ? children : undefined}
+      className={cn(
+        "relative flex items-center rounded-[7px] text-[14px] transition",
+        rail ? "justify-center px-0 py-2.5" : "gap-2.5 px-2 py-2",
+        active
+          ? "bg-ink text-bg [&_svg]:text-bg"
+          : "text-ink-2 hover:bg-bg-2 hover:text-ink [&_svg]:text-muted hover:[&_svg]:text-ink",
+      )}
+    >
+      <span className="grid h-4 w-4 place-items-center [&>svg]:h-[15px] [&>svg]:w-[15px]">
+        {icon}
+      </span>
+      {!rail && children}
+      {!rail && count !== undefined && (
+        <span
+          className={cn(
+            "ml-auto rounded-full px-1.5 py-px font-mono text-[10px]",
+            active ? "bg-white/15 text-bg" : "bg-bg-3 text-muted",
+          )}
+        >
+          {count}
+        </span>
+      )}
+      {!rail && hasDot && !count && (
+        <span
+          className="ml-auto inline-block h-1.5 w-1.5 rounded-full bg-accent"
+          style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
+        />
+      )}
+    </Link>
+  );
+}
