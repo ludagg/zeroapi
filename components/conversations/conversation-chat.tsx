@@ -56,6 +56,9 @@ type AgentResponse =
   | { status: "noop"; assistant: string; meta: string }
   | { error: string };
 
+/** Session-persisted chat width (% of the content area) for the resizable split. */
+const CHAT_PCT_KEY = "zeroapi:conv-chat-pct";
+
 export function ConversationChat({
   conversationId,
   initialTitle,
@@ -82,6 +85,48 @@ export function ConversationChat({
   const [specOpen, setSpecOpen] = useState(false);
   const threadRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
+  // Resizable split (desktop): chat width as a % of the content area. The right
+  // panel (Spec/Graphe/Endpoints) takes the rest — kept large on purpose.
+  const splitRef = useRef<HTMLDivElement>(null);
+  const [chatPct, setChatPct] = useState(35);
+
+  useEffect(() => {
+    try {
+      const saved = Number(sessionStorage.getItem(CHAT_PCT_KEY));
+      if (saved >= 30 && saved <= 50) setChatPct(saved);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(CHAT_PCT_KEY, String(Math.round(chatPct)));
+    } catch {
+      /* ignore */
+    }
+  }, [chatPct]);
+
+  function startResize(e: React.PointerEvent) {
+    e.preventDefault();
+    const container = splitRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    const onMove = (ev: PointerEvent) => {
+      const pct = ((ev.clientX - rect.left) / rect.width) * 100;
+      setChatPct(Math.min(50, Math.max(30, pct)));
+    };
+    const onUp = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      document.body.style.userSelect = "";
+      document.body.style.cursor = "";
+    };
+    document.body.style.userSelect = "none";
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }
 
   // Modification mode: an existing spec + job → the chat drives the Kia agent.
   const isModification = Boolean(job && spec);
@@ -408,7 +453,11 @@ export function ConversationChat({
   }
 
   return (
-    <div className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 overflow-hidden lg:grid-cols-[minmax(0,1fr)_380px]">
+    <div
+      ref={splitRef}
+      className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 overflow-hidden lg:[grid-template-columns:var(--chat-col)_6px_minmax(0,1fr)]"
+      style={{ "--chat-col": `${chatPct}%` } as React.CSSProperties}
+    >
       <div className="flex min-h-0 min-w-0 flex-col bg-bg">
         <header className="flex h-[60px] flex-shrink-0 items-center gap-2 border-b border-line bg-bg px-4 sm:gap-3 sm:px-6">
           <Link
@@ -518,6 +567,15 @@ export function ConversationChat({
           </div>
         </div>
       </div>
+
+      {/* Draggable splitter (desktop only). */}
+      <div
+        onPointerDown={startResize}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Redimensionner les panneaux"
+        className="hidden cursor-col-resize bg-line transition-colors hover:bg-accent lg:block"
+      />
 
       <SpecPanel
         conversationId={conversationId}
