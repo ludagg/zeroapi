@@ -25,7 +25,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   const showVerifyBanner = account ? !account.emailVerified : false;
 
   return (
-    <div className="grid h-screen grid-cols-1 overflow-hidden bg-bg-2 lg:grid-cols-[248px_1fr]">
+    <div className="h-screen overflow-hidden bg-bg-2">
       <DashboardShell
         user={{
           name: user.name,

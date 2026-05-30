@@ -3,13 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  ChevronsUpDown,
   Database,
   GitBranch,
   Home,
   MessageCircle,
   MessagesSquare,
   MoreVertical,
+  PanelLeftClose,
+  PanelLeftOpen,
   Search,
   Settings,
   Shield,
@@ -33,143 +34,208 @@ type SidebarProps = {
   user: SidebarUser;
   variant?: "desktop" | "drawer";
   onNavigate?: () => void;
+  /** Desktop only: render the narrow icon-rail. */
+  collapsed?: boolean;
+  /** Desktop only: show the collapse/expand toggle. */
+  onToggleCollapse?: () => void;
 };
 
-export function Sidebar({ user, variant = "desktop", onNavigate }: SidebarProps) {
+export function Sidebar({
+  user,
+  variant = "desktop",
+  onNavigate,
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarProps) {
   const pct = Math.min(
     100,
     Math.round((user.generationsUsed / Math.max(1, user.generationsLimit)) * 100),
   );
 
   const isDrawer = variant === "drawer";
+  // The collapsed rail only applies to the desktop variant.
+  const rail = variant === "desktop" && collapsed;
 
   return (
     <aside
       className={cn(
-        "flex-col overflow-y-auto bg-bg p-3.5",
-        isDrawer
-          ? "flex h-full pt-14"
-          : "hidden border-r border-line lg:flex",
+        "flex-col overflow-y-auto bg-bg",
+        rail ? "p-2" : "p-3.5",
+        isDrawer ? "flex h-full pt-14" : "hidden border-r border-line lg:flex",
       )}
     >
-      <div className="mb-3 flex items-center gap-2.5 border-b border-line px-2 pb-3.5">
-        <span className="brand-mark h-[30px] w-[30px] text-[14px]">
-          <span>0</span>
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold">
-            {user.name ?? user.email.split("@")[0]}
-          </div>
-          <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-            <b className="rounded-[3px] bg-accent px-1.5 py-px font-medium text-accent-ink">
-              {user.plan}
-            </b>
-          </div>
+      {rail ? (
+        <div className="mb-3 flex flex-col items-center gap-2 border-b border-line pb-3">
+          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
+            <span>0</span>
+          </span>
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Déplier la navigation"
+              title="Déplier la navigation"
+              className="grid h-7 w-7 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              <PanelLeftOpen className="h-4 w-4" />
+            </button>
+          )}
         </div>
-        <button
-          aria-label="Changer de workspace"
-          className="grid h-6 w-6 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
-        >
-          <ChevronsUpDown className="h-3 w-3" />
-        </button>
-      </div>
+      ) : (
+        <div className="mb-3 flex items-center gap-2.5 border-b border-line px-2 pb-3.5">
+          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
+            <span>0</span>
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold">
+              {user.name ?? user.email.split("@")[0]}
+            </div>
+            <div className="mt-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+              <b className="rounded-[3px] bg-accent px-1.5 py-px font-medium text-accent-ink">
+                {user.plan}
+              </b>
+            </div>
+          </div>
+          {variant === "desktop" && onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              aria-label="Réduire la navigation"
+              title="Réduire la navigation"
+              className="grid h-6 w-6 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              <PanelLeftClose className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+      )}
 
-      <button
-        type="button"
-        onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
-        className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2"
-      >
-        <Search className="h-3.5 w-3.5" />
-        <span>Rechercher, sauter à…</span>
-        <span className="ml-auto rounded-[4px] border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px]">
-          ⌘ K
-        </span>
-      </button>
+      {rail ? (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
+          aria-label="Rechercher"
+          title="Rechercher, sauter à…"
+          className="mx-auto mb-3.5 grid h-9 w-9 place-items-center rounded-[8px] border border-line bg-bg-2 text-muted transition hover:border-line-2 hover:text-ink"
+        >
+          <Search className="h-3.5 w-3.5" />
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
+          className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2"
+        >
+          <Search className="h-3.5 w-3.5" />
+          <span>Rechercher, sauter à…</span>
+          <span className="ml-auto rounded-[4px] border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px]">
+            ⌘ K
+          </span>
+        </button>
+      )}
 
       <nav className="mb-5 flex flex-col gap-0.5">
-        <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate}>
+        <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate} rail={rail}>
           Vue d&apos;ensemble
         </NavLink>
-        <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate}>
+        <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate} rail={rail}>
           Jobs
         </NavLink>
-        <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate}>
+        <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate} rail={rail}>
           Conversations
         </NavLink>
-        <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate}>
+        <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate} rail={rail}>
           Playground
         </NavLink>
-        <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate}>
+        <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate} rail={rail}>
           Déploiements
         </NavLink>
-        <NavLink href="/databases" icon={<Database />} onNavigate={onNavigate}>
+        <NavLink href="/databases" icon={<Database />} onNavigate={onNavigate} rail={rail}>
           Bases de données
         </NavLink>
 
-        <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
-          Équipe
-        </div>
-        <NavLink href="/members" icon={<Users />} onNavigate={onNavigate}>
+        <SectionLabel rail={rail}>Équipe</SectionLabel>
+        <NavLink href="/members" icon={<Users />} onNavigate={onNavigate} rail={rail}>
           Membres
         </NavLink>
-        <NavLink href="/discussions" icon={<MessageCircle />} onNavigate={onNavigate}>
+        <NavLink href="/discussions" icon={<MessageCircle />} onNavigate={onNavigate} rail={rail}>
           Discussions
         </NavLink>
-        <NavLink href="/settings" icon={<Settings />} onNavigate={onNavigate}>
+        <NavLink href="/settings" icon={<Settings />} onNavigate={onNavigate} rail={rail}>
           Paramètres
         </NavLink>
 
         {user.role === "ADMIN" && (
           <>
-            <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
-              Plateforme
-            </div>
-            <NavLink href="/admin" icon={<Shield />} onNavigate={onNavigate}>
+            <SectionLabel rail={rail}>Plateforme</SectionLabel>
+            <NavLink href="/admin" icon={<Shield />} onNavigate={onNavigate} rail={rail}>
               Admin
             </NavLink>
           </>
         )}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3">
-        <div className="rounded-[10px] border border-line bg-bg-2 p-3">
-          <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-            <span>Générations</span>
-            <span>
-              <b className="font-medium text-ink">{user.generationsUsed}</b>/{user.generationsLimit}
-            </span>
-          </div>
-          <div className="mt-2 h-1 overflow-hidden rounded-full bg-line">
-            <div
-              className="h-full bg-accent transition-[width] duration-700 ease-out"
-              style={{ width: `${pct}%` }}
-            />
-          </div>
+      {rail ? (
+        <div className="mt-auto flex flex-col items-center gap-2 border-t border-line pt-3">
           <Link
             href="/settings"
             onClick={onNavigate}
-            className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
+            title={user.name ?? user.email}
+            className="grid h-[30px] w-[30px] place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink"
           >
-            Passer Business →
+            {user.initials}
           </Link>
         </div>
+      ) : (
+        <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3">
+          <div className="rounded-[10px] border border-line bg-bg-2 p-3">
+            <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
+              <span>Générations</span>
+              <span>
+                <b className="font-medium text-ink">{user.generationsUsed}</b>/{user.generationsLimit}
+              </span>
+            </div>
+            <div className="mt-2 h-1 overflow-hidden rounded-full bg-line">
+              <div
+                className="h-full bg-accent transition-[width] duration-700 ease-out"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+            <Link
+              href="/settings"
+              onClick={onNavigate}
+              className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
+            >
+              Passer Business →
+            </Link>
+          </div>
 
-        <Link
-          href="/settings"
-          onClick={onNavigate}
-          className="flex items-center gap-2.5 rounded-[9px] p-2 transition hover:bg-bg-2"
-        >
-          <div className="grid h-[30px] w-[30px] flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink">
-            {user.initials}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium">{user.name ?? "—"}</div>
-            <div className="truncate font-mono text-[11px] text-muted">{user.email}</div>
-          </div>
-          <MoreVertical className="h-3.5 w-3.5 text-muted" />
-        </Link>
-      </div>
+          <Link
+            href="/settings"
+            onClick={onNavigate}
+            className="flex items-center gap-2.5 rounded-[9px] p-2 transition hover:bg-bg-2"
+          >
+            <div className="grid h-[30px] w-[30px] flex-shrink-0 place-items-center rounded-full bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[11px] font-semibold text-accent-ink">
+              {user.initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] font-medium">{user.name ?? "—"}</div>
+              <div className="truncate font-mono text-[11px] text-muted">{user.email}</div>
+            </div>
+            <MoreVertical className="h-3.5 w-3.5 text-muted" />
+          </Link>
+        </div>
+      )}
     </aside>
+  );
+}
+
+function SectionLabel({ children, rail }: { children: React.ReactNode; rail: boolean }) {
+  if (rail) return <div className="my-1.5 border-t border-line" />;
+  return (
+    <div className="px-2 pb-1.5 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
+      {children}
+    </div>
   );
 }
 
@@ -180,6 +246,7 @@ function NavLink({
   count,
   hasDot,
   onNavigate,
+  rail,
 }: {
   href: string;
   icon: React.ReactNode;
@@ -187,6 +254,7 @@ function NavLink({
   count?: number;
   hasDot?: boolean;
   onNavigate?: () => void;
+  rail?: boolean;
 }) {
   const pathname = usePathname();
   const active = pathname === href || (href !== "/dashboard" && pathname?.startsWith(href));
@@ -195,8 +263,10 @@ function NavLink({
     <Link
       href={href}
       onClick={onNavigate}
+      title={rail && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex items-center gap-2.5 rounded-[7px] px-2 py-2 text-[14px] transition",
+        "relative flex items-center rounded-[7px] text-[14px] transition",
+        rail ? "justify-center px-0 py-2.5" : "gap-2.5 px-2 py-2",
         active
           ? "bg-ink text-bg [&_svg]:text-bg"
           : "text-ink-2 hover:bg-bg-2 hover:text-ink [&_svg]:text-muted hover:[&_svg]:text-ink",
@@ -205,8 +275,8 @@ function NavLink({
       <span className="grid h-4 w-4 place-items-center [&>svg]:h-[15px] [&>svg]:w-[15px]">
         {icon}
       </span>
-      {children}
-      {count !== undefined && (
+      {!rail && children}
+      {!rail && count !== undefined && (
         <span
           className={cn(
             "ml-auto rounded-full px-1.5 py-px font-mono text-[10px]",
@@ -216,7 +286,7 @@ function NavLink({
           {count}
         </span>
       )}
-      {hasDot && !count && (
+      {!rail && hasDot && !count && (
         <span
           className="ml-auto inline-block h-1.5 w-1.5 rounded-full bg-accent"
           style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
