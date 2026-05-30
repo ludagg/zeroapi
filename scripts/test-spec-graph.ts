@@ -15,6 +15,7 @@
 
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import { buildSpecGraph, layoutGraph } from "../lib/spec-graph";
+import { applyOperation, type ApplyResult } from "../lib/operations";
 
 let passed = 0;
 let failed = 0;
@@ -39,6 +40,9 @@ function ecommerceSpec(): ZeroAPISpec {
   return structuredClone({
     version: "1.0",
     name: "shop",
+    // JWT auth → the runtime-managed `User` resource is a valid relation target.
+    auth: { enabled: true, strategies: ["jwt"], jwt: { enabled: true, secretEnv: "JWT_SECRET" } },
+    env: [{ name: "JWT_SECRET", required: true, generate: true, managedByCloud: true }],
     resources: [
       {
         name: "Product",
@@ -151,6 +155,60 @@ test("layout — positions distinctes (pas tous empilés)", () => {
   assert(pos.size === nodes.length, "une position par nœud");
   const keys = new Set([...pos.values()].map((p) => `${p.x},${p.y}`));
   assert(keys.size === nodes.length, "toutes les positions doivent être distinctes");
+});
+
+// ── Édition : glisser A→B émet addRelation → applyOperation → graphe ─────────
+
+/** Gate-valid spec (no dangling aggregate) for the apply round-trip. */
+function validSpec(): ZeroAPISpec {
+  return structuredClone({
+    version: "1.0",
+    name: "shop",
+    auth: { enabled: true, strategies: ["jwt"], jwt: { enabled: true, secretEnv: "JWT_SECRET" } },
+    env: [{ name: "JWT_SECRET", required: true, generate: true, managedByCloud: true }],
+    resources: [
+      { name: "Product", fields: { title: { type: "string", required: true } } },
+      {
+        name: "Order",
+        fields: { userId: { type: "uuid", required: true }, total: { type: "integer", required: true } },
+        relations: [{ type: "manyToOne", resource: "User", field: "userId", onDelete: "Cascade" }],
+      },
+      { name: "Member", fields: { handle: { type: "string", required: true } } },
+    ],
+  }) as unknown as ZeroAPISpec;
+}
+
+test("éditeur — drag Member → Order émet addRelation, l'arête apparaît (anti-dérive)", () => {
+  const before = validSpec();
+  // Exactement ce que la connexion du graphe envoie (params addRelation).
+  const res: ApplyResult = applyOperation(before, {
+    type: "addRelation",
+    from: "Member",
+    to: "Order",
+    relationType: "one-to-many",
+  });
+  assert(res.ok, `addRelation valide doit réussir: ${res.ok ? "" : res.error}`);
+  const after = (res as Extract<ApplyResult, { ok: true }>).spec;
+
+  // La spec d'origine n'est jamais touchée (le graphe ne mute pas en direct).
+  assert(buildSpecGraph(before).edges.every((e) => !(e.source === "Member" && e.target === "Order")), "spec d'origine intacte");
+
+  // Le graphe recalculé montre la nouvelle flèche, labellisée 1-N.
+  const edge = buildSpecGraph(after).edges.find((e) => e.source === "Member" && e.target === "Order");
+  assert(edge?.label === "1-N", "la nouvelle arête Member → Order doit apparaître en 1-N");
+});
+
+test("éditeur — relation invalide rejetée proprement, spec préservée", () => {
+  const before = validSpec();
+  const snapshot = JSON.stringify(before);
+  const res = applyOperation(before, {
+    type: "addRelation",
+    from: "Order",
+    to: "Ghost", // cible inexistante
+    relationType: "one-to-many",
+  });
+  assert(!res.ok, "une relation vers une ressource inconnue doit être rejetée");
+  assert(JSON.stringify(before) === snapshot, "la spec d'origine doit être préservée après rejet");
 });
 
 console.log(`\nspec → graphe — ${passed} passés, ${failed} échoués, ${assertions} assertions.`);

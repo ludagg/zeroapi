@@ -25,6 +25,7 @@ import {
 import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import { deriveEndpoints } from "@/components/api-detail/endpoints-list";
+import type { ApplyOperation } from "@/components/conversations/spec-graph";
 import {
   computeInsights,
   confidenceTone,
@@ -67,6 +68,7 @@ export function SpecPanel({
   variant,
   onLaunch,
   pending,
+  onApplyOperation,
 }: {
   conversationId: string;
   messages: ChatMessage[];
@@ -75,6 +77,8 @@ export function SpecPanel({
   variant: "desktop" | "drawer";
   onLaunch?: () => void;
   pending?: boolean;
+  /** When set, the Graph tab becomes an editor (emits operations). */
+  onApplyOperation?: ApplyOperation;
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
@@ -158,7 +162,7 @@ export function SpecPanel({
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {tab === "graph" ? (
           // Full-bleed: the canvas owns its own scroll/pan, no padding.
-          <SpecGraph spec={spec} />
+          <SpecGraph spec={spec} onApplyOperation={onApplyOperation} />
         ) : (
           <div className="flex-1 overflow-y-auto p-4.5 scrollbar-thin">
             {tab === "summary" && (
