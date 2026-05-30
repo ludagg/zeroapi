@@ -79,7 +79,7 @@ RÈGLES :
  * `env`, `features`. Since v0.15.0, relations to the reserved `User` resource
  * are forwarded as-is to the runtime (real FK + cascade + ?include=user).
  */
-export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.15.
+export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.20.
 Le framework cible est TOUJOURS Hono.js — ne mentionne jamais Express, FastAPI ou un autre framework.
 
 SHAPE EXACTE — tout écart sera rejeté :
@@ -120,6 +120,18 @@ SHAPE EXACTE — tout écart sera rejeté :
       "searchable": ["title", "description"],
       "relations": [
         { "type": "manyToOne", "resource": "User", "field": "userId", "onDelete": "Cascade" }
+      ],
+      "stateMachine": {
+        "field": "status",
+        "initial": "draft",
+        "transitions": [
+          { "from": "draft",     "to": "published", "roles": ["admin"] },
+          { "from": "published", "to": "archived",  "roles": ["admin"] }
+        ]
+      },
+      "aggregates": [
+        { "name": "reviewCount", "op": "count", "relation": "reviews" },
+        { "name": "avgRating",   "op": "avg",   "relation": "reviews", "field": "rating" }
       ]
     }
   ],
@@ -132,6 +144,7 @@ SHAPE EXACTE — tout écart sera rejeté :
   "permissions": [
     { "resource": "Order", "rules": [
       { "role": "user",  "actions": ["create","read","update"], "ownOnly": true },
+      { "role": "member", "actions": ["read"], "scope": { "column": "tenantId", "claim": "tenantId" } },
       { "role": "admin", "actions": ["create","read","update","delete"] }
     ]}
   ],
@@ -176,10 +189,46 @@ RELATIONS :
 - Le champ FK (\`field\`) doit exister sur la ressource source comme \`string\` ou \`uuid\`.
 - Toute ressource référencée dans une relation doit exister dans \`resources\`.
 
+STATE MACHINE (\`resources[].stateMachine\`, depuis 0.19.0) :
+- Contraint les valeurs d'un champ de statut à un graphe de transitions autorisées.
+- Forme : \`{ "field": "status", "initial": "draft", "transitions": [{ "from", "to", "roles" }] }\`
+  · \`field\` doit référencer un champ \`enum\` de la ressource ; \`initial\` doit être l'une de ses \`values\`.
+  · Chaque transition : \`from\`/\`to\` sont des valeurs de l'enum, \`roles\` liste les rôles autorisés à l'effectuer.
+  · À la création le statut vaut \`initial\` ; toute mise à jour du champ doit suivre une transition déclarée.
+- Exemple — cycle de vie d'une commande :
+    \`"stateMachine": { "field": "status", "initial": "pending", "transitions": [
+       { "from": "pending", "to": "paid",      "roles": ["user","admin"] },
+       { "from": "paid",    "to": "shipped",   "roles": ["admin"] },
+       { "from": "shipped", "to": "delivered", "roles": ["admin"] },
+       { "from": "pending", "to": "cancelled", "roles": ["user","admin"] }
+    ] }\`
+
+AGGREGATES (\`resources[].aggregates\`, depuis 0.20.0) :
+- Expose des valeurs calculées en lecture, dérivées d'une relation de la ressource.
+- Forme : \`[{ "name", "op", "relation", "field?" }]\`
+  · \`name\` = nom du champ calculé exposé dans la réponse.
+  · \`op\` ∈ \`"count" | "sum" | "avg" | "min" | "max"\`.
+  · \`relation\` = nom d'une relation déclarée sur la ressource (résultat agrégé sur les lignes liées).
+  · \`field\` = champ numérique de la ressource liée à agréger ; OBLIGATOIRE pour \`sum\`/\`avg\`/\`min\`/\`max\`,
+    et OMIS pour \`count\` (qui compte les lignes liées).
+- Exemple — statistiques d'un produit à partir de ses avis :
+    \`"aggregates": [
+       { "name": "reviewCount", "op": "count", "relation": "reviews" },
+       { "name": "avgRating",   "op": "avg",   "relation": "reviews", "field": "rating" },
+       { "name": "maxRating",   "op": "max",   "relation": "reviews", "field": "rating" }
+    ]\`
+
 PERMISSIONS (RBAC déclaratif top-level) :
 - Une règle peut avoir \`"ownOnly": true\` → l'user ne voit/modifie que ses propres lignes.
 - \`ownOnly\` EXIGE \`auth.jwt.enabled: true\` (pas pour rôle \`"public"\`).
 - Les actions valides sont \`["create","read","update","delete"]\`.
+- \`scope\` (RBAC multi-tenant, depuis 0.18.0) — restreint une règle aux lignes dont
+  la colonne \`column\` est égale à la claim JWT \`claim\` de l'identité courante :
+    \`"scope": { "column": "tenantId", "claim": "tenantId" }\`
+  · \`column\` = champ de la ressource (doit exister), \`claim\` = clé du payload JWT.
+  · EXIGE \`auth.jwt.enabled: true\`. Combinable avec \`ownOnly\`.
+  · Exemple — un \`member\` ne voit que les \`Invoice\` de son organisation :
+    \`{ "role": "member", "actions": ["read"], "scope": { "column": "orgId", "claim": "orgId" } }\`
 
 NOMS RÉSERVÉS quand \`auth.jwt.enabled: true\` :
 - \`User\`, \`RefreshToken\` ne peuvent PAS être des ressources spec (le runtime les gère).
