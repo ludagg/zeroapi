@@ -8,6 +8,8 @@ import {
 } from "@/components/playground/playground-console";
 import { buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { readSpec } from "@/lib/job-helpers";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -67,18 +69,11 @@ export default async function PlaygroundPage() {
   return (
     <>
       <DashboardHeader crumbs={[{ label: "Workspace", href: "/dashboard" }, { label: "Playground" }]} />
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
-          <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-5">
-            <div className="min-w-0">
-              <h1 className="font-serif text-[26px] italic leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none">
-                Playground
-              </h1>
-              <p className="mt-1.5 max-w-2xl text-[13.5px] text-muted sm:mt-2 sm:text-[14.5px]">
-                Choisis une API, sélectionne un endpoint, ajuste les paramètres et lance la
-                requête. Le résultat s&apos;affiche sous le formulaire.
-              </p>
-            </div>
+      <PageContainer width="wide">
+        <PageHeader
+          title={<em>Playground</em>}
+          description="Choisis une API, sélectionne un endpoint, ajuste les paramètres et lance la requête. Le résultat s'affiche sous le formulaire."
+          actions={
             <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2.5 py-1.5 font-mono text-[10.5px] text-muted sm:gap-3 sm:px-3 sm:py-2 sm:text-[11px]">
               <span className="inline-flex items-center gap-1.5">
                 <span
@@ -90,11 +85,11 @@ export default async function PlaygroundPage() {
               <span className="text-line-2">·</span>
               <span>{apis.length} total</span>
             </div>
-          </div>
+          }
+        />
 
-          <PlaygroundConsole apis={apis} />
-        </div>
-      </div>
+        <PlaygroundConsole apis={apis} />
+      </PageContainer>
     </>
   );
 }
