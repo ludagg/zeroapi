@@ -7,6 +7,7 @@ import { ArrowRight, Check, Pencil, X } from "lucide-react";
 import type { JobStatus } from "@prisma/client";
 import { toast } from "sonner";
 import { formatRelativeTime } from "@/lib/utils";
+import { StatusPill } from "@/components/ui/status-pill";
 
 export type ConversationCardData = {
   id: string;
@@ -15,22 +16,6 @@ export type ConversationCardData = {
   messagesCount: number;
   updatedAt: string;
   job: { id: string; name: string; status: JobStatus } | null;
-};
-
-const JOB_STATUS_LABEL: Record<JobStatus, string> = {
-  PENDING: "En file",
-  RUNNING: "En cours",
-  READY: "Prêt",
-  DEPLOYED: "En ligne",
-  FAILED: "Échec",
-};
-
-const JOB_STATUS_CLASS: Record<JobStatus, string> = {
-  PENDING: "border border-dashed border-line-2 text-muted",
-  RUNNING: "bg-warn-soft text-warn-ink",
-  READY: "bg-accent text-accent-ink",
-  DEPLOYED: "bg-accent text-accent-ink",
-  FAILED: "bg-danger-soft text-danger",
 };
 
 export function ConversationCard({ data }: { data: ConversationCardData }) {
@@ -74,7 +59,7 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
   }
 
   return (
-    <article className="overflow-hidden rounded-[14px] border border-line bg-surface transition hover:-translate-y-px hover:border-line-2 hover:shadow-md">
+    <article className="group overflow-hidden rounded-card border border-line bg-surface transition hover:-translate-y-px hover:border-line-2 hover:shadow-md">
       <div className="flex flex-wrap items-start justify-between gap-3 px-4 pt-4">
         <div className="min-w-0 flex-1">
           {editing ? (
@@ -123,16 +108,7 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
             </div>
           )}
         </div>
-        {data.job && (
-          <span
-            className={
-              "inline-flex flex-shrink-0 items-center gap-1.5 rounded-full px-2 py-0.5 font-mono text-[10px] tracking-[0.04em] " +
-              JOB_STATUS_CLASS[data.job.status]
-            }
-          >
-            {JOB_STATUS_LABEL[data.job.status]}
-          </span>
-        )}
+        {data.job && <StatusPill status={data.job.status} className="flex-shrink-0" />}
       </div>
 
       <p className="mt-2 line-clamp-2 px-4 text-[13.5px] text-muted">

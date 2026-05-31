@@ -9,6 +9,8 @@ import { z } from "zod";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { signIn } from "@/lib/auth-client";
+import { FormField } from "@/components/ui/form-field";
+import { Button } from "@/components/ui/button";
 
 const schema = z.object({
   email: z.string().email("Adresse email invalide"),
@@ -53,56 +55,45 @@ export function LoginForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
-        <label htmlFor="login-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Adresse email
-        </label>
-        <div className="relative">
-          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            id="login-email"
-            type="email"
-            autoComplete="email"
-            placeholder="aminata@exemple.ci"
-            className="input-base pl-10"
-            {...register("email")}
-          />
-        </div>
-        {errors.email && (
-          <p className="mt-1.5 text-[12px] text-danger">{errors.email.message}</p>
-        )}
+        <FormField
+          label="Adresse email"
+          type="email"
+          autoComplete="email"
+          placeholder="aminata@exemple.ci"
+          icon={<Mail />}
+          error={errors.email?.message}
+          {...register("email")}
+        />
       </div>
 
       <div className="mb-4">
-        <div className="mb-2 flex items-center justify-between">
-          <label htmlFor="login-pwd" className="text-[13px] font-medium text-ink-2">
-            Mot de passe
-          </label>
-          <Link href="/forgot-password" className="font-mono text-[12px] text-muted transition hover:text-ink">
-            Oublié&nbsp;?
-          </Link>
-        </div>
-        <div className="relative">
-          <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            id="login-pwd"
-            type={showPwd ? "text" : "password"}
-            autoComplete="current-password"
-            placeholder="••••••••••"
-            className="input-base pl-10 pr-11"
-            {...register("password")}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPwd((s) => !s)}
-            aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
-            className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
-          >
-            {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
-        {errors.password && (
-          <p className="mt-1.5 text-[12px] text-danger">{errors.password.message}</p>
-        )}
+        <FormField
+          label="Mot de passe"
+          type={showPwd ? "text" : "password"}
+          autoComplete="current-password"
+          placeholder="••••••••••"
+          icon={<Lock />}
+          error={errors.password?.message}
+          labelAction={
+            <Link
+              href="/forgot-password"
+              className="font-mono text-[12px] text-muted transition hover:text-ink"
+            >
+              Oublié&nbsp;?
+            </Link>
+          }
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPwd((s) => !s)}
+              aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+              className="grid h-8 w-8 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          }
+          {...register("password")}
+        />
       </div>
 
       <label className="my-1 mb-5 flex cursor-pointer select-none items-start gap-2.5 text-[13.5px] text-ink-2">
@@ -123,14 +114,10 @@ export function LoginForm() {
         <span>Garder ma session active sur cet appareil</span>
       </label>
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-primary group h-[46px] w-full disabled:opacity-70"
-      >
+      <Button type="submit" disabled={submitting} className="group w-full">
         {submitting ? "Connexion…" : "Se connecter"}
         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-      </button>
+      </Button>
     </form>
   );
 }

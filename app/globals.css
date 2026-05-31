@@ -10,10 +10,13 @@
     --surface: #FFFFFF;
     --ink: #0A0A0A;
     --ink-2: #2A2A28;
-    --muted: #6E6E68;
-    --muted-2: #9A9A93;
+    --muted: #5F5F58;
+    --muted-2: #8A8A82;
     --line: #E5E4DE;
     --line-2: #D8D7D0;
+
+    --radius-card: 14px;
+    --focus-ring: 0 0 0 4px var(--accent-glow);
 
     --accent: #10F083;
     --accent-ink: #002914;
@@ -39,8 +42,8 @@
     --surface: #161816;
     --ink: #F5F6F2;
     --ink-2: #D7D8D2;
-    --muted: #8C8F87;
-    --muted-2: #5C5F58;
+    --muted: #989B92;
+    --muted-2: #6C6F68;
     --line: #1F221F;
     --line-2: #2A2D2A;
 
@@ -120,6 +123,53 @@
   .btn-primary-accent:hover {
     transform: translateY(-1px);
     box-shadow: 0 8px 22px var(--accent-glow);
+  }
+
+  .btn-secondary {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-[10px] border border-line bg-surface px-4 text-[15px] font-medium text-ink transition;
+  }
+  .btn-secondary:hover {
+    border-color: var(--line-2);
+    background-color: var(--bg-2);
+  }
+
+  .btn-ghost {
+    @apply inline-flex h-11 items-center justify-center gap-2 rounded-[10px] px-4 text-[15px] font-medium text-ink-2 transition;
+  }
+  .btn-ghost:hover {
+    background-color: var(--bg-2);
+    color: var(--ink);
+  }
+
+  /* Size modifiers — shared height scale for every button variant. */
+  .btn-sm {
+    @apply h-9 px-3 text-[14px];
+  }
+  .btn-lg {
+    @apply h-12 px-5 text-[15px];
+  }
+
+  /* Disabled state shared by all button variants. */
+  .btn-primary:disabled,
+  .btn-primary-accent:disabled,
+  .btn-secondary:disabled,
+  .btn-ghost:disabled {
+    @apply pointer-events-none opacity-50;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Single shared focus ring for every interactive element. */
+  .focus-ring:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+  }
+  .btn-primary:focus-visible,
+  .btn-primary-accent:focus-visible,
+  .btn-secondary:focus-visible,
+  .btn-ghost:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
   }
 
   .eyebrow {

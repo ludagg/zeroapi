@@ -6,6 +6,8 @@ import { JobsList, type DashboardJob } from "@/components/dashboard/jobs-list";
 import { JobsSearch } from "@/components/dashboard/jobs-search";
 import { JobsPagination } from "@/components/dashboard/jobs-pagination";
 import { JobFilters } from "@/components/dashboard/job-filters";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 import { extractAuthMode, extractVersion, pickEmoji } from "@/lib/job-helpers";
 
 export const dynamic = "force-dynamic";
@@ -84,34 +86,36 @@ export default async function JobsPage({
           { label: "Jobs" },
         ]}
       />
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <header className="mb-6">
-            <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-              Tous tes <em className="italic">jobs</em>.
-            </h1>
-            <p className="mt-2 text-muted">
+      <PageContainer width="wide">
+        <PageHeader
+          title={
+            <>
+              Tous tes <em>jobs</em>.
+            </>
+          }
+          description={
+            <>
               {allCount} job{allCount > 1 ? "s" : ""} au total
               {q && ` · ${total} résultat${total > 1 ? "s" : ""} pour « ${q} »`}
-            </p>
-          </header>
+            </>
+          }
+        />
 
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <JobsSearch />
-            <JobFilters
-              filters={[
-                { id: "all", label: "Tous", n: allCount },
-                { id: "running", label: "En cours", n: countByStatus(["PENDING", "RUNNING"]) },
-                { id: "ready", label: "Prêts", n: countByStatus(["READY", "DEPLOYED"]) },
-                { id: "failed", label: "Échoués", n: countByStatus(["FAILED"]) },
-              ]}
-            />
-          </div>
-
-          <JobsList jobs={mapped} />
-          <JobsPagination page={page} pageSize={PAGE_SIZE} total={total} />
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <JobsSearch />
+          <JobFilters
+            filters={[
+              { id: "all", label: "Tous", n: allCount },
+              { id: "running", label: "En cours", n: countByStatus(["PENDING", "RUNNING"]) },
+              { id: "ready", label: "Prêts", n: countByStatus(["READY", "DEPLOYED"]) },
+              { id: "failed", label: "Échoués", n: countByStatus(["FAILED"]) },
+            ]}
+          />
         </div>
-      </div>
+
+        <JobsList jobs={mapped} />
+        <JobsPagination page={page} pageSize={PAGE_SIZE} total={total} />
+      </PageContainer>
     </>
   );
 }

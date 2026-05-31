@@ -8,6 +8,8 @@ import { PasswordCard } from "@/components/settings/password-card";
 import { NotificationsCard } from "@/components/settings/notifications-card";
 import { ApiKeysCard } from "@/components/settings/api-keys-card";
 import { DangerCard } from "@/components/settings/danger-card";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -66,18 +68,17 @@ export default async function SettingsPage() {
           { label: "Paramètres" },
         ]}
       />
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <header className="mb-6">
-            <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-              Tes <em className="italic">paramètres</em>.
-            </h1>
-            <p className="mt-2 text-[14.5px] text-muted">
-              Profil, sécurité, notifications et plan.
-            </p>
-          </header>
+      <PageContainer width="narrow">
+        <PageHeader
+          title={
+            <>
+              Tes <em>paramètres</em>.
+            </>
+          }
+          description="Profil, sécurité, notifications et plan."
+        />
 
-          <div className="mx-auto grid max-w-3xl grid-cols-1 gap-4">
+        <div className="grid grid-cols-1 gap-4">
             <ProfileCard
               email={account.email}
               initial={{ name: account.name ?? "" }}
@@ -119,9 +120,8 @@ export default async function SettingsPage() {
             />
             <ApiKeysCard initial={initialKeys} />
             <DangerCard email={account.email} />
-          </div>
         </div>
-      </div>
+      </PageContainer>
     </>
   );
 }

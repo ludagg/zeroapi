@@ -135,6 +135,7 @@ export function Sidebar({
       )}
 
       <nav className="mb-5 flex flex-col gap-0.5">
+        <SectionLabel rail={rail}>Workspace</SectionLabel>
         <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate} rail={rail}>
           Vue d&apos;ensemble
         </NavLink>
@@ -147,6 +148,8 @@ export function Sidebar({
         <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate} rail={rail}>
           Playground
         </NavLink>
+
+        <SectionLabel rail={rail}>Infrastructure</SectionLabel>
         <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate} rail={rail}>
           Déploiements
         </NavLink>
@@ -265,7 +268,7 @@ function NavLink({
       onClick={onNavigate}
       title={rail && typeof children === "string" ? children : undefined}
       className={cn(
-        "relative flex items-center rounded-[7px] text-[14px] transition",
+        "focus-ring relative flex items-center rounded-[7px] text-[14px] transition",
         rail ? "justify-center px-0 py-2.5" : "gap-2.5 px-2 py-2",
         active
           ? "bg-ink text-bg [&_svg]:text-bg"
