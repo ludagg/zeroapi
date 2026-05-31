@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { PLAN_LIMITS, PLAN_ORDER } from "@/lib/plans";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
+import { PageHeader } from "@/components/ui/page-header";
 import { UserRowActions } from "./row-actions";
 
 export const dynamic = "force-dynamic";
@@ -59,16 +60,16 @@ export default async function AdminUsersPage({ searchParams }: Props) {
 
   return (
     <>
-      <header className="mb-6">
-        <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
-          <em className="italic">Utilisateurs</em>.
-        </h1>
-        <p className="mt-2 text-muted">
-          {formatNumber(total)} compte{total > 1 ? "s" : ""}
-          {users.length < total ? ` · ${users.length} affichés` : ""}
-          {rawQuery || planFilter ? " · filtré" : ""}
-        </p>
-      </header>
+      <PageHeader
+        title={<><em>Utilisateurs</em>.</>}
+        description={
+          <>
+            {formatNumber(total)} compte{total > 1 ? "s" : ""}
+            {users.length < total ? ` · ${users.length} affichés` : ""}
+            {rawQuery || planFilter ? " · filtré" : ""}
+          </>
+        }
+      />
 
       <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
         <label className="relative flex-1 min-w-[220px]">
@@ -109,7 +110,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         )}
       </form>
 
-      <div className="overflow-x-auto overflow-y-visible rounded-[14px] border border-line bg-surface">
+      <div className="overflow-x-auto overflow-y-visible rounded-card border border-line bg-surface">
         <table className="w-full text-[13.5px]">
           <thead className="bg-bg-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
             <tr>
