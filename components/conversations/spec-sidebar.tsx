@@ -13,9 +13,11 @@ import {
   Image,
   Key,
   ListTree,
+  Loader2,
   Lock,
   Redo2,
   Save,
+  Wrench,
   Search,
   Share2,
   Shield,
@@ -35,6 +37,7 @@ import {
   type ChatMessage,
   type ConversationInsights,
 } from "@/lib/conversation-helpers";
+import { auditSpec, auditScore, type AuditFinding, type AuditSeverity } from "@/lib/spec-audit";
 
 // React Flow is client-only and heavy — load it lazily, only for the Graph tab.
 const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"), {
@@ -49,7 +52,7 @@ const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"),
 type TabKey = "summary" | "spec" | "endpoints" | "graph";
 
 const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
-  { key: "summary", label: "Résumé", icon: <Sparkles className="h-3 w-3" /> },
+  { key: "summary", label: "Audit", icon: <Gauge className="h-3 w-3" /> },
   { key: "spec", label: "Spec", icon: <FileJson className="h-3 w-3" /> },
   { key: "endpoints", label: "Endpoints", icon: <ListTree className="h-3 w-3" /> },
   { key: "graph", label: "Graphe", icon: <Share2 className="h-3 w-3" /> },
@@ -103,8 +106,9 @@ export function SpecPanel({
   const [tab, setTab] = useState<TabKey>("graph");
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const insights = useMemo(() => computeInsights(messages, spec), [messages, spec]);
-  const tone = confidenceTone(insights.confidence);
+  const findings = useMemo(() => auditSpec(spec), [spec]);
+  const score = useMemo(() => auditScore(findings), [findings]);
+  const tone = confidenceTone(score);
   const resourceCount = spec?.resources.length ?? 0;
   const canSave = resourceCount > 0 && !submitting && !pending;
 
@@ -245,7 +249,7 @@ export function SpecPanel({
                 (tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger")
               }
             />
-            {insights.confidence}%
+            {score}%
           </span>
           {jobId ? (
             <a
@@ -280,7 +284,9 @@ export function SpecPanel({
           <SpecGraph spec={spec} onApplyOperation={onApplyOperation} />
         ) : (
           <div className="flex-1 overflow-y-auto p-4.5 scrollbar-thin">
-            {tab === "summary" && <SummaryTab insights={insights} />}
+            {tab === "summary" && (
+              <AuditTab findings={findings} score={score} onApplyOperation={onApplyOperation} />
+            )}
             {tab === "spec" && <SpecJsonTab spec={spec} />}
             {tab === "endpoints" && <EndpointsTab spec={spec} />}
           </div>
@@ -290,102 +296,123 @@ export function SpecPanel({
   );
 }
 
-// ── Résumé tab (the original sidebar body) ───────────────────────────────────
+// ── Audit tab (architecture findings + 1-click fixes) ────────────────────────
 
-function SummaryTab({ insights }: { insights: ConversationInsights }) {
-  const tone = confidenceTone(insights.confidence);
-  const detectedModelVisible = insights.confidence >= 70;
+const SEV_DOT: Record<AuditSeverity, string> = {
+  error: "bg-danger",
+  warning: "bg-warn",
+  info: "bg-muted-2",
+};
+
+function AuditTab({
+  findings,
+  score,
+  onApplyOperation,
+}: {
+  findings: AuditFinding[];
+  score: number;
+  onApplyOperation?: ApplyOperation;
+}) {
+  const tone = confidenceTone(score);
+  const barColor = tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger";
+  const errors = findings.filter((f) => f.severity === "error").length;
+  const warns = findings.filter((f) => f.severity === "warning").length;
+  const [applyingId, setApplyingId] = useState<string | null>(null);
+
+  async function fix(f: AuditFinding) {
+    if (!f.fix || !onApplyOperation) return;
+    setApplyingId(f.id);
+    const res = await onApplyOperation({
+      type: f.fix.op.type,
+      params: f.fix.op.params,
+      confirmed: f.fix.confirmed,
+    });
+    setApplyingId(null);
+    if (!res.ok) {
+      toast.error("error" in res && res.error ? res.error : "Correction rejetée.");
+    }
+    // ok → the spec updates → findings recompute (parent passes a new spec).
+  }
 
   return (
     <div className="space-y-4">
-      <ConfidenceCard confidence={insights.confidence} tone={tone} />
+      <div className="rounded-[12px] border border-line bg-surface p-4">
+        <div className="flex items-center justify-between">
+          <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+            Score d&apos;architecture
+          </span>
+          <span className="font-serif text-[22px] leading-none">
+            {score}
+            <span className="text-[13px] text-muted">/100</span>
+          </span>
+        </div>
+        <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-bg-3">
+          <div
+            className={`h-full ${barColor} transition-[width] duration-700`}
+            style={{ width: `${score}%` }}
+          />
+        </div>
+        <p className="mt-2.5 text-[12px] leading-snug text-muted">
+          {errors > 0
+            ? `${errors} problème${errors > 1 ? "s" : ""} critique${errors > 1 ? "s" : ""}`
+            : warns > 0
+              ? `${warns} amélioration${warns > 1 ? "s" : ""} recommandée${warns > 1 ? "s" : ""}`
+              : "Architecture saine."}
+        </p>
+      </div>
 
-      <SpecSection label="Sécurité détectée" count={insights.specReady ? "spec" : "auto"}>
-        <AuthBadgeRow features={insights.authFeatures} />
-        <SpecRow
-          icon={<Shield className="h-3 w-3" />}
-          label="RBAC"
-          meta={
-            insights.roles.length > 0
-              ? `${insights.roles.length} rôle${insights.roles.length > 1 ? "s" : ""} · ${insights.roles
-                  .slice(0, 3)
-                  .join(", ")}`
-              : insights.hasPermissions
-                ? "Permissions déclaratives"
-                : "Pas de rôles"
-          }
-          enabled={insights.roles.length > 0 || insights.hasPermissions}
-        />
-        <SpecRow
-          icon={<Lock className="h-3 w-3" />}
-          label="ownOnly"
-          meta={insights.ownOnly ? "Lignes privées par user" : "—"}
-          enabled={insights.ownOnly}
-        />
-        <SpecRow
-          icon={<Gauge className="h-3 w-3" />}
-          label="Rate limit"
-          meta={insights.rateLimit ?? "Non configuré"}
-          enabled={Boolean(insights.rateLimit)}
-        />
-      </SpecSection>
-
-      {insights.relations.length > 0 ? (
-        <SpecSection label="Relations" count={`${insights.relations.length}`}>
-          {insights.relations.slice(0, 6).map((r, idx) => (
-            <SpecRow
-              key={`${r.label}-${idx}`}
-              icon={<GitBranch className="h-3 w-3" />}
-              label={r.label}
-              meta={r.kind}
-              enabled
-            />
-          ))}
-          {insights.relations.length > 6 && (
-            <div className="px-0 pt-1 text-[11px] text-muted">
-              + {insights.relations.length - 6} autres…
-            </div>
-          )}
-        </SpecSection>
-      ) : null}
-
-      {insights.features.length > 0 ? (
-        <SpecSection label="Features" count={`${insights.features.length}`}>
-          {insights.features.includes("fileUpload") && (
-            <SpecRow icon={<Image className="h-3 w-3" aria-hidden />} label="Upload fichiers" meta="S3 · R2 · local" enabled />
-          )}
-          {insights.features.includes("webhooks") && (
-            <SpecRow icon={<Webhook className="h-3 w-3" />} label="Webhooks" meta="inbound / outbound" enabled />
-          )}
-          {insights.features.includes("search") && (
-            <SpecRow icon={<Search className="h-3 w-3" />} label="Recherche" meta="?q=" enabled />
-          )}
-          {insights.features.includes("pagination") && (
-            <SpecRow icon={<Gauge className="h-3 w-3" />} label="Pagination" meta="cursor + offset" enabled />
-          )}
-        </SpecSection>
-      ) : null}
-
-      <SpecSection label="Extras inclus">
-        <SpecRow label="Tests Vitest" meta="✓" enabled />
-        <SpecRow label="Docs OpenAPI 3.1" meta="✓" enabled />
-        <SpecRow label="Logs structurés" meta="✓" enabled />
-      </SpecSection>
-
-      {detectedModelVisible ? (
-        <div className="rounded-[12px] border border-accent/40 bg-accent-soft p-4">
-          <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.1em] text-accent-ink">
-            <Check className="h-3 w-3" strokeWidth={2.6} />
-            Modèle détecté
-          </div>
-          <div className="mt-2 text-[14px] font-medium text-ink">{insights.summary}</div>
+      {findings.length === 0 ? (
+        <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-6 text-center text-[12px] text-muted">
+          <ShieldCheck className="mx-auto mb-2 h-4 w-4 text-accent-ink" />
+          Architecture saine — aucun problème détecté.
         </div>
       ) : (
-        <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-4 text-center text-[12px] text-muted">
-          <FileText className="mx-auto mb-2 h-4 w-4" />
-          Continue à décrire ton API à Kia : ressources, authentification, rôles. Le graphe et les
-          endpoints se mettent à jour en direct.
+        <div className="space-y-2">
+          {findings.map((f) => (
+            <FindingRow
+              key={f.id}
+              finding={f}
+              applying={applyingId === f.id}
+              canFix={Boolean(onApplyOperation)}
+              onFix={() => fix(f)}
+            />
+          ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+function FindingRow({
+  finding,
+  applying,
+  canFix,
+  onFix,
+}: {
+  finding: AuditFinding;
+  applying: boolean;
+  canFix: boolean;
+  onFix: () => void;
+}) {
+  return (
+    <div className="rounded-[12px] border border-line bg-surface p-3">
+      <div className="flex items-start gap-2">
+        <span className={"mt-1 h-1.5 w-1.5 flex-shrink-0 rounded-full " + SEV_DOT[finding.severity]} />
+        <div className="min-w-0 flex-1">
+          <div className="text-[12.5px] font-medium text-ink">{finding.title}</div>
+          <div className="mt-0.5 text-[11.5px] leading-snug text-muted">{finding.detail}</div>
+        </div>
+      </div>
+      {finding.fix && canFix && (
+        <button
+          type="button"
+          disabled={applying}
+          onClick={onFix}
+          className="mt-2 ml-3.5 inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-2.5 text-[11.5px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:opacity-50"
+        >
+          {applying ? <Loader2 className="h-3 w-3 animate-spin" /> : <Wrench className="h-3 w-3" />}
+          {finding.fix.label}
+        </button>
       )}
     </div>
   );
