@@ -42,6 +42,7 @@ import {
   type GraphField,
   type GraphNodeModel,
 } from "@/lib/spec-graph";
+import { GlobalSettings } from "@/components/conversations/global-settings";
 
 /** Result of applying a graph-emitted operation (resolved by the parent). */
 export type ApplyOperationResult =
@@ -365,6 +366,7 @@ export default function SpecGraph({
     topLevel: boolean;
   } | null>(null);
   const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const [globalOpen, setGlobalOpen] = useState(false);
   // Generic confirmation for any destructive op (setFieldType, renameField…).
   const [confirmOp, setConfirmOp] = useState<{
     op: { type: string; params: Record<string, unknown> };
@@ -391,6 +393,7 @@ export default function SpecGraph({
     setEditFieldFor(null);
     setEditEdgeFor(null);
     setSettingsFor(null);
+    setGlobalOpen(false);
     setConfirmOp(null);
     setErr(null);
   }, []);
@@ -793,17 +796,34 @@ export default function SpecGraph({
         />
 
         {editable && (
-          <button
-            type="button"
-            onClick={() => {
-              closeAll();
-              setCreateOpen(true);
-            }}
-            className="absolute right-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Ressource
-          </button>
+          <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                closeAll();
+                setGlobalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              API
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAll();
+                setCreateOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Ressource
+            </button>
+          </div>
+        )}
+
+        {globalOpen && editable && spec && onApplyOperation && (
+          <GlobalSettings spec={spec} onApplyOperation={onApplyOperation} onClose={() => setGlobalOpen(false)} />
         )}
 
         {editable &&
