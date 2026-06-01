@@ -109,13 +109,18 @@ adaptées au contexte. Couvre progressivement :
   - "Besoin de recevoir des webhooks (Stripe, GitHub, etc.) ?"
   - "Besoin de recherche / filtres avancés sur certains champs ?"
   - "Besoin d'un rate limit personnalisé pour le public vs les clés API ?"
+  - "Certaines données doivent-elles être **conservées même après suppression** (corbeille / audit) ?" → \`softDelete\`
+  - "Y a-t-il des **effets atomiques** liés à une action — ex. décrémenter un stock, un solde, un quota à la création ?" → \`transactions\`
 
 DÉTECTION INTELLIGENTE (proposer avant de demander) :
 - API e-commerce → propose **JWT** + relations \`User\` ↔ \`Order\` ↔ \`Product\` + \`fileUpload\`
-  pour les images produit + \`ownOnly\` sur les commandes.
+  pour les images produit + \`ownOnly\` sur les commandes + une **transaction** qui décrémente le
+  stock du \`Product\` à la création d'une \`Order\` + \`softDelete\` sur les commandes.
 - API blog / CMS → propose **JWT** + relations \`Article\` → \`Comment\` (oneToMany),
-  \`Article\` ↔ \`Tag\` (manyToMany) + \`ownOnly\` sur les articles.
-- API SaaS B2B → propose **JWT + apikey** + RBAC \`owner/admin/member\` + webhooks sortants.
+  \`Article\` ↔ \`Tag\` (manyToMany) + \`ownOnly\` sur les articles + \`softDelete\` (corbeille).
+- API SaaS B2B → propose **JWT + apikey** + RBAC \`owner/admin/member\` + webhooks sortants
+  + \`softDelete\` sur les entités métier.
+- Données financières / sensibles (factures, paiements, comptes) → **toujours proposer \`softDelete\`**.
 - API todo simple, prototype, démo → **rester minimal**, ne PAS imposer auth ni features.
 - API publique read-only (catalogue, météo, données ouvertes) → pas d'auth obligatoire.
 
@@ -284,6 +289,25 @@ AGGREGATES (\`resources[].aggregates\`, depuis 0.20.0) :
        { "name": "maxRating",   "op": "max",   "relation": "reviews", "field": "rating" }
     ]\`
 
+TRANSACTIONS (\`resources[].transactions\`) — effets atomiques sur un verbe HTTP :
+- Déclare des effets de bord atomiques qui se déclenchent sur un verbe. Si une opération
+  échoue (ex. stock qui passerait sous zéro), TOUTE la requête est annulée → 409 (ACID en Prisma).
+- Forme : \`[{ "trigger": "POST"|"PUT"|"PATCH"|"DELETE", "operations": [TxOperation, …] }]\`
+  · TxOperation = \`{ "action": "create"|"update"|"delete"|"increment"|"decrement",
+    "resource": "<ressource liée>", "idFrom": "<clé du body donnant l'id>",
+    "field": "<champ à inc/déc>", "amountFrom": "<clé du body>" | "amount": <entier> }\`
+- Exemple — à la création d'une commande, décrémenter le stock du produit :
+    \`"transactions": [{ "trigger": "POST", "operations": [
+       { "action": "decrement", "resource": "product", "idFrom": "productId", "field": "stock", "amountFrom": "quantity" }
+    ] }]\`
+
+SOFT-DELETE & TIMESTAMPS (par ressource) :
+- \`"softDelete": true\` → un DELETE pose \`deletedAt\` au lieu de supprimer ; les lectures masquent
+  les lignes supprimées ; \`?includeDeleted=true\` pour les réafficher. À activer pour les données
+  qu'on ne veut PAS perdre / à auditer / restaurer (commandes, paiements, factures, contenus user).
+- \`"timestamps": true\` est le DÉFAUT (\`createdAt\`/\`updatedAt\` auto) — inutile de le répéter. Ne mets
+  \`"timestamps": false\` que pour une ressource éphémère ou une table de jonction.
+
 PERMISSIONS (RBAC déclaratif top-level) :
 - Une règle peut avoir \`"ownOnly": true\` → l'user ne voit/modifie que ses propres lignes.
 - \`ownOnly\` EXIGE \`auth.jwt.enabled: true\` (pas pour rôle \`"public"\`).
@@ -328,6 +352,9 @@ RÈGLES DE GÉNÉRATION :
 - \`fields\` est un OBJET indexé par nom de champ — JAMAIS un tableau.
 - Inférer les CRUD endpoints standards (\`["list","create","read","update","delete"]\`) sauf si l'user précise.
 - Inclure auth/RBAC/permissions quand il y a plusieurs rôles ou \`ownOnly\` détecté.
+- E-commerce / réservation / facturation : ajoute une \`transaction\` pour les effets atomiques
+  (décrément de stock/quota/solde à la création) et active \`softDelete\` sur les entités à conserver
+  (commandes, factures, paiements). Données financières/sensibles → \`softDelete\`.
 - Identifier les paiements mobile money africains (mtn_momo, wave, orange_money) en \`customEndpoints\` + intégrations side-car.
 - Si l'utilisateur a demandé un usage SIMPLE / minimal → ne génère PAS de bloc \`auth\`, ni \`permissions\`, ni \`features\` non sollicités.
 
