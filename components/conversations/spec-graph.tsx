@@ -26,6 +26,7 @@ import {
   Link2,
   Loader2,
   Plus,
+  Settings2,
   Share2,
   Sigma,
   Trash2,
@@ -41,6 +42,7 @@ import {
   type GraphField,
   type GraphNodeModel,
 } from "@/lib/spec-graph";
+import { GlobalSettings } from "@/components/conversations/global-settings";
 
 /** Result of applying a graph-emitted operation (resolved by the parent). */
 export type ApplyOperationResult =
@@ -58,16 +60,20 @@ export type ApplyOperation = (op: {
 type GraphActions = {
   editable: boolean;
   onAddField: (resource: string) => void;
+  onEditField: (resource: string, field: GraphField) => void;
   onRemoveField: (resource: string, field: string) => void;
   onRenameResource: (resource: string) => void;
   onRemoveResource: (resource: string) => void;
+  onResourceSettings: (resource: string) => void;
 };
 const GraphActionsContext = createContext<GraphActions>({
   editable: false,
   onAddField: () => {},
+  onEditField: () => {},
   onRemoveField: () => {},
   onRenameResource: () => {},
   onRemoveResource: () => {},
+  onResourceSettings: () => {},
 });
 
 const FIELD_TYPES = [
@@ -156,6 +162,14 @@ function ResourceNode({ data }: NodeProps) {
             <span className="flex items-center gap-1">
               <button
                 type="button"
+                title="Réglages de la ressource"
+                onClick={() => actions.onResourceSettings(node.name)}
+                className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
+              >
+                <Settings2 className="h-3 w-3" />
+              </button>
+              <button
+                type="button"
                 title="Ajouter un champ"
                 onClick={() => actions.onAddField(node.name)}
                 className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
@@ -184,15 +198,31 @@ function ResourceNode({ data }: NodeProps) {
               key={f.name}
               className="group grid grid-cols-[1fr_auto] items-center gap-2 px-3 py-[2.5px]"
             >
-              <span className="flex min-w-0 items-center gap-1.5">
-                <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + FIELD_DOT[f.kind]} />
-                <span className="truncate font-mono text-[11px] text-ink-2">
-                  {f.name}
-                  {f.required && <span className="text-danger">*</span>}
+              {editable && f.kind !== "pk" ? (
+                <button
+                  type="button"
+                  onClick={() => actions.onEditField(node.name, f)}
+                  title="Éditer le champ"
+                  className="nodrag flex min-w-0 items-center gap-1.5 rounded-[5px] px-1 py-px text-left transition hover:bg-bg-2"
+                >
+                  <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + FIELD_DOT[f.kind]} />
+                  <span className="truncate font-mono text-[11px] text-ink-2">
+                    {f.name}
+                    {f.required && <span className="text-danger">*</span>}
+                  </span>
+                  {f.kind === "fk" && <Link2 className="h-2.5 w-2.5 flex-shrink-0 text-[#2A6FDB]" />}
+                </button>
+              ) : (
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + FIELD_DOT[f.kind]} />
+                  <span className="truncate font-mono text-[11px] text-ink-2">
+                    {f.name}
+                    {f.required && <span className="text-danger">*</span>}
+                  </span>
+                  {f.kind === "pk" && <KeyRound className="h-2.5 w-2.5 flex-shrink-0 text-accent-ink" />}
+                  {f.kind === "fk" && <Link2 className="h-2.5 w-2.5 flex-shrink-0 text-[#2A6FDB]" />}
                 </span>
-                {f.kind === "pk" && <KeyRound className="h-2.5 w-2.5 flex-shrink-0 text-accent-ink" />}
-                {f.kind === "fk" && <Link2 className="h-2.5 w-2.5 flex-shrink-0 text-[#2A6FDB]" />}
-              </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <span className="font-mono text-[10px] text-muted">{f.type}</span>
                 {removable && (
@@ -327,6 +357,22 @@ export default function SpecGraph({
   } | null>(null);
   const [renameFor, setRenameFor] = useState<string | null>(null);
   const [removeResourceFor, setRemoveResourceFor] = useState<{ name: string; lines: string[] } | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [editFieldFor, setEditFieldFor] = useState<{ resource: string; field: GraphField } | null>(null);
+  const [editEdgeFor, setEditEdgeFor] = useState<{
+    source: string;
+    target: string;
+    label: string;
+    topLevel: boolean;
+  } | null>(null);
+  const [settingsFor, setSettingsFor] = useState<string | null>(null);
+  const [globalOpen, setGlobalOpen] = useState(false);
+  // Generic confirmation for any destructive op (setFieldType, renameField…).
+  const [confirmOp, setConfirmOp] = useState<{
+    op: { type: string; params: Record<string, unknown> };
+    title: React.ReactNode;
+    lines: string[];
+  } | null>(null);
   const [relField, setRelField] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -343,8 +389,44 @@ export default function SpecGraph({
     setRemoveConfirm(null);
     setRenameFor(null);
     setRemoveResourceFor(null);
+    setCreateOpen(false);
+    setEditFieldFor(null);
+    setEditEdgeFor(null);
+    setSettingsFor(null);
+    setGlobalOpen(false);
+    setConfirmOp(null);
     setErr(null);
   }, []);
+
+  const requestEditField = useCallback(
+    (resource: string, field: GraphField) => {
+      closeAll();
+      setEditFieldFor({ resource, field });
+    },
+    [closeAll],
+  );
+
+  const requestResourceSettings = useCallback(
+    (resource: string) => {
+      closeAll();
+      setSettingsFor(resource);
+    },
+    [closeAll],
+  );
+
+  const onEdgeClick = useCallback(
+    (_e: React.MouseEvent, edge: Edge) => {
+      if (!editable) return;
+      closeAll();
+      setEditEdgeFor({
+        source: edge.source,
+        target: edge.target,
+        label: typeof edge.label === "string" ? edge.label : "",
+        topLevel: edge.id.startsWith("tl:"),
+      });
+    },
+    [editable, closeAll],
+  );
 
   const onConnect = useCallback(
     (c: Connection) => {
@@ -401,11 +483,21 @@ export default function SpecGraph({
     () => ({
       editable,
       onAddField: requestAddField,
+      onEditField: requestEditField,
       onRemoveField: requestRemoveField,
       onRenameResource: requestRenameResource,
       onRemoveResource: requestRemoveResource,
+      onResourceSettings: requestResourceSettings,
     }),
-    [editable, requestAddField, requestRemoveField, requestRenameResource, requestRemoveResource],
+    [
+      editable,
+      requestAddField,
+      requestEditField,
+      requestRemoveField,
+      requestRenameResource,
+      requestRemoveResource,
+      requestResourceSettings,
+    ],
   );
 
   async function chooseRelationType(kebab: string) {
@@ -500,6 +592,175 @@ export default function SpecGraph({
     else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
   }
 
+  async function submitCreateResource(form: { name: string; fieldName: string; fieldType: string }) {
+    if (!onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const params: Record<string, unknown> = { name: form.name.trim() };
+    if (form.fieldName.trim()) {
+      params.fields = { [form.fieldName.trim()]: { type: form.fieldType } };
+    }
+    const res = await onApplyOperation({ type: "addResource", params });
+    setBusy(false);
+    if (res.ok) setCreateOpen(false);
+    else setErr("error" in res ? res.error ?? "Création rejetée." : "Création rejetée.");
+  }
+
+  // Apply a field edit as a sequence of operations (safe ones first, then the
+  // destructive type/rename which may require confirmation — surfaced generically).
+  async function submitEditField(form: {
+    newName: string;
+    type: string;
+    required: boolean;
+    unique: boolean;
+    values: string;
+  }) {
+    if (!editFieldFor || !onApplyOperation) return;
+    const { resource, field } = editFieldFor;
+    setBusy(true);
+    setErr(null);
+
+    const fail = (res: ApplyOperationResult, fallback: string) => {
+      setBusy(false);
+      setErr("error" in res ? res.error ?? fallback : fallback);
+    };
+
+    if (form.required !== field.required) {
+      const r = await onApplyOperation({
+        type: "setFieldRequired",
+        params: { resource, field: field.name, required: form.required },
+      });
+      if (!r.ok) return fail(r, "Échec (required).");
+    }
+    if (form.unique) {
+      const r = await onApplyOperation({
+        type: "modifyFieldOptions",
+        params: { resource, field: field.name, options: { unique: true } },
+      });
+      if (!r.ok) return fail(r, "Échec (unique).");
+    }
+    if (form.type !== field.type) {
+      const params: Record<string, unknown> = { resource, field: field.name, fieldType: form.type };
+      if (form.type === "enum") {
+        params.options = { values: form.values.split(",").map((s) => s.trim()).filter(Boolean) };
+      }
+      const r = await onApplyOperation({ type: "setFieldType", params });
+      if (!r.ok) {
+        setBusy(false);
+        if ("requiresConfirmation" in r) {
+          setEditFieldFor(null);
+          setConfirmOp({
+            op: { type: "setFieldType", params },
+            title: <>Changer le type de <span className="font-mono">{field.name}</span> ?</>,
+            lines: r.requiresConfirmation.flatMap((im) => [im.reason, ...im.impact]),
+          });
+          return;
+        }
+        return fail(r, "Échec du changement de type.");
+      }
+    }
+    if (form.newName.trim() && form.newName.trim() !== field.name) {
+      const params = { resource, oldName: field.name, newName: form.newName.trim() };
+      const r = await onApplyOperation({ type: "renameField", params });
+      if (!r.ok) {
+        setBusy(false);
+        if ("requiresConfirmation" in r) {
+          setEditFieldFor(null);
+          setConfirmOp({
+            op: { type: "renameField", params },
+            title: <>Renommer <span className="font-mono">{field.name}</span> ?</>,
+            lines: r.requiresConfirmation.flatMap((im) => [im.reason, ...im.impact]),
+          });
+          return;
+        }
+        return fail(r, "Échec du renommage.");
+      }
+    }
+    setBusy(false);
+    setEditFieldFor(null);
+  }
+
+  async function confirmGeneric() {
+    if (!confirmOp || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const res = await onApplyOperation({ ...confirmOp.op, confirmed: true });
+    setBusy(false);
+    if (res.ok) setConfirmOp(null);
+    else setErr("error" in res ? res.error ?? "Opération rejetée." : "Opération rejetée.");
+  }
+
+  async function setEdgeOnDelete(onDelete: string) {
+    if (!editEdgeFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const res = await onApplyOperation({
+      type: "setRelationOnDelete",
+      params: { from: editEdgeFor.source, to: editEdgeFor.target, onDelete },
+    });
+    setBusy(false);
+    if (res.ok) setEditEdgeFor(null);
+    else setErr("error" in res ? res.error ?? "Échec." : "Échec.");
+  }
+
+  async function removeEdgeRelation() {
+    if (!editEdgeFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const op = editEdgeFor.topLevel
+      ? { type: "removeRelation", params: { from: editEdgeFor.source, to: editEdgeFor.target } }
+      : { type: "removeResourceRelation", params: { resource: editEdgeFor.source, target: editEdgeFor.target } };
+    const res = await onApplyOperation(op);
+    setBusy(false);
+    if (res.ok) setEditEdgeFor(null);
+    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+  }
+
+  async function submitResourceSettings(form: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  }) {
+    if (!settingsFor || !onApplyOperation) return;
+    const name = settingsFor;
+    const r = spec?.resources.find((x) => x.name === name);
+    setBusy(true);
+    setErr(null);
+    const fail = (res: ApplyOperationResult, fallback: string): boolean => {
+      if (res.ok) return false;
+      setBusy(false);
+      setErr("error" in res ? res.error ?? fallback : fallback);
+      return true;
+    };
+    const defaultEndpoints = ["list", "create", "read", "update", "delete"];
+    const sortJoin = (a: string[]) => [...a].sort().join(",");
+
+    if ((r?.description ?? "") !== form.description) {
+      if (fail(await onApplyOperation({ type: "setResourceDescription", params: { name, description: form.description } }), "Échec (description)."))
+        return;
+    }
+    if (sortJoin(r?.endpoints ?? defaultEndpoints) !== sortJoin(form.endpoints)) {
+      if (fail(await onApplyOperation({ type: "setResourceEndpoints", params: { name, endpoints: form.endpoints } }), "Échec (endpoints)."))
+        return;
+    }
+    if ((r?.softDelete === true) !== form.softDelete) {
+      if (fail(await onApplyOperation({ type: "setSoftDelete", params: { resource: name, enabled: form.softDelete } }), "Échec (soft-delete)."))
+        return;
+    }
+    if ((r?.timestamps !== false) !== form.timestamps) {
+      if (fail(await onApplyOperation({ type: "setTimestamps", params: { resource: name, enabled: form.timestamps } }), "Échec (timestamps)."))
+        return;
+    }
+    if (sortJoin(r?.searchable ?? []) !== sortJoin(form.searchable)) {
+      if (fail(await onApplyOperation({ type: "setSearchableFields", params: { name, fields: form.searchable } }), "Échec (recherche)."))
+        return;
+    }
+    setBusy(false);
+    setSettingsFor(null);
+  }
+
   if (flow.nodes.length === 0) {
     return (
       <div className="grid h-full place-items-center p-8 text-center">
@@ -534,12 +795,53 @@ export default function SpecGraph({
           }}
         />
 
-        {editable && !pending && !addFieldFor && !removeConfirm && !renameFor && !removeResourceFor && (
-          <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[10px] text-muted backdrop-blur">
-            <Link2 className="h-3 w-3 text-accent-ink" />
-            Glisse pour relier · + champ · double-clic = renommer
+        {editable && (
+          <div className="absolute right-3 top-3 z-10 flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                closeAll();
+                setGlobalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
+            >
+              <Settings2 className="h-3.5 w-3.5" />
+              API
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                closeAll();
+                setCreateOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Ressource
+            </button>
           </div>
         )}
+
+        {globalOpen && editable && spec && onApplyOperation && (
+          <GlobalSettings spec={spec} onApplyOperation={onApplyOperation} onClose={() => setGlobalOpen(false)} />
+        )}
+
+        {editable &&
+          !pending &&
+          !addFieldFor &&
+          !removeConfirm &&
+          !renameFor &&
+          !removeResourceFor &&
+          !createOpen &&
+          !editFieldFor &&
+          !editEdgeFor &&
+          !settingsFor &&
+          !confirmOp && (
+            <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[10px] text-muted backdrop-blur">
+              <Link2 className="h-3 w-3 text-accent-ink" />
+              Glisse pour relier · clic champ/relation = éditer · ⚙ = réglages
+            </div>
+          )}
 
         {pending && (
           <RelationPopover
@@ -606,6 +908,67 @@ export default function SpecGraph({
           />
         )}
 
+        {createOpen && (
+          <CreateResourcePopover busy={busy} error={err} onSubmit={submitCreateResource} onCancel={closeAll} />
+        )}
+
+        {editFieldFor && (
+          <EditFieldPopover
+            resource={editFieldFor.resource}
+            field={editFieldFor.field}
+            busy={busy}
+            error={err}
+            onSubmit={submitEditField}
+            onDelete={() => requestRemoveField(editFieldFor.resource, editFieldFor.field.name)}
+            onCancel={closeAll}
+          />
+        )}
+
+        {confirmOp && (
+          <ConfirmDeleteCard
+            title={confirmOp.title}
+            lines={confirmOp.lines}
+            confirmLabel="Confirmer"
+            busy={busy}
+            error={err}
+            onConfirm={confirmGeneric}
+            onCancel={closeAll}
+          />
+        )}
+
+        {editEdgeFor && (
+          <EditRelationPopover
+            edge={editEdgeFor}
+            busy={busy}
+            error={err}
+            onSetOnDelete={setEdgeOnDelete}
+            onRemove={removeEdgeRelation}
+            onCancel={closeAll}
+          />
+        )}
+
+        {settingsFor &&
+          (() => {
+            const r = spec?.resources.find((x) => x.name === settingsFor);
+            return (
+              <ResourceSettingsPopover
+                resource={settingsFor}
+                fieldNames={r ? Object.keys(r.fields ?? {}) : []}
+                initial={{
+                  description: r?.description ?? "",
+                  endpoints: (r?.endpoints as string[] | undefined) ?? ["list", "create", "read", "update", "delete"],
+                  softDelete: r?.softDelete === true,
+                  timestamps: r?.timestamps !== false,
+                  searchable: r?.searchable ?? [],
+                }}
+                busy={busy}
+                error={err}
+                onSubmit={submitResourceSettings}
+                onCancel={closeAll}
+              />
+            );
+          })()}
+
         {/* The key forces a re-fit when the topology (nodes/edges) changes. */}
         <ReactFlow
           key={`${flow.nodes.map((n) => n.id).join(",")}|${flow.edges.length}`}
@@ -615,6 +978,7 @@ export default function SpecGraph({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={editable ? onConnect : undefined}
+          onEdgeClick={editable ? onEdgeClick : undefined}
           nodesConnectable={editable}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }}
           fitView
@@ -796,6 +1160,357 @@ function AddFieldPopover({
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
         Ajouter le champ
+      </button>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+function CreateResourcePopover({
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  busy: boolean;
+  error: string | null;
+  onSubmit: (form: { name: string; fieldName: string; fieldType: string }) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [fieldName, setFieldName] = useState("");
+  const [fieldType, setFieldType] = useState<string>("string");
+  const canSubmit = name.trim().length > 0 && !busy;
+  return (
+    <PopoverShell onCancel={onCancel} title={<>Nouvelle ressource</>}>
+      <input
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        disabled={busy}
+        autoFocus
+        placeholder="Nom (PascalCase, ex. Product)"
+        className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+      />
+      <div className="mt-2.5 mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+        Premier champ (optionnel)
+      </div>
+      <div className="flex gap-1.5">
+        <input
+          value={fieldName}
+          onChange={(e) => setFieldName(e.target.value)}
+          disabled={busy}
+          placeholder="champ (ex. name)"
+          className="h-8 min-w-0 flex-1 rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+        />
+        <select
+          value={fieldType}
+          onChange={(e) => setFieldType(e.target.value)}
+          disabled={busy}
+          className="h-8 rounded-[8px] border border-line bg-bg px-2 font-mono text-[11px] text-ink outline-none focus:border-ink disabled:opacity-50"
+        >
+          {FIELD_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t}
+            </option>
+          ))}
+        </select>
+      </div>
+      <button
+        type="button"
+        disabled={!canSubmit}
+        onClick={() => onSubmit({ name, fieldName, fieldType })}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+        Créer la ressource
+      </button>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+function EditFieldPopover({
+  resource,
+  field,
+  busy,
+  error,
+  onSubmit,
+  onDelete,
+  onCancel,
+}: {
+  resource: string;
+  field: GraphField;
+  busy: boolean;
+  error: string | null;
+  onSubmit: (form: { newName: string; type: string; required: boolean; unique: boolean; values: string }) => void;
+  onDelete: () => void;
+  onCancel: () => void;
+}) {
+  const [newName, setNewName] = useState(field.name);
+  const [type, setType] = useState<string>(field.type);
+  const [required, setRequired] = useState(Boolean(field.required));
+  const [unique, setUnique] = useState(false);
+  const [values, setValues] = useState("");
+  // Keep the field's current type selectable even if it's not in the common list.
+  const typeOptions = (FIELD_TYPES as readonly string[]).includes(field.type)
+    ? (FIELD_TYPES as readonly string[])
+    : [field.type, ...FIELD_TYPES];
+  const canSubmit = newName.trim().length > 0 && !busy && (type !== "enum" || values.trim().length > 0);
+
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          Éditer <b className="text-ink">{resource}.{field.name}</b>
+        </>
+      }
+    >
+      <input
+        value={newName}
+        onChange={(e) => setNewName(e.target.value)}
+        disabled={busy}
+        autoFocus
+        placeholder="nom du champ"
+        className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+      />
+      <select
+        value={type}
+        onChange={(e) => setType(e.target.value)}
+        disabled={busy}
+        className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2 font-mono text-[12px] text-ink outline-none focus:border-ink disabled:opacity-50"
+      >
+        {typeOptions.map((t) => (
+          <option key={t} value={t}>
+            {t}
+          </option>
+        ))}
+      </select>
+      {type === "enum" && (
+        <input
+          value={values}
+          onChange={(e) => setValues(e.target.value)}
+          disabled={busy}
+          placeholder="valeurs (séparées par ,)"
+          className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+        />
+      )}
+      <div className="mt-2.5 flex items-center gap-3">
+        <Check label="required" checked={required} onChange={setRequired} disabled={busy} />
+        <Check label="unique" checked={unique} onChange={setUnique} disabled={busy} />
+      </div>
+      <div className="mt-2.5 flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!canSubmit}
+          onClick={() => onSubmit({ newName, type, required, unique, values })}
+          className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          Enregistrer
+        </button>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onDelete}
+          title="Supprimer le champ"
+          className="grid h-9 w-9 place-items-center rounded-[9px] border border-line bg-surface text-muted transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+      <p className="mt-2 text-[10.5px] leading-snug text-muted">
+        Le renommage et le changement de type peuvent demander une confirmation.
+      </p>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+const ON_DELETE_CHOICES = [
+  { value: "cascade", label: "Cascade" },
+  { value: "set-null", label: "Set null" },
+  { value: "restrict", label: "Restrict" },
+];
+
+function EditRelationPopover({
+  edge,
+  busy,
+  error,
+  onSetOnDelete,
+  onRemove,
+  onCancel,
+}: {
+  edge: { source: string; target: string; label: string; topLevel: boolean };
+  busy: boolean;
+  error: string | null;
+  onSetOnDelete: (v: string) => void;
+  onRemove: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          <b className="text-ink">{edge.source}</b> → <b className="text-ink">{edge.target}</b>
+          {edge.label ? ` · ${edge.label}` : ""}
+        </>
+      }
+    >
+      {edge.topLevel ? (
+        <>
+          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+            onDelete
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ON_DELETE_CHOICES.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                disabled={busy}
+                onClick={() => onSetOnDelete(c.value)}
+                className="rounded-[9px] border border-line bg-bg-2 px-2 py-2 text-[11px] font-medium text-ink-2 transition hover:border-accent/50 hover:bg-accent-soft hover:text-accent-ink disabled:opacity-50"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="text-[11px] leading-snug text-muted">
+          Le comportement onDelete se règle sur les relations top-level.
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onRemove}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] border border-line bg-surface text-[13px] font-medium text-ink-2 transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+        Supprimer la relation
+      </button>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+const CRUD_ACTIONS = ["list", "create", "read", "update", "delete"] as const;
+
+function ResourceSettingsPopover({
+  resource,
+  fieldNames,
+  initial,
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  resource: string;
+  fieldNames: string[];
+  initial: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  };
+  busy: boolean;
+  error: string | null;
+  onSubmit: (form: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [description, setDescription] = useState(initial.description);
+  const [endpoints, setEndpoints] = useState<string[]>(initial.endpoints);
+  const [softDelete, setSoftDelete] = useState(initial.softDelete);
+  const [timestamps, setTimestamps] = useState(initial.timestamps);
+  const [searchable, setSearchable] = useState<string[]>(initial.searchable);
+
+  const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>
+    set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  const Pill = ({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) => (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className={
+        "rounded-full px-2.5 py-1 font-mono text-[10.5px] transition disabled:opacity-50 " +
+        (active
+          ? "border border-accent/40 bg-accent-soft text-accent-ink"
+          : "border border-line bg-bg-2 text-muted hover:text-ink-2")
+      }
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          Réglages · <b className="text-ink">{resource}</b>
+        </>
+      }
+    >
+      <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-0.5 scrollbar-thin">
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={busy}
+          placeholder="description (optionnel)"
+          className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+        />
+
+        <div>
+          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">Endpoints</div>
+          <div className="flex flex-wrap gap-1.5">
+            {CRUD_ACTIONS.map((a) => (
+              <Pill key={a} active={endpoints.includes(a)} label={a} onClick={() => toggle(endpoints, setEndpoints, a)} />
+            ))}
+          </div>
+        </div>
+
+        {fieldNames.length > 0 && (
+          <div>
+            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+              Champs cherchables
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {fieldNames.map((f) => (
+                <Pill
+                  key={f}
+                  active={searchable.includes(f)}
+                  label={f}
+                  onClick={() => toggle(searchable, setSearchable, f)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <Check label="soft-delete" checked={softDelete} onChange={setSoftDelete} disabled={busy} />
+          <Check label="timestamps" checked={timestamps} onChange={setTimestamps} disabled={busy} />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onSubmit({ description, endpoints, softDelete, timestamps, searchable })}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+        Enregistrer
       </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>

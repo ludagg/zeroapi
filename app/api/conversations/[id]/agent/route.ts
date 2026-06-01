@@ -6,7 +6,7 @@ import { getCurrentUser } from "@/lib/session";
 import { parseMessages, readSpec, emptySpec, type ChatMessage } from "@/lib/conversation-helpers";
 import { parseHistory, commitSnapshot, historyTimeline, canUndo, canRedo } from "@/lib/conversation-history";
 import { runKiaModification } from "@/lib/agent/run-modification";
-import { summarizeAppliedOperations } from "@/lib/agent/operation-descriptions";
+import { summarizeAppliedOperations, describeOperation } from "@/lib/agent/operation-descriptions";
 import { OPERATION_DANGER } from "@/lib/operations/registry";
 import type { OperationType } from "@/lib/operations/types";
 
@@ -87,103 +87,133 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
   }
 
-  let result;
-  try {
-    result = await runKiaModification({
-      plan: user.plan as Plan,
-      spec,
-      apiName: conv.job?.name ?? conv.title,
-      messages: baseHistory.map((m) => ({ role: m.role, content: m.content })),
-      approvedConfirmations: approved,
-    });
-  } catch (err) {
-    const detail = err instanceof Error ? err.message : "Erreur de l'agent.";
-    return jsonError(`L'agent Kia a échoué — ${detail}`, 502);
-  }
+  // Stream the build live (NDJSON): one "operation" event per applied op (with the
+  // post-op spec so the graph fills in progressively), then a final "done" event.
+  const encoder = new TextEncoder();
+  const enc = (ev: unknown) => encoder.encode(JSON.stringify(ev) + "\n");
 
-  const meta = `kia · ${result.provider}/${result.model}`;
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let result;
+      try {
+        result = await runKiaModification({
+          plan: user.plan as Plan,
+          spec,
+          apiName: conv.job?.name ?? conv.title,
+          messages: baseHistory.map((m) => ({ role: m.role, content: m.content })),
+          approvedConfirmations: approved,
+          onOperationApplied: (entry, currentSpec) => {
+            controller.enqueue(
+              enc({
+                type: "operation",
+                op: {
+                  type: entry.type,
+                  danger: entry.danger,
+                  params: entry.params,
+                  text: describeOperation(entry.type, entry.params),
+                },
+                spec: currentSpec,
+              }),
+            );
+          },
+        });
+      } catch (err) {
+        const detail = err instanceof Error ? err.message : "Erreur de l'agent.";
+        controller.enqueue(enc({ type: "error", error: `L'agent Kia a échoué — ${detail}` }));
+        controller.close();
+        return;
+      }
 
-  // Destructive op needs confirmation — surface the impact, change nothing.
-  if (result.pendingConfirmations.length > 0) {
-    return NextResponse.json({
-      status: "confirmation",
-      requiresConfirmation: result.pendingConfirmations,
-      confirm: result.pendingConfirmations.map((c) => c.operation),
-      assistant: result.assistantText,
-      meta,
-    });
-  }
+      const meta = `kia · ${result.provider}/${result.model}`;
 
-  if (result.error) {
-    return jsonError(`L'agent Kia a échoué — ${result.error}`, 502);
-  }
+      try {
+        if (result.pendingConfirmations.length > 0) {
+          // Destructive op needs confirmation — surface the impact, change nothing.
+          controller.enqueue(
+            enc({
+              type: "done",
+              status: "confirmation",
+              requiresConfirmation: result.pendingConfirmations,
+              confirm: result.pendingConfirmations.map((c) => c.operation),
+              assistant: result.assistantText,
+              meta,
+            }),
+          );
+        } else if (result.error) {
+          controller.enqueue(enc({ type: "error", error: `L'agent Kia a échoué — ${result.error}` }));
+        } else if (!result.changed) {
+          const note =
+            result.assistantText?.trim() || "Aucun changement à appliquer — précise ta demande.";
+          const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
+          await prisma.conversation
+            .update({
+              where: { id: conv.id },
+              data: { messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue },
+            })
+            .catch(() => undefined);
+          controller.enqueue(
+            enc({ type: "done", status: "noop", operations: result.operations, assistant: note, meta }),
+          );
+        } else {
+          // Applied — keep Kia's prose (may include a follow-up question) + the ops.
+          const summary = summarizeAppliedOperations(result.operations);
+          const note = result.assistantText?.trim() || summary;
+          const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
+          const committed = commitSnapshot(
+            parseHistory(conv.specHistory),
+            conv.specVersion,
+            spec,
+            result.spec,
+            summary,
+          );
+          const writes: Prisma.PrismaPromise<unknown>[] = [
+            prisma.conversation.update({
+              where: { id: conv.id },
+              data: {
+                messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue,
+                spec: result.spec as unknown as Prisma.InputJsonValue,
+                specHistory: committed.history as unknown as Prisma.InputJsonValue,
+                specVersion: committed.version,
+              },
+            }),
+          ];
+          if (conv.job) {
+            writes.push(
+              prisma.job.update({
+                where: { id: conv.job.id },
+                data: { spec: result.spec as unknown as Prisma.InputJsonValue },
+              }),
+            );
+          }
+          await prisma.$transaction(writes);
+          controller.enqueue(
+            enc({
+              type: "done",
+              status: "applied",
+              operations: result.operations,
+              spec: result.spec,
+              assistant: note,
+              meta,
+              version: committed.version,
+              history: historyTimeline(committed.history),
+              canUndo: canUndo(committed.history, committed.version),
+              canRedo: canRedo(committed.history, committed.version),
+            }),
+          );
+        }
+      } catch {
+        controller.enqueue(enc({ type: "error", error: "Erreur lors de l'enregistrement." }));
+      } finally {
+        controller.close();
+      }
+    },
+  });
 
-  if (!result.changed) {
-    // Persist a short assistant note so the thread stays coherent on reload.
-    const note = result.assistantText?.trim() || "Aucun changement à appliquer — précise ta demande.";
-    const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
-    await prisma.conversation
-      .update({
-        where: { id: conv.id },
-        data: { messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue },
-      })
-      .catch(() => undefined);
-    return NextResponse.json({
-      status: "noop",
-      operations: result.operations,
-      assistant: note,
-      meta,
-    });
-  }
-
-  // Applied — keep Kia's own message (it may include a follow-up question) and
-  // surface the operations as chips. Fall back to a generated summary if the model
-  // returned no prose.
-  const summary = summarizeAppliedOperations(result.operations);
-  const note = result.assistantText?.trim() || summary;
-  const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
-
-  // Archive the new spec state for undo/redo + version history.
-  const committed = commitSnapshot(
-    parseHistory(conv.specHistory),
-    conv.specVersion,
-    spec,
-    result.spec,
-    summary,
-  );
-
-  const writes: Prisma.PrismaPromise<unknown>[] = [
-    prisma.conversation.update({
-      where: { id: conv.id },
-      data: {
-        messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue,
-        spec: result.spec as unknown as Prisma.InputJsonValue,
-        specHistory: committed.history as unknown as Prisma.InputJsonValue,
-        specVersion: committed.version,
-      },
-    }),
-  ];
-  // Keep the linked job's spec in sync once one exists (so "Régénérer" ships the
-  // up-to-date spec). Draft conversations have no job yet — nothing to sync.
-  if (conv.job) {
-    writes.push(
-      prisma.job.update({
-        where: { id: conv.job.id },
-        data: { spec: result.spec as unknown as Prisma.InputJsonValue },
-      }),
-    );
-  }
-  await prisma.$transaction(writes);
-
-  return NextResponse.json({
-    status: "applied",
-    operations: result.operations,
-    spec: result.spec,
-    assistant: note,
-    meta,
-    version: committed.version,
-    history: historyTimeline(committed.history),
-    canUndo: canUndo(committed.history, committed.version),
-    canRedo: canRedo(committed.history, committed.version),
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store, no-transform",
+      "X-Accel-Buffering": "no",
+    },
   });
 }

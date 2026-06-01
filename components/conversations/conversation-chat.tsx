@@ -225,57 +225,91 @@ export function ConversationChat({
       return next;
     });
 
+    const setMsg = (patch: Partial<Message>) =>
+      setMessages((m) => m.map((msg) => (msg.id === assistantId ? { ...msg, ...patch } : msg)));
+
     try {
       const res = await fetch(`/api/conversations/${conversationId}/agent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ content, confirm, replay: replay ?? false }),
       });
-      const data = (await res.json().catch(() => ({}))) as AgentResponse;
-      if (!res.ok) {
-        throw new Error("error" in data ? data.error : "Erreur de l'agent Kia.");
+      if (!res.ok || !res.body) {
+        const errData = (await res.json().catch(() => ({}))) as { error?: string };
+        throw new Error(errData.error ?? "Erreur de l'agent Kia.");
       }
 
-      if ("status" in data && data.status === "confirmation") {
-        setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId
-              ? {
-                  ...msg,
-                  streaming: false,
-                  meta: data.meta,
-                  content: data.assistant ?? "",
-                  confirm: { impacts: data.requiresConfirmation, ops: data.confirm, content, status: "pending" },
-                }
-              : msg,
-          ),
-        );
-      } else if ("status" in data && data.status === "applied") {
-        setSpec(data.spec);
-        syncHistory(data as { version?: number; history?: HistoryEntry[] });
-        const ops: AppliedOp[] = (data.operations ?? [])
-          .filter((o) => o.outcome === "applied")
-          .map((o) => ({ type: o.type, danger: o.danger, text: describeOperation(o.type, o.params) }));
-        setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId
-              ? { ...msg, streaming: false, meta: data.meta, content: data.assistant, ops }
-              : msg,
-          ),
-        );
-      } else {
-        const note = "status" in data ? data.assistant : "Aucun changement.";
-        setMessages((m) =>
-          m.map((msg) =>
-            msg.id === assistantId
-              ? { ...msg, streaming: false, meta: "status" in data ? data.meta : undefined, content: note || "Aucun changement." }
-              : msg,
-          ),
-        );
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let liveOps: AppliedOp[] = [];
+
+      streamLoop: while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let idx: number;
+        while ((idx = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, idx).trim();
+          buffer = buffer.slice(idx + 1);
+          if (!line) continue;
+          let ev: {
+            type: string;
+            op?: { type: OperationType; danger: string; params: Record<string, unknown>; text: string };
+            spec?: ZeroAPISpec;
+            status?: string;
+            assistant?: string;
+            meta?: string;
+            operations?: Array<{ type: OperationType; danger: string; params: Record<string, unknown>; outcome: string }>;
+            requiresConfirmation?: ConfirmationImpact[];
+            confirm?: OperationType[];
+            version?: number;
+            history?: HistoryEntry[];
+            error?: string;
+          };
+          try {
+            ev = JSON.parse(line);
+          } catch {
+            continue;
+          }
+
+          if (ev.type === "operation" && ev.op) {
+            // The graph fills in live as each operation lands.
+            if (ev.spec) setSpec(ev.spec);
+            liveOps = [...liveOps, { type: ev.op.type, danger: ev.op.danger, text: ev.op.text }];
+            const opsNow = liveOps;
+            setMsg({ ops: opsNow });
+          } else if (ev.type === "error") {
+            throw new Error(ev.error ?? "Erreur de l'agent Kia.");
+          } else if (ev.type === "done") {
+            if (ev.status === "confirmation") {
+              setMsg({
+                streaming: false,
+                meta: ev.meta,
+                content: ev.assistant ?? "",
+                confirm: {
+                  impacts: ev.requiresConfirmation ?? [],
+                  ops: ev.confirm ?? [],
+                  content,
+                  status: "pending",
+                },
+              });
+            } else if (ev.status === "applied") {
+              if (ev.spec) setSpec(ev.spec);
+              syncHistory(ev);
+              const ops: AppliedOp[] = (ev.operations ?? [])
+                .filter((o) => o.outcome === "applied")
+                .map((o) => ({ type: o.type, danger: o.danger, text: describeOperation(o.type, o.params) }));
+              setMsg({ streaming: false, meta: ev.meta, content: ev.assistant ?? "", ops });
+            } else {
+              setMsg({ streaming: false, meta: ev.meta, content: ev.assistant || "Aucun changement." });
+            }
+            break streamLoop;
+          }
+        }
       }
 
-      // Once, after the first assistant reply, ask the server to generate a real
-      // title from the conversation.
+      // Once, after the first assistant reply, regenerate a real title.
       if (initialAssistantCount.current === 0 && !titleRegenAttempted.current) {
         titleRegenAttempted.current = true;
         void fetch(`/api/conversations/${conversationId}/title`, { method: "POST" })
