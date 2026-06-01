@@ -1,11 +1,10 @@
 import Link from "next/link";
+import { BrandMark } from "@/components/brand-mark";
 
 export function Brand({ href = "/" }: { href?: string }) {
   return (
     <Link href={href} className="brand" aria-label="ZeroAPI">
-      <span className="brand-mark h-[26px] w-[26px] text-[13px]">
-        <span>0</span>
-      </span>
+      <BrandMark size={26} />
       <span className="brand-name">
         <b>Zero</b>
         <i>API</i>

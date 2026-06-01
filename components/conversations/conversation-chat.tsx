@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, ListChecks, Send, ShieldCheck, X } from "lucide-react";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
@@ -654,9 +655,7 @@ function Bubble({
   const empty = message.content.trim().length === 0 && !message.ops && !message.confirm;
   return (
     <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
-      <span className="brand-mark mt-0.5 h-8 w-8 text-[12px]">
-        <span>0</span>
-      </span>
+      <BrandMark size={32} className="mt-0.5" />
       <div className="min-w-0">
         <div className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
           <b className="font-medium text-ink">Kia</b>

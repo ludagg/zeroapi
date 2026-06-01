@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { BrandMark } from "@/components/brand-mark";
 
 export function AuthShell({
   children,
@@ -14,9 +15,7 @@ export function AuthShell({
       <div className="relative flex min-h-screen flex-col bg-bg px-5 py-6 sm:px-8 sm:py-7">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Link href="/" className="flex items-center gap-2.5 font-semibold">
-            <span className="brand-mark h-[26px] w-[26px] text-[13px]">
-              <span>0</span>
-            </span>
+            <BrandMark size={26} />
             <span>
               Zero<span className="font-medium not-italic text-muted">API</span>
             </span>
