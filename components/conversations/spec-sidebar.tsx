@@ -23,6 +23,7 @@ import {
   Shield,
   ShieldCheck,
   Sparkles,
+  Terminal,
   Undo2,
   Webhook,
 } from "lucide-react";
@@ -30,6 +31,7 @@ import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import { formatRelativeTime } from "@/lib/utils";
 import { deriveEndpoints } from "@/components/api-detail/endpoints-list";
+import { DevTab } from "@/components/conversations/dev-tab";
 import type { ApplyOperation } from "@/components/conversations/spec-graph";
 import {
   computeInsights,
@@ -49,13 +51,14 @@ const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"),
   ),
 });
 
-type TabKey = "summary" | "spec" | "endpoints" | "graph";
+type TabKey = "summary" | "spec" | "endpoints" | "graph" | "dev";
 
 const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
   { key: "summary", label: "Audit", icon: <Gauge className="h-3 w-3" /> },
   { key: "spec", label: "Spec", icon: <FileJson className="h-3 w-3" /> },
   { key: "endpoints", label: "Endpoints", icon: <ListTree className="h-3 w-3" /> },
   { key: "graph", label: "Graphe", icon: <Share2 className="h-3 w-3" /> },
+  { key: "dev", label: "Dev", icon: <Terminal className="h-3 w-3" /> },
 ];
 
 /**
@@ -289,6 +292,7 @@ export function SpecPanel({
             )}
             {tab === "spec" && <SpecJsonTab spec={spec} />}
             {tab === "endpoints" && <EndpointsTab spec={spec} />}
+            {tab === "dev" && <DevTab conversationId={conversationId} spec={spec} />}
           </div>
         )}
       </div>
