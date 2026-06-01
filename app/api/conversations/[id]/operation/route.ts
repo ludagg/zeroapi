@@ -76,8 +76,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   if (!conv) return jsonError("Conversation introuvable.", 404);
 
   const spec = readSpec(conv.spec ?? null);
-  if (!spec || !conv.job) {
-    return jsonError("Aucune spec à modifier. Génère d'abord le backend.", 409);
+  if (!spec) {
+    return jsonError("Aucune ressource à éditer pour l'instant.", 409);
   }
 
   const opParams = parsed.data as Record<string, unknown>;
@@ -108,7 +108,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const assistantMsg: ChatMessage = { role: "assistant", content: `✓ ${summary}`, ts: Date.now(), meta };
   const history = parseMessages(conv.messages);
 
-  await prisma.$transaction([
+  const writes: Prisma.PrismaPromise<unknown>[] = [
     prisma.conversation.update({
       where: { id: conv.id },
       data: {
@@ -116,11 +116,16 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         spec: res.spec as unknown as Prisma.InputJsonValue,
       },
     }),
-    prisma.job.update({
-      where: { id: conv.job.id },
-      data: { spec: res.spec as unknown as Prisma.InputJsonValue },
-    }),
-  ]);
+  ];
+  if (conv.job) {
+    writes.push(
+      prisma.job.update({
+        where: { id: conv.job.id },
+        data: { spec: res.spec as unknown as Prisma.InputJsonValue },
+      }),
+    );
+  }
+  await prisma.$transaction(writes);
 
   return NextResponse.json({
     status: "applied",

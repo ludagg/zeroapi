@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import type { Plan, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
-import { parseMessages, readSpec, type ChatMessage } from "@/lib/conversation-helpers";
+import { parseMessages, readSpec, emptySpec, type ChatMessage } from "@/lib/conversation-helpers";
 import { runKiaModification } from "@/lib/agent/run-modification";
 import { summarizeAppliedOperations } from "@/lib/agent/operation-descriptions";
 import { OPERATION_DANGER } from "@/lib/operations/registry";
@@ -29,6 +29,9 @@ const RequestSchema = z.object({
   content: z.string().trim().min(1, "Message vide").max(8000),
   /** Operation types the user approved (re-sent after a confirmation prompt). */
   confirm: z.array(z.string()).optional(),
+  /** True when `content` is already the last persisted user message (initial
+   *  reply of a freshly created conversation) — don't re-append it. */
+  replay: z.boolean().optional(),
 });
 
 function jsonError(message: string, status: number) {
@@ -57,21 +60,26 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   });
   if (!conv) return jsonError("Conversation introuvable.", 404);
 
-  const spec = readSpec(conv.spec ?? null);
-  if (!spec || !conv.job) {
-    return jsonError("Aucune spec à modifier. Génère d'abord le backend.", 409);
-  }
+  // The spec is built LIVE from message 1: a brand-new conversation starts from a
+  // blank spec and the agent fills it in. No job is required — modifications sync
+  // to the linked job only once one exists.
+  const spec = readSpec(conv.spec ?? null) ?? emptySpec(conv.title);
 
   const approved = parseApproved(body.confirm);
   const isConfirmFollowUp = approved.length > 0;
 
   const history = parseMessages(conv.messages);
-  // On a confirmation follow-up the user message is already persisted; otherwise
-  // append it now so the agent (and the thread) see the new instruction.
-  const userMsg: ChatMessage = { role: "user", content: body.content, ts: Date.now() };
-  const baseHistory = isConfirmFollowUp ? history : [...history, userMsg];
+  const last = history[history.length - 1];
+  const isAlreadyPersisted =
+    body.replay === true && last && last.role === "user" && last.content === body.content;
+  const skipAppend = isConfirmFollowUp || isAlreadyPersisted;
 
-  if (!isConfirmFollowUp) {
+  // On a confirmation follow-up (or the seed replay) the user message is already
+  // persisted; otherwise append it now so the agent + thread see the instruction.
+  const userMsg: ChatMessage = { role: "user", content: body.content, ts: Date.now() };
+  const baseHistory = skipAppend ? history : [...history, userMsg];
+
+  if (!skipAppend) {
     await prisma.conversation.update({
       where: { id: conv.id },
       data: { messages: baseHistory as unknown as Prisma.InputJsonValue },
@@ -83,7 +91,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     result = await runKiaModification({
       plan: user.plan as Plan,
       spec,
-      apiName: conv.job.name,
+      apiName: conv.job?.name ?? conv.title,
       messages: baseHistory.map((m) => ({ role: m.role, content: m.content })),
       approvedConfirmations: approved,
     });
@@ -132,7 +140,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const summary = summarizeAppliedOperations(result.operations);
   const assistantMsg: ChatMessage = { role: "assistant", content: summary, ts: Date.now(), meta };
 
-  await prisma.$transaction([
+  const writes: Prisma.PrismaPromise<unknown>[] = [
     prisma.conversation.update({
       where: { id: conv.id },
       data: {
@@ -140,11 +148,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
         spec: result.spec as unknown as Prisma.InputJsonValue,
       },
     }),
-    prisma.job.update({
-      where: { id: conv.job.id },
-      data: { spec: result.spec as unknown as Prisma.InputJsonValue },
-    }),
-  ]);
+  ];
+  // Keep the linked job's spec in sync once one exists (so "Régénérer" ships the
+  // up-to-date spec). Draft conversations have no job yet — nothing to sync.
+  if (conv.job) {
+    writes.push(
+      prisma.job.update({
+        where: { id: conv.job.id },
+        data: { spec: result.spec as unknown as Prisma.InputJsonValue },
+      }),
+    );
+  }
+  await prisma.$transaction(writes);
 
   return NextResponse.json({
     status: "applied",

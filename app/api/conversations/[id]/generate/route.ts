@@ -32,17 +32,16 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const previousSpec = readSpec(conv.spec ?? null);
+  // The spec is now built live in the chat by the Kia agent, so as soon as it
+  // holds at least one resource we ship it AS-IS — no LLM re-derivation, no drift.
+  const hasLiveSpec = Boolean(previousSpec && previousSpec.resources.length > 0);
   const isModification = Boolean(previousSpec && conv.job);
 
   let spec: ZeroAPISpec;
   let info: { provider: string; model: string; latencyMs: number };
 
-  if (isModification && previousSpec && conv.job) {
-    // ── MODIFICATION — ship the CURRENT spec as a build. ─────────────────────
-    // Incremental edits are applied live in the chat by the Kia agent
-    // (POST …/agent), which keeps `conv.spec` (and the job's spec) up to date.
-    // "Régénérer" therefore just rebuilds from that already-modified spec — no
-    // LLM call, no risk of re-deriving / drifting the whole spec.
+  if (hasLiveSpec && previousSpec) {
+    // ── Ship the live spec as a build (agent already kept it up to date). ────
     spec = previousSpec;
     info = { provider: "kia", model: "incremental", latencyMs: 0 };
   } else {

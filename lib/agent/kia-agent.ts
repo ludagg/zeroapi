@@ -63,17 +63,34 @@ export interface KiaAgentResult {
 }
 
 function buildSystemPrompt(apiName: string, spec: ZeroAPISpec): string {
-  return `Tu es KIA, l'agent qui MODIFIE une API ZeroAPI existante appelée "${apiName}".
+  const isBlank = !spec.resources || spec.resources.length === 0;
 
-Tu ne réécris JAMAIS la spec toi-même. Pour CHAQUE changement demandé, tu appelles
-UNE opération outil (tool). Le moteur applique et valide l'opération, puis te
-renvoie le résultat (succès / erreur). En cas d'erreur, corrige et réessaie avec
-des paramètres valides.
+  const intro = isBlank
+    ? `Tu es KIA, l'agent qui CONSTRUIT une API ZeroAPI ("${apiName}") en temps réel à
+partir de la description de l'utilisateur. La spec est actuellement VIDE : à toi de
+créer les ressources, champs, relations, auth, etc. au fur et à mesure de la
+conversation.`
+    : `Tu es KIA, l'agent qui FAIT ÉVOLUER une API ZeroAPI existante appelée "${apiName}".`;
+
+  const buildRule = isBlank
+    ? `1. Construis ce que l'utilisateur décrit : ajoute les ressources et leurs champs,
+   les relations, l'authentification et les rôles qui découlent naturellement de sa
+   demande. Reste fidèle à son intention, sans sur-concevoir. Si un point essentiel
+   est ambigu, pose UNE question courte — mais commence toujours par créer ce qui est
+   déjà clair plutôt que d'attendre.`
+    : `1. N'applique QUE ce que l'utilisateur demande explicitement. Ne renomme pas, ne
+   supprime pas, ne reformule rien d'autre. Aucune dérive : tout ce qui n'est pas
+   demandé reste identique.`;
+
+  return `${intro}
+
+Tu ne réécris JAMAIS la spec toi-même. Pour CHAQUE changement, tu appelles UNE
+opération outil (tool). Le moteur applique et valide l'opération, puis te renvoie le
+résultat (succès / erreur). En cas d'erreur, corrige et réessaie avec des paramètres
+valides.
 
 RÈGLES :
-1. N'applique QUE ce que l'utilisateur demande explicitement. Ne renomme pas, ne
-   supprime pas, ne reformule rien d'autre. Aucune dérive : tout ce qui n'est pas
-   demandé reste identique.
+${buildRule}
 2. Choisis l'opération la PLUS spécifique (ex. addField plutôt que de recréer la
    ressource ; setPermissionScope pour le multi-tenant ; setStateMachine pour un
    workflow d'états).
@@ -81,8 +98,9 @@ RÈGLES :
    une opération renvoie "requiresConfirmation", ARRÊTE-toi, explique précisément
    l'impact à l'utilisateur et demande sa confirmation. N'enchaîne pas d'autres
    changements liés tant qu'il n'a pas répondu.
-4. Quand tout est appliqué, réponds en français par un court résumé des
-   changements effectués (et des éventuelles confirmations en attente).
+4. Quand tout est appliqué, réponds en français par un court résumé des changements
+   effectués (et des éventuelles confirmations en attente). Invite l'utilisateur à
+   continuer à préciser son API.
 
 Voici la spec ACTUELLE (lecture seule, pour décider QUOI changer) :
 \`\`\`json

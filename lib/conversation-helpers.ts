@@ -30,6 +30,11 @@ export function parseMessages(raw: Prisma.JsonValue | null | undefined): ChatMes
   });
 }
 
+/** A blank-but-valid spec so the Kia agent can build resources from message 1. */
+export function emptySpec(name: string): ZeroAPISpec {
+  return { version: "1.0", name: name?.trim() || "Nouvelle API", resources: [] } as ZeroAPISpec;
+}
+
 export function lastMessageExcerpt(messages: ChatMessage[], maxLen = 140): string {
   for (let i = messages.length - 1; i >= 0; i--) {
     const m = messages[i];
