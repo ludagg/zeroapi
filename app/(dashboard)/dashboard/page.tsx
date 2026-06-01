@@ -2,6 +2,7 @@ import { BarChart3, Briefcase, DollarSign, Package } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { DashboardChatbox } from "@/components/dashboard/dashboard-chatbox";
+import { IntroOnce } from "@/components/dashboard/intro-once";
 import { JobsList, type DashboardJob } from "@/components/dashboard/jobs-list";
 import { JobFilters } from "@/components/dashboard/job-filters";
 import { ActivityPanel } from "@/components/dashboard/activity-panel";
@@ -110,7 +111,7 @@ export default async function DashboardPage({
       />
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
+        <IntroOnce className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
           <div className="mb-7 flex flex-col items-center">
             <span className="zi-eyebrow mb-2 font-mono text-[12px] uppercase tracking-[0.18em] text-muted">
               {greetingFor(new Date())}
@@ -223,7 +224,7 @@ export default async function DashboardPage({
             <ActivityPanel items={activity} />
             <DeploymentsPanel deployments={deployments} />
           </div>
-        </div>
+        </IntroOnce>
       </div>
     </>
   );

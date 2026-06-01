@@ -1,3 +1,4 @@
+import { cookies } from "next/headers";
 import { DashboardShell } from "@/components/dashboard/shell";
 import { CommandPalette } from "@/components/command-palette";
 import { VerifyEmailBanner } from "@/components/dashboard/verify-email-banner";
@@ -8,6 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const navCollapsed = cookies().get("zeroapi_nav_collapsed")?.value === "1";
 
   const [account, recentJobs] = await Promise.all([
     prisma.user.findUnique({
@@ -27,6 +29,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="h-screen overflow-hidden bg-bg-2">
       <DashboardShell
+        initialCollapsed={navCollapsed}
         user={{
           name: user.name,
           email: user.email,

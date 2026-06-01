@@ -152,17 +152,20 @@
   border-radius: 999px;
 }
 
+/* L'animation ne se déclenche que sous .intro-on (posé une seule fois par
+   chargement par le composant IntroOnce). Sans cette classe — ou en
+   prefers-reduced-motion — les éléments restent dans leur état final visible. */
 @media (prefers-reduced-motion: no-preference) {
-  .zi-eyebrow {
+  .intro-on .zi-eyebrow {
     opacity: 0;
     animation: zi-eyebrow 0.5s ease 0.6s both;
   }
-  .zi-halo {
+  .intro-on .zi-halo {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.35);
     animation: zi-halo 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s both;
   }
-  .zi-ring {
+  .intro-on .zi-ring {
     display: block;
     position: absolute;
     left: 50%;
@@ -173,26 +176,26 @@
     pointer-events: none;
     animation: zi-ring-expand 0.5s cubic-bezier(0.5, 0, 0.9, 0.4) 0.5s both;
   }
-  .zi-ring-circle {
+  .intro-on .zi-ring-circle {
     stroke-dasharray: 57.81;
     stroke-dashoffset: 57.81;
     animation: zi-ring-draw 0.5s cubic-bezier(0.3, 0.7, 0.3, 1) 0.05s both;
   }
-  .zi-ring-node {
+  .intro-on .zi-ring-node {
     opacity: 0;
     animation: zi-node 0.25s ease 0.4s both;
   }
-  .zi-card-in {
+  .intro-on .zi-card-in {
     opacity: 0;
     transform: translateY(10px);
     animation: zi-card 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 1s) both;
   }
-  .zi-reveal {
+  .intro-on .zi-reveal {
     -webkit-mask: linear-gradient(90deg, #000 45%, transparent 55%) 100% 0 / 250% 100% no-repeat;
     mask: linear-gradient(90deg, #000 45%, transparent 55%) 100% 0 / 250% 100% no-repeat;
     animation: zi-reveal 0.85s cubic-bezier(0.3, 0.6, 0.2, 1) var(--d, 0.75s) both;
   }
-  .zi-bar {
+  .intro-on .zi-bar {
     animation: zi-bar 0.85s cubic-bezier(0.3, 0.6, 0.2, 1) var(--d, 0.75s) both;
   }
 }
