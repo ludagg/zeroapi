@@ -4,6 +4,7 @@ import type { Plan, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { parseMessages, readSpec, emptySpec, type ChatMessage } from "@/lib/conversation-helpers";
+import { parseHistory, commitSnapshot, historyTimeline, canUndo, canRedo } from "@/lib/conversation-history";
 import { runKiaModification } from "@/lib/agent/run-modification";
 import { summarizeAppliedOperations } from "@/lib/agent/operation-descriptions";
 import { OPERATION_DANGER } from "@/lib/operations/registry";
@@ -142,12 +143,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const note = result.assistantText?.trim() || summary;
   const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
 
+  // Archive the new spec state for undo/redo + version history.
+  const committed = commitSnapshot(
+    parseHistory(conv.specHistory),
+    conv.specVersion,
+    spec,
+    result.spec,
+    summary,
+  );
+
   const writes: Prisma.PrismaPromise<unknown>[] = [
     prisma.conversation.update({
       where: { id: conv.id },
       data: {
         messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue,
         spec: result.spec as unknown as Prisma.InputJsonValue,
+        specHistory: committed.history as unknown as Prisma.InputJsonValue,
+        specVersion: committed.version,
       },
     }),
   ];
@@ -169,5 +181,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     spec: result.spec,
     assistant: note,
     meta,
+    version: committed.version,
+    history: historyTimeline(committed.history),
+    canUndo: canUndo(committed.history, committed.version),
+    canRedo: canRedo(committed.history, committed.version),
   });
 }
