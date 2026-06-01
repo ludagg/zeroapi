@@ -580,10 +580,11 @@ function Bubble({
           </div>
         ) : (
           <div className="min-w-0 space-y-3 text-[15px] leading-relaxed text-ink-2">
+            {/* Kia's prose (may include a follow-up question) … */}
+            {message.content ? <Markdown content={message.content} /> : null}
+            {/* … then the operations it applied, as chips. */}
             {message.ops && message.ops.length > 0 ? (
               <OperationsList ops={message.ops} />
-            ) : message.content ? (
-              <Markdown content={message.content} />
             ) : null}
 
             {message.confirm && (

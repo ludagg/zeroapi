@@ -135,10 +135,12 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     });
   }
 
-  // Applied — persist the readable summary + the modified spec, and keep the
-  // linked job's spec in sync so "Régénérer" ships the up-to-date spec.
+  // Applied — keep Kia's own message (it may include a follow-up question) and
+  // surface the operations as chips. Fall back to a generated summary if the model
+  // returned no prose.
   const summary = summarizeAppliedOperations(result.operations);
-  const assistantMsg: ChatMessage = { role: "assistant", content: summary, ts: Date.now(), meta };
+  const note = result.assistantText?.trim() || summary;
+  const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
 
   const writes: Prisma.PrismaPromise<unknown>[] = [
     prisma.conversation.update({
@@ -165,7 +167,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     status: "applied",
     operations: result.operations,
     spec: result.spec,
-    assistant: summary,
+    assistant: note,
     meta,
   });
 }
