@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { Sidebar, type SidebarUser } from "@/components/dashboard/sidebar";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 
@@ -16,33 +16,28 @@ export function useDashboardShell() {
   return useContext(ShellContext);
 }
 
-const COLLAPSE_KEY = "zeroapi:nav-collapsed";
+const COLLAPSE_KEY = "zeroapi_nav_collapsed";
 
 export function DashboardShell({
   user,
+  initialCollapsed = false,
   children,
 }: {
   user: SidebarUser;
+  initialCollapsed?: boolean;
   children: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-
-  // Restore the collapsed preference for the session (client-only to avoid a
-  // hydration mismatch).
-  useEffect(() => {
-    try {
-      setCollapsed(sessionStorage.getItem(COLLAPSE_KEY) === "1");
-    } catch {
-      /* ignore */
-    }
-  }, []);
+  // The collapsed preference is resolved on the server from a cookie, so the
+  // sidebar renders in its final state on the first paint (no post-hydration
+  // flip that would reflow the content and re-trigger entry animations).
+  const [collapsed, setCollapsed] = useState(initialCollapsed);
 
   function toggleCollapse() {
     setCollapsed((c) => {
       const next = !c;
       try {
-        sessionStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
+        document.cookie = `${COLLAPSE_KEY}=${next ? "1" : "0"}; path=/; max-age=31536000; samesite=lax`;
       } catch {
         /* ignore */
       }
