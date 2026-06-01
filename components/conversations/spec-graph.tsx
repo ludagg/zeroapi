@@ -26,6 +26,7 @@ import {
   Link2,
   Loader2,
   Plus,
+  Settings2,
   Share2,
   Sigma,
   Trash2,
@@ -62,6 +63,7 @@ type GraphActions = {
   onRemoveField: (resource: string, field: string) => void;
   onRenameResource: (resource: string) => void;
   onRemoveResource: (resource: string) => void;
+  onResourceSettings: (resource: string) => void;
 };
 const GraphActionsContext = createContext<GraphActions>({
   editable: false,
@@ -70,6 +72,7 @@ const GraphActionsContext = createContext<GraphActions>({
   onRemoveField: () => {},
   onRenameResource: () => {},
   onRemoveResource: () => {},
+  onResourceSettings: () => {},
 });
 
 const FIELD_TYPES = [
@@ -156,6 +159,14 @@ function ResourceNode({ data }: NodeProps) {
         ) : (
           editable && (
             <span className="flex items-center gap-1">
+              <button
+                type="button"
+                title="Réglages de la ressource"
+                onClick={() => actions.onResourceSettings(node.name)}
+                className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
+              >
+                <Settings2 className="h-3 w-3" />
+              </button>
               <button
                 type="button"
                 title="Ajouter un champ"
@@ -347,6 +358,13 @@ export default function SpecGraph({
   const [removeResourceFor, setRemoveResourceFor] = useState<{ name: string; lines: string[] } | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [editFieldFor, setEditFieldFor] = useState<{ resource: string; field: GraphField } | null>(null);
+  const [editEdgeFor, setEditEdgeFor] = useState<{
+    source: string;
+    target: string;
+    label: string;
+    topLevel: boolean;
+  } | null>(null);
+  const [settingsFor, setSettingsFor] = useState<string | null>(null);
   // Generic confirmation for any destructive op (setFieldType, renameField…).
   const [confirmOp, setConfirmOp] = useState<{
     op: { type: string; params: Record<string, unknown> };
@@ -371,6 +389,8 @@ export default function SpecGraph({
     setRemoveResourceFor(null);
     setCreateOpen(false);
     setEditFieldFor(null);
+    setEditEdgeFor(null);
+    setSettingsFor(null);
     setConfirmOp(null);
     setErr(null);
   }, []);
@@ -381,6 +401,28 @@ export default function SpecGraph({
       setEditFieldFor({ resource, field });
     },
     [closeAll],
+  );
+
+  const requestResourceSettings = useCallback(
+    (resource: string) => {
+      closeAll();
+      setSettingsFor(resource);
+    },
+    [closeAll],
+  );
+
+  const onEdgeClick = useCallback(
+    (_e: React.MouseEvent, edge: Edge) => {
+      if (!editable) return;
+      closeAll();
+      setEditEdgeFor({
+        source: edge.source,
+        target: edge.target,
+        label: typeof edge.label === "string" ? edge.label : "",
+        topLevel: edge.id.startsWith("tl:"),
+      });
+    },
+    [editable, closeAll],
   );
 
   const onConnect = useCallback(
@@ -442,8 +484,17 @@ export default function SpecGraph({
       onRemoveField: requestRemoveField,
       onRenameResource: requestRenameResource,
       onRemoveResource: requestRemoveResource,
+      onResourceSettings: requestResourceSettings,
     }),
-    [editable, requestAddField, requestEditField, requestRemoveField, requestRenameResource, requestRemoveResource],
+    [
+      editable,
+      requestAddField,
+      requestEditField,
+      requestRemoveField,
+      requestRenameResource,
+      requestRemoveResource,
+      requestResourceSettings,
+    ],
   );
 
   async function chooseRelationType(kebab: string) {
@@ -636,6 +687,77 @@ export default function SpecGraph({
     else setErr("error" in res ? res.error ?? "Opération rejetée." : "Opération rejetée.");
   }
 
+  async function setEdgeOnDelete(onDelete: string) {
+    if (!editEdgeFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const res = await onApplyOperation({
+      type: "setRelationOnDelete",
+      params: { from: editEdgeFor.source, to: editEdgeFor.target, onDelete },
+    });
+    setBusy(false);
+    if (res.ok) setEditEdgeFor(null);
+    else setErr("error" in res ? res.error ?? "Échec." : "Échec.");
+  }
+
+  async function removeEdgeRelation() {
+    if (!editEdgeFor || !onApplyOperation) return;
+    setBusy(true);
+    setErr(null);
+    const op = editEdgeFor.topLevel
+      ? { type: "removeRelation", params: { from: editEdgeFor.source, to: editEdgeFor.target } }
+      : { type: "removeResourceRelation", params: { resource: editEdgeFor.source, target: editEdgeFor.target } };
+    const res = await onApplyOperation(op);
+    setBusy(false);
+    if (res.ok) setEditEdgeFor(null);
+    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+  }
+
+  async function submitResourceSettings(form: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  }) {
+    if (!settingsFor || !onApplyOperation) return;
+    const name = settingsFor;
+    const r = spec?.resources.find((x) => x.name === name);
+    setBusy(true);
+    setErr(null);
+    const fail = (res: ApplyOperationResult, fallback: string): boolean => {
+      if (res.ok) return false;
+      setBusy(false);
+      setErr("error" in res ? res.error ?? fallback : fallback);
+      return true;
+    };
+    const defaultEndpoints = ["list", "create", "read", "update", "delete"];
+    const sortJoin = (a: string[]) => [...a].sort().join(",");
+
+    if ((r?.description ?? "") !== form.description) {
+      if (fail(await onApplyOperation({ type: "setResourceDescription", params: { name, description: form.description } }), "Échec (description)."))
+        return;
+    }
+    if (sortJoin(r?.endpoints ?? defaultEndpoints) !== sortJoin(form.endpoints)) {
+      if (fail(await onApplyOperation({ type: "setResourceEndpoints", params: { name, endpoints: form.endpoints } }), "Échec (endpoints)."))
+        return;
+    }
+    if ((r?.softDelete === true) !== form.softDelete) {
+      if (fail(await onApplyOperation({ type: "setSoftDelete", params: { resource: name, enabled: form.softDelete } }), "Échec (soft-delete)."))
+        return;
+    }
+    if ((r?.timestamps !== false) !== form.timestamps) {
+      if (fail(await onApplyOperation({ type: "setTimestamps", params: { resource: name, enabled: form.timestamps } }), "Échec (timestamps)."))
+        return;
+    }
+    if (sortJoin(r?.searchable ?? []) !== sortJoin(form.searchable)) {
+      if (fail(await onApplyOperation({ type: "setSearchableFields", params: { name, fields: form.searchable } }), "Échec (recherche)."))
+        return;
+    }
+    setBusy(false);
+    setSettingsFor(null);
+  }
+
   if (flow.nodes.length === 0) {
     return (
       <div className="grid h-full place-items-center p-8 text-center">
@@ -692,10 +814,12 @@ export default function SpecGraph({
           !removeResourceFor &&
           !createOpen &&
           !editFieldFor &&
+          !editEdgeFor &&
+          !settingsFor &&
           !confirmOp && (
             <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[10px] text-muted backdrop-blur">
               <Link2 className="h-3 w-3 text-accent-ink" />
-              Glisse pour relier · clic champ = éditer · double-clic = renommer
+              Glisse pour relier · clic champ/relation = éditer · ⚙ = réglages
             </div>
           )}
 
@@ -792,6 +916,39 @@ export default function SpecGraph({
           />
         )}
 
+        {editEdgeFor && (
+          <EditRelationPopover
+            edge={editEdgeFor}
+            busy={busy}
+            error={err}
+            onSetOnDelete={setEdgeOnDelete}
+            onRemove={removeEdgeRelation}
+            onCancel={closeAll}
+          />
+        )}
+
+        {settingsFor &&
+          (() => {
+            const r = spec?.resources.find((x) => x.name === settingsFor);
+            return (
+              <ResourceSettingsPopover
+                resource={settingsFor}
+                fieldNames={r ? Object.keys(r.fields ?? {}) : []}
+                initial={{
+                  description: r?.description ?? "",
+                  endpoints: (r?.endpoints as string[] | undefined) ?? ["list", "create", "read", "update", "delete"],
+                  softDelete: r?.softDelete === true,
+                  timestamps: r?.timestamps !== false,
+                  searchable: r?.searchable ?? [],
+                }}
+                busy={busy}
+                error={err}
+                onSubmit={submitResourceSettings}
+                onCancel={closeAll}
+              />
+            );
+          })()}
+
         {/* The key forces a re-fit when the topology (nodes/edges) changes. */}
         <ReactFlow
           key={`${flow.nodes.map((n) => n.id).join(",")}|${flow.edges.length}`}
@@ -801,6 +958,7 @@ export default function SpecGraph({
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={editable ? onConnect : undefined}
+          onEdgeClick={editable ? onEdgeClick : undefined}
           nodesConnectable={editable}
           connectionLineStyle={{ stroke: "var(--accent)", strokeWidth: 2 }}
           fitView
@@ -1144,6 +1302,196 @@ function EditFieldPopover({
       <p className="mt-2 text-[10.5px] leading-snug text-muted">
         Le renommage et le changement de type peuvent demander une confirmation.
       </p>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+const ON_DELETE_CHOICES = [
+  { value: "cascade", label: "Cascade" },
+  { value: "set-null", label: "Set null" },
+  { value: "restrict", label: "Restrict" },
+];
+
+function EditRelationPopover({
+  edge,
+  busy,
+  error,
+  onSetOnDelete,
+  onRemove,
+  onCancel,
+}: {
+  edge: { source: string; target: string; label: string; topLevel: boolean };
+  busy: boolean;
+  error: string | null;
+  onSetOnDelete: (v: string) => void;
+  onRemove: () => void;
+  onCancel: () => void;
+}) {
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          <b className="text-ink">{edge.source}</b> → <b className="text-ink">{edge.target}</b>
+          {edge.label ? ` · ${edge.label}` : ""}
+        </>
+      }
+    >
+      {edge.topLevel ? (
+        <>
+          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+            onDelete
+          </div>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ON_DELETE_CHOICES.map((c) => (
+              <button
+                key={c.value}
+                type="button"
+                disabled={busy}
+                onClick={() => onSetOnDelete(c.value)}
+                className="rounded-[9px] border border-line bg-bg-2 px-2 py-2 text-[11px] font-medium text-ink-2 transition hover:border-accent/50 hover:bg-accent-soft hover:text-accent-ink disabled:opacity-50"
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </>
+      ) : (
+        <p className="text-[11px] leading-snug text-muted">
+          Le comportement onDelete se règle sur les relations top-level.
+        </p>
+      )}
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onRemove}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] border border-line bg-surface text-[13px] font-medium text-ink-2 transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+        Supprimer la relation
+      </button>
+      {error && <ErrorNote error={error} />}
+    </PopoverShell>
+  );
+}
+
+const CRUD_ACTIONS = ["list", "create", "read", "update", "delete"] as const;
+
+function ResourceSettingsPopover({
+  resource,
+  fieldNames,
+  initial,
+  busy,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  resource: string;
+  fieldNames: string[];
+  initial: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  };
+  busy: boolean;
+  error: string | null;
+  onSubmit: (form: {
+    description: string;
+    endpoints: string[];
+    softDelete: boolean;
+    timestamps: boolean;
+    searchable: string[];
+  }) => void;
+  onCancel: () => void;
+}) {
+  const [description, setDescription] = useState(initial.description);
+  const [endpoints, setEndpoints] = useState<string[]>(initial.endpoints);
+  const [softDelete, setSoftDelete] = useState(initial.softDelete);
+  const [timestamps, setTimestamps] = useState(initial.timestamps);
+  const [searchable, setSearchable] = useState<string[]>(initial.searchable);
+
+  const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>
+    set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+
+  const Pill = ({ active, label, onClick }: { active: boolean; label: string; onClick: () => void }) => (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className={
+        "rounded-full px-2.5 py-1 font-mono text-[10.5px] transition disabled:opacity-50 " +
+        (active
+          ? "border border-accent/40 bg-accent-soft text-accent-ink"
+          : "border border-line bg-bg-2 text-muted hover:text-ink-2")
+      }
+    >
+      {label}
+    </button>
+  );
+
+  return (
+    <PopoverShell
+      onCancel={onCancel}
+      title={
+        <>
+          Réglages · <b className="text-ink">{resource}</b>
+        </>
+      }
+    >
+      <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-0.5 scrollbar-thin">
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          disabled={busy}
+          placeholder="description (optionnel)"
+          className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
+        />
+
+        <div>
+          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">Endpoints</div>
+          <div className="flex flex-wrap gap-1.5">
+            {CRUD_ACTIONS.map((a) => (
+              <Pill key={a} active={endpoints.includes(a)} label={a} onClick={() => toggle(endpoints, setEndpoints, a)} />
+            ))}
+          </div>
+        </div>
+
+        {fieldNames.length > 0 && (
+          <div>
+            <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
+              Champs cherchables
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {fieldNames.map((f) => (
+                <Pill
+                  key={f}
+                  active={searchable.includes(f)}
+                  label={f}
+                  onClick={() => toggle(searchable, setSearchable, f)}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-center gap-3">
+          <Check label="soft-delete" checked={softDelete} onChange={setSoftDelete} disabled={busy} />
+          <Check label="timestamps" checked={timestamps} onChange={setTimestamps} disabled={busy} />
+        </div>
+      </div>
+
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onSubmit({ description, endpoints, softDelete, timestamps, searchable })}
+        className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+      >
+        {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+        Enregistrer
+      </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
   );
