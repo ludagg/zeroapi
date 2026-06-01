@@ -9,20 +9,24 @@ import {
   FileText,
   Gauge,
   GitBranch,
+  History,
   Image,
   Key,
   ListTree,
   Lock,
+  Redo2,
   Save,
   Search,
   Share2,
   Shield,
   ShieldCheck,
   Sparkles,
+  Undo2,
   Webhook,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
+import { formatRelativeTime } from "@/lib/utils";
 import { deriveEndpoints } from "@/components/api-detail/endpoints-list";
 import type { ApplyOperation } from "@/components/conversations/spec-graph";
 import {
@@ -68,6 +72,13 @@ export function SpecPanel({
   onLaunch,
   pending,
   onApplyOperation,
+  historyEntries = [],
+  version = -1,
+  canUndo = false,
+  canRedo = false,
+  onUndo,
+  onRedo,
+  onRestore,
 }: {
   conversationId: string;
   messages: ChatMessage[];
@@ -78,11 +89,19 @@ export function SpecPanel({
   pending?: boolean;
   /** When set, the Graph tab becomes an editor (emits operations). */
   onApplyOperation?: ApplyOperation;
+  historyEntries?: Array<{ index: number; summary: string; ts: number }>;
+  version?: number;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onUndo?: () => void;
+  onRedo?: () => void;
+  onRestore?: (index: number) => void;
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   // The graph is the hero of this panel — open on it by default.
   const [tab, setTab] = useState<TabKey>("graph");
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const insights = useMemo(() => computeInsights(messages, spec), [messages, spec]);
   const tone = confidenceTone(insights.confidence);
@@ -142,6 +161,80 @@ export function SpecPanel({
               </button>
             );
           })}
+        </div>
+
+        {/* Undo / Redo / Historique des versions */}
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={onUndo}
+            disabled={!canUndo}
+            title="Annuler (⌘Z)"
+            className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Undo2 className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={onRedo}
+            disabled={!canRedo}
+            title="Rétablir (⌘⇧Z)"
+            className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
+          >
+            <Redo2 className="h-3.5 w-3.5" />
+          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen((v) => !v)}
+              disabled={historyEntries.length === 0}
+              title="Historique des versions"
+              className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <History className="h-3.5 w-3.5" />
+            </button>
+            {historyOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setHistoryOpen(false)} aria-hidden />
+                <div className="absolute left-0 top-full z-30 mt-1 max-h-[60vh] w-[280px] overflow-y-auto rounded-[10px] border border-line bg-surface shadow-xl scrollbar-thin">
+                  <div className="border-b border-line px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+                    Versions
+                  </div>
+                  {[...historyEntries].reverse().map((e) => {
+                    const active = e.index === version;
+                    return (
+                      <button
+                        key={e.index}
+                        type="button"
+                        onClick={() => {
+                          onRestore?.(e.index);
+                          setHistoryOpen(false);
+                        }}
+                        className={
+                          "flex w-full items-center gap-2 border-b border-line px-3 py-2 text-left transition last:border-b-0 hover:bg-bg-2 " +
+                          (active ? "bg-accent-soft" : "")
+                        }
+                      >
+                        <span
+                          className={
+                            "h-1.5 w-1.5 flex-shrink-0 rounded-full " +
+                            (active ? "bg-accent" : "bg-line-2")
+                          }
+                        />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-[12.5px] text-ink">{e.summary}</span>
+                          <span className="block font-mono text-[10px] text-muted">
+                            {formatRelativeTime(new Date(e.ts))}
+                            {active ? " · actuel" : ""}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <div className="ml-auto flex items-center gap-2">

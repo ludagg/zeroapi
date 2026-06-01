@@ -60,11 +60,15 @@ type AgentResponse =
 /** Session-persisted chat width (% of the content area) for the resizable split. */
 const CHAT_PCT_KEY = "zeroapi:conv-chat-pct";
 
+export type HistoryEntry = { index: number; summary: string; ts: number };
+
 export function ConversationChat({
   conversationId,
   initialTitle,
   initialMessages,
   spec: initialSpec,
+  initialVersion,
+  initialHistory,
   job,
   user,
 }: {
@@ -72,6 +76,8 @@ export function ConversationChat({
   initialTitle: string;
   initialMessages: ChatMessage[];
   spec: ZeroAPISpec | null;
+  initialVersion: number;
+  initialHistory: HistoryEntry[];
   job: { id: string; name: string; status: JobStatus } | null;
   user: { name: string | null; email: string; initials: string };
 }) {
@@ -81,6 +87,9 @@ export function ConversationChat({
   );
   // Spec lives in state so Kia's edits refresh the right-panel tabs in real time.
   const [spec, setSpec] = useState<ZeroAPISpec | null>(initialSpec);
+  // Undo/redo + version history (snapshot-based, server-backed).
+  const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
+  const [version, setVersion] = useState(initialVersion);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
   const [specOpen, setSpecOpen] = useState(false);
@@ -146,6 +155,20 @@ export function ConversationChat({
       behavior: "smooth",
     });
   }, [messages]);
+
+  // ⌘Z / Ctrl+Z = undo, ⌘⇧Z = redo — except while typing in a field.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "z") return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      void runHistory(e.shiftKey ? "redo" : "undo");
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [version, history, pending]);
 
   useEffect(() => {
     if (needsInitialReply) {
@@ -229,6 +252,7 @@ export function ConversationChat({
         );
       } else if ("status" in data && data.status === "applied") {
         setSpec(data.spec);
+        syncHistory(data as { version?: number; history?: HistoryEntry[] });
         const ops: AppliedOp[] = (data.operations ?? [])
           .filter((o) => o.outcome === "applied")
           .map((o) => ({ type: o.type, danger: o.danger, text: describeOperation(o.type, o.params) }));
@@ -301,6 +325,8 @@ export function ConversationChat({
         meta?: string;
         error?: string;
         requiresConfirmation?: ConfirmationImpact[];
+        version?: number;
+        history?: HistoryEntry[];
       };
 
       // Destructive op (e.g. removeField referenced) — bubble the impact up to
@@ -318,6 +344,7 @@ export function ConversationChat({
       // Same anti-drift guarantee as the chat: the server applied the operation
       // through applyOperation and returned the validated spec.
       setSpec(data.spec);
+      syncHistory(data);
       const ops: AppliedOp[] = (data.operations ?? []).map((o) => ({
         type: o.type,
         danger: o.danger,
@@ -340,6 +367,41 @@ export function ConversationChat({
       const error = err instanceof Error ? err.message : "Erreur réseau.";
       toast.error(error);
       return { ok: false, error };
+    }
+  }
+
+  // ── Undo / redo / version history ──────────────────────────────────────────
+
+  function syncHistory(data: { version?: number; history?: HistoryEntry[] }) {
+    if (typeof data.version === "number") setVersion(data.version);
+    if (Array.isArray(data.history)) setHistory(data.history);
+  }
+
+  const canUndo = version > 0;
+  const canRedo = version >= 0 && version < history.length - 1;
+
+  async function runHistory(action: "undo" | "redo" | "restore", v?: number) {
+    if (pending) return;
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/history`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, version: v }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        spec?: ZeroAPISpec | null;
+        version?: number;
+        history?: HistoryEntry[];
+        error?: string;
+      };
+      if (!res.ok) {
+        if (res.status !== 409) toast.error(data.error ?? "Action impossible.");
+        return;
+      }
+      setSpec((data.spec ?? null) as ZeroAPISpec | null);
+      syncHistory(data);
+    } catch {
+      toast.error("Erreur réseau.");
     }
   }
 
@@ -482,6 +544,13 @@ export function ConversationChat({
         variant="desktop"
         pending={pending}
         onApplyOperation={applyGraphOperation}
+        historyEntries={history}
+        version={version}
+        canUndo={canUndo}
+        canRedo={canRedo}
+        onUndo={() => runHistory("undo")}
+        onRedo={() => runHistory("redo")}
+        onRestore={(i) => runHistory("restore", i)}
       />
 
       <MobileDrawer
@@ -501,6 +570,13 @@ export function ConversationChat({
           pending={pending}
           onLaunch={() => setSpecOpen(false)}
           onApplyOperation={applyGraphOperation}
+          historyEntries={history}
+          version={version}
+          canUndo={canUndo}
+          canRedo={canRedo}
+          onUndo={() => runHistory("undo")}
+          onRedo={() => runHistory("redo")}
+          onRestore={(i) => runHistory("restore", i)}
         />
       </MobileDrawer>
     </div>

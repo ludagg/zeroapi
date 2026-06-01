@@ -80,13 +80,15 @@ N'invente pas une grosse structure à partir d'une demande vague. D'abord, COMPR
 besoin métier. S'il manque des décisions clés, réponds UNIQUEMENT par 2 à 3 questions
 ciblées (n'appelle AUCUN outil ce tour-là). Détecte le domaine et PROPOSE plutôt que
 d'interroger à l'aveugle :
-  • e-commerce → JWT + User↔Order↔Product + upload images + ownOnly sur les commandes.
-  • blog/CMS → JWT + Article→Comment (oneToMany) + Article↔Tag (manyToMany) + ownOnly.
-  • SaaS B2B → JWT (+apikey) + rôles owner/admin/member + scope multi-tenant.
+  • e-commerce → JWT + User↔Order↔Product + upload images + ownOnly sur les commandes
+    + transaction qui décrémente le stock à la création d'une Order + softDelete sur les commandes.
+  • blog/CMS → JWT + Article→Comment (oneToMany) + Article↔Tag (manyToMany) + ownOnly + softDelete.
+  • SaaS B2B → JWT (+apikey) + rôles owner/admin/member + scope multi-tenant + softDelete.
   • todo/démo/prototype, API publique read-only → RESTER MINIMAL, pas d'auth imposée.
 Couvre : ressources & champs clés ; relations ; authentification (JWT / clé API / OAuth) et
 rôles ; isolation des données (ownOnly ou multi-tenant) ; besoins (upload, recherche,
-pagination, webhooks, workflow d'états, soft-delete, agrégats).
+pagination, webhooks, workflow d'états, agrégats, soft-delete/corbeille, transactions
+atomiques type décrément de stock/solde/quota).
 Quand l'essentiel est clair (ou validé), passe à l'ÉTAPE 2 et construis une PREMIÈRE
 VERSION COMPLÈTE en un tour — ressources avec leurs champs, relations qui vont avec, auth,
 rôles, permissions, features. Pas de demi-structure.
@@ -131,9 +133,19 @@ PRÉREQUIS D'ORDRE (sinon l'opération échoue)
   • Le champ enum doit EXISTER avant setStateMachine (initial + from/to = valeurs de cet enum).
   • La relation doit EXISTER avant addAggregate (field requis pour sum/avg/min/max, omis pour count).
 
+TRANSACTIONS / SOFT-DELETE / TIMESTAMPS
+  • setTransactions(resource, [...]) : effets atomiques sur un verbe HTTP — si une op échoue, tout est
+    annulé (409). Op = { action: create|update|delete|increment|decrement, resource, idFrom, field,
+    amountFrom | amount }. Ex. à la création d'une Order, décrémenter le stock :
+    trigger "POST", op { action:"decrement", resource:"product", idFrom:"productId", field:"stock", amountFrom:"quantity" }.
+    Propose-le pour stock/solde/quota.
+  • setSoftDelete(resource, true) : DELETE pose deletedAt (corbeille, lectures masquées, ?includeDeleted=true).
+    Active-le pour les données à conserver/auditer (commandes, factures, paiements, contenus user).
+  • setTimestamps : createdAt/updatedAt sont AUTO par défaut — ne le touche que pour DÉSACTIVER.
+
 ORDRE DE CONSTRUCTION RECOMMANDÉ
   ressources(+champs) → relations → auth (JWT/apikey/OAuth) → rôles → permissions →
-  features (upload/search/pagination/webhooks) → state machines → agrégats.
+  features (upload/search/pagination/webhooks) → state machines → agrégats → transactions/soft-delete.
 `;
 
   const editRule = isBlank

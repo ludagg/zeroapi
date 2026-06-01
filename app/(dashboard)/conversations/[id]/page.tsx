@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { initials, requireUser } from "@/lib/session";
 import { ConversationChat } from "@/components/conversations/conversation-chat";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
+import { parseHistory, historyTimeline } from "@/lib/conversation-history";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function ConversationDetailPage({
 
   const messages = parseMessages(conv.messages);
   const spec = readSpec(conv.spec ?? null);
+  const historyEntries = historyTimeline(parseHistory(conv.specHistory));
 
   return (
     <ConversationChat
@@ -28,6 +30,8 @@ export default async function ConversationDetailPage({
       initialTitle={conv.title}
       initialMessages={messages}
       spec={spec}
+      initialVersion={conv.specVersion}
+      initialHistory={historyEntries}
       job={conv.job ?? null}
       user={{
         name: user.name,

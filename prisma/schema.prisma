@@ -169,6 +169,10 @@ model Conversation {
   title     String   @default("Nouvelle conversation")
   messages  Json     @default("[]")
   spec      Json?
+  // Ordered snapshots of the spec for undo/redo + version history.
+  specHistory Json   @default("[]")
+  // Index of the active snapshot in specHistory (-1 = none yet).
+  specVersion Int    @default(-1)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { parseMessages, readSpec, type ChatMessage } from "@/lib/conversation-helpers";
+import { parseHistory, commitSnapshot, historyTimeline, canUndo, canRedo } from "@/lib/conversation-history";
 import { applyOperation } from "@/lib/operations";
 import type { Operation, OperationType } from "@/lib/operations/types";
 import { OPERATION_DANGER } from "@/lib/operations/registry";
@@ -108,12 +109,23 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   const assistantMsg: ChatMessage = { role: "assistant", content: `✓ ${summary}`, ts: Date.now(), meta };
   const history = parseMessages(conv.messages);
 
+  // Archive the new spec state for undo/redo + version history.
+  const committed = commitSnapshot(
+    parseHistory(conv.specHistory),
+    conv.specVersion,
+    spec,
+    res.spec,
+    summary,
+  );
+
   const writes: Prisma.PrismaPromise<unknown>[] = [
     prisma.conversation.update({
       where: { id: conv.id },
       data: {
         messages: [...history, assistantMsg] as unknown as Prisma.InputJsonValue,
         spec: res.spec as unknown as Prisma.InputJsonValue,
+        specHistory: committed.history as unknown as Prisma.InputJsonValue,
+        specVersion: committed.version,
       },
     }),
   ];
@@ -133,5 +145,9 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     operations: [{ type, danger, params: opParams, outcome: "applied" }],
     assistant: `✓ ${summary}`,
     meta,
+    version: committed.version,
+    history: historyTimeline(committed.history),
+    canUndo: canUndo(committed.history, committed.version),
+    canRedo: canRedo(committed.history, committed.version),
   });
 }
