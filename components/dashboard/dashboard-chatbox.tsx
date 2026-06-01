@@ -61,7 +61,10 @@ export function DashboardChatbox() {
   const placeholder = PLACEHOLDERS[placeholderIdx];
 
   return (
-    <div className="relative mb-7 rounded-[16px] border border-line bg-surface px-[18px] pb-[14px] pt-[18px] text-left shadow-lg">
+    <div
+      className="zi-card-in relative mb-7 rounded-[16px] border border-line bg-surface px-[18px] pb-[14px] pt-[18px] text-left shadow-lg"
+      style={{ "--d": "1s" } as React.CSSProperties}
+    >
       <div
         aria-hidden
         className="pointer-events-none absolute"
@@ -79,6 +82,10 @@ export function DashboardChatbox() {
         }}
       />
 
+      <div
+        className="zi-reveal relative"
+        style={{ "--d": "1.1s" } as React.CSSProperties}
+      >
       <div className="mb-3.5 flex items-center gap-2.5 border-b border-dashed border-line pb-3 font-mono text-[12px] text-muted">
         <div className="flex gap-1.5">
           <i className="h-[9px] w-[9px] rounded-full bg-accent" />
@@ -133,6 +140,8 @@ export function DashboardChatbox() {
           <ArrowRight className="h-3 w-3" strokeWidth={2.4} />
         </button>
       </div>
+      </div>
+      <span aria-hidden className="zi-bar" />
     </div>
   );
 }

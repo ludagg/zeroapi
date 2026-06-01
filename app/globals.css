@@ -133,3 +133,127 @@
     background: transparent;
   }
 }
+
+/* ---- Animation d'intro du dashboard : anneau → halo vert → balayage lumineux ---- */
+.zi-ring {
+  display: none;
+}
+.zi-bar {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -5%;
+  width: 44px;
+  transform: translateX(-50%);
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  filter: blur(6px);
+  border-radius: 999px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .zi-eyebrow {
+    opacity: 0;
+    animation: zi-eyebrow 0.5s ease 0.6s both;
+  }
+  .zi-halo {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.35);
+    animation: zi-halo 0.75s cubic-bezier(0.2, 0.7, 0.2, 1) 0.35s both;
+  }
+  .zi-ring {
+    display: block;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 40px;
+    height: 40px;
+    transform: translate(-50%, -50%) scale(1);
+    pointer-events: none;
+    animation: zi-ring-expand 0.5s cubic-bezier(0.5, 0, 0.9, 0.4) 0.5s both;
+  }
+  .zi-ring-circle {
+    stroke-dasharray: 57.81;
+    stroke-dashoffset: 57.81;
+    animation: zi-ring-draw 0.5s cubic-bezier(0.3, 0.7, 0.3, 1) 0.05s both;
+  }
+  .zi-ring-node {
+    opacity: 0;
+    animation: zi-node 0.25s ease 0.4s both;
+  }
+  .zi-card-in {
+    opacity: 0;
+    transform: translateY(10px);
+    animation: zi-card 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) var(--d, 1s) both;
+  }
+  .zi-reveal {
+    -webkit-mask: linear-gradient(90deg, #000 45%, transparent 55%) 100% 0 / 250% 100% no-repeat;
+    mask: linear-gradient(90deg, #000 45%, transparent 55%) 100% 0 / 250% 100% no-repeat;
+    animation: zi-reveal 0.85s cubic-bezier(0.3, 0.6, 0.2, 1) var(--d, 0.75s) both;
+  }
+  .zi-bar {
+    animation: zi-bar 0.85s cubic-bezier(0.3, 0.6, 0.2, 1) var(--d, 0.75s) both;
+  }
+}
+
+@keyframes zi-eyebrow {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes zi-halo {
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+@keyframes zi-ring-expand {
+  to {
+    transform: translate(-50%, -50%) scale(6);
+    opacity: 0;
+  }
+}
+@keyframes zi-ring-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes zi-node {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes zi-reveal {
+  to {
+    -webkit-mask-position: 0 0;
+    mask-position: 0 0;
+  }
+}
+@keyframes zi-card {
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes zi-bar {
+  0% {
+    left: -5%;
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.95;
+  }
+  85% {
+    opacity: 0.9;
+  }
+  100% {
+    left: 105%;
+    opacity: 0;
+  }
+}
