@@ -99,9 +99,6 @@ export default async function DashboardPage({
     completedAt: j.completedAt,
   }));
 
-  const greeting = greetingFor(new Date());
-  const firstName = (user.name ?? user.email).split(/\s+/)[0];
-
   return (
     <>
       <DashboardHeader
@@ -114,28 +111,20 @@ export default async function DashboardPage({
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <h1 className="font-serif text-[clamp(36px,4.6vw,50px)] leading-[1.05] tracking-[-0.01em]">
-                {greeting} <em className="italic">{firstName}</em>.
-              </h1>
-              <div className="mt-1.5 flex items-center gap-2.5 text-[14.5px] text-muted">
-                <span
-                  className="h-1.5 w-1.5 rounded-full bg-accent"
-                  style={{ boxShadow: "0 0 0 4px var(--accent-glow)" }}
-                />
-                {runningCount > 0 ? (
-                  <span>
-                    <b className="font-medium text-ink">
-                      {runningCount} job{runningCount > 1 ? "s" : ""}
-                    </b>{" "}
-                    en cours · on te prévient quand c&apos;est prêt
-                  </span>
-                ) : (
-                  <span>Aucun job en cours · prêt à démarrer</span>
-                )}
-              </div>
-            </div>
+          <div className="mb-7 flex items-center justify-center gap-4 sm:gap-5">
+            <span
+              aria-hidden
+              className="hidden h-px w-full max-w-[200px] flex-1 sm:block"
+              style={{ background: "linear-gradient(to right, transparent, var(--line))" }}
+            />
+            <h1 className="text-center font-serif text-[clamp(28px,4.4vw,46px)] leading-[1.05] tracking-[-0.01em]">
+              Qu&apos;est-ce qu&apos;on <em className="italic">crée</em> aujourd&apos;hui&nbsp;?
+            </h1>
+            <span
+              aria-hidden
+              className="hidden h-px w-full max-w-[200px] flex-1 sm:block"
+              style={{ background: "linear-gradient(to left, transparent, var(--line))" }}
+            />
           </div>
 
           <DashboardChatbox />
@@ -205,14 +194,6 @@ export default async function DashboardPage({
       </div>
     </>
   );
-}
-
-function greetingFor(d: Date): string {
-  const h = d.getHours();
-  if (h < 6) return "Bonne nuit,";
-  if (h < 12) return "Bonjour,";
-  if (h < 18) return "Bon après-midi,";
-  return "Bonsoir,";
 }
 
 function costForPlan(plan: "FREE" | "STARTER" | "PRO" | "BUSINESS"): string {
