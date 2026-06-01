@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 import { Briefcase, Home, KeyRound, Menu, Network, Users } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -85,9 +86,7 @@ function AdminSidebar({
         onClick={onNavigate}
         className="mb-5 flex items-center gap-2.5 px-2 font-semibold"
       >
-        <span className="brand-mark h-[26px] w-[26px] text-[13px]">
-          <span>0</span>
-        </span>
+        <BrandMark size={26} />
         <span>
           Zero<span className="font-medium not-italic text-muted">API</span>
         </span>

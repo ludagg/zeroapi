@@ -78,24 +78,6 @@
 }
 
 @layer components {
-  .brand-mark {
-    @apply relative grid place-items-center overflow-hidden rounded-[7px] font-mono font-semibold text-bg;
-    background: var(--ink);
-  }
-  .brand-mark::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, transparent 40%, var(--accent) 40%, var(--accent) 56%, transparent 56%);
-    opacity: 0.9;
-  }
-  .brand-mark > span {
-    position: relative;
-    z-index: 1;
-    mix-blend-mode: difference;
-    color: #fff;
-  }
-
   .input-base {
     @apply h-11 w-full rounded-[10px] border border-line bg-surface px-3.5 text-[15px] text-ink outline-none transition;
   }

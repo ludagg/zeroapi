@@ -19,6 +19,7 @@ import {
   Briefcase,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { BrandMark } from "@/components/brand-mark";
 
 export type SidebarUser = {
   name: string | null;
@@ -66,9 +67,7 @@ export function Sidebar({
     >
       {rail ? (
         <div className="mb-3 flex flex-col items-center gap-2 border-b border-line pb-3">
-          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
-            <span>0</span>
-          </span>
+          <BrandMark size={30} />
           {onToggleCollapse && (
             <button
               type="button"
@@ -83,9 +82,7 @@ export function Sidebar({
         </div>
       ) : (
         <div className="mb-3 flex items-center gap-2.5 border-b border-line px-2 pb-3.5">
-          <span className="brand-mark h-[30px] w-[30px] text-[14px]">
-            <span>0</span>
-          </span>
+          <BrandMark size={30} />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5 truncate text-[13.5px] font-semibold">
               {user.name ?? user.email.split("@")[0]}
