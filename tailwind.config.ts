@@ -54,6 +54,7 @@ const config: Config = {
         },
       },
       borderRadius: {
+        card: "var(--radius-card)",
         lg: "12px",
         md: "10px",
         sm: "8px",

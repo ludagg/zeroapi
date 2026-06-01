@@ -1,6 +1,7 @@
 import { listProvidersForAdmin } from "@/lib/ai-providers";
 import { listRoutingForAdmin, ROUTING_PLANS, ROUTING_TASKS } from "@/lib/llm-routing-config";
 import { RoutingMatrix } from "@/components/admin/routing-matrix";
+import { PageHeader } from "@/components/ui/page-header";
 
 export const dynamic = "force-dynamic";
 
@@ -14,14 +15,10 @@ export default async function AdminLLMRoutingPage() {
 
   return (
     <>
-      <header className="mb-7">
-        <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
-          LLM <em className="italic">Routing</em>.
-        </h1>
-        <p className="mt-2 text-muted">
-          Plan × tâche → provider. La config DB écrase les valeurs par défaut hardcodées.
-        </p>
-      </header>
+      <PageHeader
+        title={<>LLM <em>Routing</em>.</>}
+        description="Plan × tâche → provider. La config DB écrase les valeurs par défaut hardcodées."
+      />
 
       <RoutingMatrix
         matrix={matrix}

@@ -166,7 +166,7 @@ function AdminLink({
     <Link
       href={href}
       onClick={onNavigate}
-      className="flex items-center gap-2.5 rounded-[7px] px-2 py-2 text-[14px] text-ink-2 transition hover:bg-bg-2 hover:text-ink"
+      className="focus-ring flex items-center gap-2.5 rounded-[7px] px-2 py-2 text-[14px] text-ink-2 transition hover:bg-bg-2 hover:text-ink"
     >
       <span className="text-muted">{icon}</span>
       {children}

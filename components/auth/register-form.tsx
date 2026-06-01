@@ -10,6 +10,8 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { signUp } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
+import { FormField } from "@/components/ui/form-field";
+import { Button } from "@/components/ui/button";
 
 const schema = z.object({
   name: z.string().min(2, "Nom trop court"),
@@ -69,65 +71,50 @@ export function RegisterForm() {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
-        <label htmlFor="signup-name" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Nom complet
-        </label>
-        <div className="relative">
-          <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            id="signup-name"
-            autoComplete="name"
-            placeholder="Aminata Diallo"
-            className="input-base pl-10"
-            {...register("name")}
-          />
-        </div>
-        {errors.name && <p className="mt-1.5 text-[12px] text-danger">{errors.name.message}</p>}
+        <FormField
+          label="Nom complet"
+          autoComplete="name"
+          placeholder="Aminata Diallo"
+          icon={<User />}
+          error={errors.name?.message}
+          {...register("name")}
+        />
       </div>
 
       <div className="mb-4">
-        <label htmlFor="signup-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Adresse email professionnelle
-        </label>
-        <div className="relative">
-          <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            id="signup-email"
-            type="email"
-            autoComplete="email"
-            placeholder="aminata@startup.ci"
-            className="input-base pl-10"
-            {...register("email")}
-          />
-        </div>
-        {errors.email && <p className="mt-1.5 text-[12px] text-danger">{errors.email.message}</p>}
+        <FormField
+          label="Adresse email professionnelle"
+          type="email"
+          autoComplete="email"
+          placeholder="aminata@startup.ci"
+          icon={<Mail />}
+          error={errors.email?.message}
+          {...register("email")}
+        />
       </div>
 
       <div className="mb-4">
-        <label htmlFor="signup-pwd" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Mot de passe
-        </label>
-        <div className="relative">
-          <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-          <input
-            id="signup-pwd"
-            type={showPwd ? "text" : "password"}
-            autoComplete="new-password"
-            placeholder="Au moins 10 caractères"
-            className="input-base pl-10 pr-11"
-            {...register("password", {
-              onChange: (e) => setPwd(e.target.value),
-            })}
-          />
-          <button
-            type="button"
-            onClick={() => setShowPwd((s) => !s)}
-            aria-label={showPwd ? "Masquer" : "Afficher"}
-            className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
-          >
-            {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        </div>
+        <FormField
+          label="Mot de passe"
+          type={showPwd ? "text" : "password"}
+          autoComplete="new-password"
+          placeholder="Au moins 10 caractères"
+          icon={<Lock />}
+          error={errors.password?.message}
+          trailing={
+            <button
+              type="button"
+              onClick={() => setShowPwd((s) => !s)}
+              aria-label={showPwd ? "Masquer" : "Afficher"}
+              className="grid h-8 w-8 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
+            >
+              {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          }
+          {...register("password", {
+            onChange: (e) => setPwd(e.target.value),
+          })}
+        />
 
         <div className="mt-2.5 flex gap-1">
           {[1, 2, 3, 4].map((i) => (
@@ -145,9 +132,6 @@ export function RegisterForm() {
         <p className="mt-1.5 font-mono text-[11px] text-muted">
           Force : <b className="font-medium text-ink">{STRENGTH_LABELS[strength]}</b>
         </p>
-        {errors.password && (
-          <p className="mt-1.5 text-[12px] text-danger">{errors.password.message}</p>
-        )}
       </div>
 
       <label className="my-1 mb-5 flex cursor-pointer select-none items-start gap-2.5 text-[13.5px] text-ink-2">
@@ -178,14 +162,10 @@ export function RegisterForm() {
       </label>
       {errors.terms && <p className="mb-2 text-[12px] text-danger">{errors.terms.message}</p>}
 
-      <button
-        type="submit"
-        disabled={submitting}
-        className="btn-primary-accent group h-[46px] w-full disabled:opacity-70"
-      >
+      <Button type="submit" variant="accent" disabled={submitting} className="group w-full">
         {submitting ? "Création…" : "Créer mon compte"}
         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-      </button>
+      </Button>
     </form>
   );
 }

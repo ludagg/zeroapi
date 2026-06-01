@@ -7,6 +7,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Check, User } from "lucide-react";
 import { toast } from "sonner";
+import { Card, CardHeader, CardBody } from "@/components/ui/card";
+import { FormField } from "@/components/ui/form-field";
+import { Button } from "@/components/ui/button";
 
 const schema = z.object({
   name: z.string().trim().min(1, "Nom requis").max(80),
@@ -59,37 +62,24 @@ export function ProfileCard({
       subtitle="Ton nom apparaît dans la sidebar et sur les emails de notification."
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
-        <div>
-          <label htmlFor="settings-name" className="mb-2 block text-[13px] font-medium text-ink-2">
-            Nom complet
-          </label>
-          <div className="relative">
-            <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
-            <input
-              id="settings-name"
-              type="text"
-              autoComplete="name"
-              className="input-base pl-10"
-              {...register("name")}
-            />
-          </div>
-          {errors.name && (
-            <p className="mt-1.5 text-[12px] text-danger">{errors.name.message}</p>
-          )}
-        </div>
+        <FormField
+          label="Nom complet"
+          type="text"
+          autoComplete="name"
+          icon={<User />}
+          error={errors.name?.message}
+          {...register("name")}
+        />
 
-        <div>
-          <label className="mb-2 block text-[13px] font-medium text-ink-2">Email</label>
-          <input
-            type="email"
-            value={email}
-            disabled
-            className="input-base cursor-not-allowed opacity-70"
-          />
-          <p className="mt-1.5 text-[12px] text-muted">
-            L&apos;email ne peut pas être modifié pour le moment.
-          </p>
-        </div>
+        <FormField
+          label="Email"
+          type="email"
+          value={email}
+          disabled
+          readOnly
+          className="cursor-not-allowed opacity-70"
+          hint="L'email ne peut pas être modifié pour le moment."
+        />
 
         <div className="flex items-center justify-end gap-3">
           {saved && !isDirty && (
@@ -98,13 +88,9 @@ export function ProfileCard({
               Enregistré
             </span>
           )}
-          <button
-            type="submit"
-            disabled={submitting || !isDirty}
-            className="btn-primary h-9 px-4 text-[13px] disabled:opacity-50"
-          >
+          <Button type="submit" size="sm" disabled={submitting || !isDirty}>
             {submitting ? "Enregistrement…" : "Enregistrer"}
-          </button>
+          </Button>
         </div>
       </form>
     </SettingsCard>
@@ -121,12 +107,9 @@ export function SettingsCard({
   children: React.ReactNode;
 }) {
   return (
-    <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
-      <header className="border-b border-line px-5 py-4">
-        <h2 className="text-[15px] font-semibold">{title}</h2>
-        {subtitle && <p className="mt-1 text-[12.5px] text-muted">{subtitle}</p>}
-      </header>
-      <div className="p-5">{children}</div>
-    </div>
+    <Card>
+      <CardHeader title={title} subtitle={subtitle} />
+      <CardBody>{children}</CardBody>
+    </Card>
   );
 }

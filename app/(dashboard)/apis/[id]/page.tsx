@@ -9,19 +9,13 @@ import { DeployButtons } from "@/components/api-detail/deploy-buttons";
 import { DownloadButton } from "@/components/api-detail/download-button";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { SecurityCard, TestsCard } from "@/components/api-detail/security-test-cards";
+import { PageContainer } from "@/components/ui/page-container";
+import { StatusPill } from "@/components/ui/status-pill";
 import { buildDeployConfigs, buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { extractAuthMode, extractVersion, readSpec } from "@/lib/job-helpers";
-import type { Job, JobStatus } from "@prisma/client";
+import type { Job } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
-  PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
-  RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
-  READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
-  DEPLOYED: { label: "EN LIGNE", className: "bg-accent text-accent-ink" },
-  FAILED: { label: "ÉCHEC", className: "bg-danger-soft text-danger" },
-};
 
 export default async function ApiDetailPage({ params }: { params: { id: string } }) {
   const user = await requireUser();
@@ -31,7 +25,6 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
   if (!job) notFound();
 
   const spec = readSpec(job.spec);
-  const pill = STATUS_PILL[job.status];
   const isReady = job.status === "READY" || job.status === "DEPLOYED";
 
   const openApiEndpoints = spec ? listEndpointsFromOpenApi(buildOpenApiSpec(spec)) : [];
@@ -47,8 +40,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
         ]}
       />
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
+      <PageContainer width="default">
           <Link
             href={`/jobs/${job.id}`}
             className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-muted transition hover:text-ink"
@@ -66,14 +58,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
                 <span className="rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
                   {extractVersion(job)}
                 </span>
-                <span
-                  className={
-                    "ml-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] " +
-                    pill.className
-                  }
-                >
-                  {pill.label}
-                </span>
+                <StatusPill status={job.status} className="ml-1" />
               </div>
               <p className="mt-2 max-w-2xl text-[14.5px] text-muted">{job.description}</p>
             </div>
@@ -127,8 +112,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
               </aside>
             </div>
           )}
-        </div>
-      </div>
+      </PageContainer>
     </>
   );
 }

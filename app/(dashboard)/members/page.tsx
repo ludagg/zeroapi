@@ -4,6 +4,9 @@ import { initials, requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { InviteButton } from "@/components/members/invite-button";
 import { RemoveButton } from "@/components/members/remove-button";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { Table } from "@/components/ui/table";
 import { formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -33,58 +36,58 @@ export default async function MembersPage() {
           { label: "Membres" },
         ]}
       />
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-                Ton <em className="italic">équipe</em>.
-              </h1>
-              <p className="mt-2 text-[14.5px] text-muted">
-                {members.length + 1} membre{members.length > 0 ? "s" : ""} · plan {owner.plan}
+      <PageContainer width="wide">
+        <PageHeader
+          title={
+            <>
+              Ton <em>équipe</em>.
+            </>
+          }
+          description={
+            <>
+              {members.length + 1} membre{members.length > 0 ? "s" : ""} · plan {owner.plan}
+            </>
+          }
+          actions={<InviteButton plan={owner.plan} />}
+        />
+
+        {locked && (
+          <div className="mb-5 rounded-[12px] border border-line bg-bg-2 px-4 py-3 text-[13px] text-muted">
+            Le plan <b className="text-ink">FREE</b> est limité à un seul utilisateur. Passe à Pro
+            pour inviter des coéquipiers.
+          </div>
+        )}
+
+        <Table>
+          <Row
+            avatar={initials(owner.name ?? owner.email)}
+            name={owner.name ?? owner.email.split("@")[0]}
+            email={owner.email}
+            role="owner"
+            joined={owner.createdAt}
+          />
+          {members.map((m) => (
+            <Row
+              key={m.id}
+              memberId={m.id}
+              avatar={initials(m.email)}
+              name={m.email.split("@")[0]}
+              email={m.email}
+              role={m.role === "admin" ? "admin" : "member"}
+              joined={m.createdAt}
+            />
+          ))}
+
+          {members.length === 0 && !locked && (
+            <div className="border-t border-line px-4 py-8 text-center">
+              <Users className="mx-auto mb-2 h-4 w-4 text-muted-2" />
+              <p className="text-[13.5px] text-muted">
+                Pas encore de coéquipier. Invite quelqu&apos;un pour commencer.
               </p>
             </div>
-            <InviteButton plan={owner.plan} />
-          </header>
-
-          {locked && (
-            <div className="mb-5 rounded-[12px] border border-line bg-bg-2 px-4 py-3 text-[13px] text-muted">
-              Le plan <b className="text-ink">FREE</b> est limité à un seul utilisateur. Passe à
-              Pro pour inviter des coéquipiers.
-            </div>
           )}
-
-          <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
-            <Row
-              avatar={initials(owner.name ?? owner.email)}
-              name={owner.name ?? owner.email.split("@")[0]}
-              email={owner.email}
-              role="owner"
-              joined={owner.createdAt}
-            />
-            {members.map((m) => (
-              <Row
-                key={m.id}
-                memberId={m.id}
-                avatar={initials(m.email)}
-                name={m.email.split("@")[0]}
-                email={m.email}
-                role={m.role === "admin" ? "admin" : "member"}
-                joined={m.createdAt}
-              />
-            ))}
-
-            {members.length === 0 && !locked && (
-              <div className="border-t border-line px-4 py-8 text-center">
-                <Users className="mx-auto mb-2 h-4 w-4 text-muted-2" />
-                <p className="text-[13.5px] text-muted">
-                  Pas encore de coéquipier. Invite quelqu&apos;un pour commencer.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+        </Table>
+      </PageContainer>
     </>
   );
 }

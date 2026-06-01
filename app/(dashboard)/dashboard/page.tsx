@@ -1,6 +1,8 @@
-import { BarChart3, Briefcase, DollarSign, Package } from "lucide-react";
+import { BarChart3, Briefcase, DollarSign, Package, Plus } from "lucide-react";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { StatsCards } from "@/components/dashboard/stats-cards";
+import { PageContainer } from "@/components/ui/page-container";
+import { Button } from "@/components/ui/button";
 import { DashboardChatbox } from "@/components/dashboard/dashboard-chatbox";
 import { JobsList, type DashboardJob } from "@/components/dashboard/jobs-list";
 import { JobFilters } from "@/components/dashboard/job-filters";
@@ -112,8 +114,7 @@ export default async function DashboardPage({
         unread={runningCount}
       />
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
+      <PageContainer width="wide">
           <div className="mb-7 flex flex-wrap items-end justify-between gap-6">
             <div>
               <h1 className="font-serif text-[clamp(36px,4.6vw,50px)] leading-[1.05] tracking-[-0.01em]">
@@ -136,6 +137,10 @@ export default async function DashboardPage({
                 )}
               </div>
             </div>
+            <Button href="/generate" variant="accent">
+              <Plus className="h-4 w-4" strokeWidth={2.6} />
+              Générer une API
+            </Button>
           </div>
 
           <StatsCards
@@ -201,8 +206,7 @@ export default async function DashboardPage({
             <ActivityPanel items={activity} />
             <DeploymentsPanel deployments={deployments} />
           </div>
-        </div>
-      </div>
+      </PageContainer>
     </>
   );
 }

@@ -7,6 +7,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { DangerActions } from "@/components/databases/danger-actions";
 import { ExportButton } from "@/components/databases/export-button";
 import { ConnectionString } from "@/components/databases/connection-string";
+import { PageContainer } from "@/components/ui/page-container";
 import { readSpec } from "@/lib/job-helpers";
 import { listTables, liveStatsFor } from "@/lib/db-tables";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
@@ -55,8 +56,7 @@ export default async function DatabaseDetailPage({ params }: { params: { id: str
         ]}
       />
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-6 py-7 lg:px-8">
+      <PageContainer width="default">
           <Link
             href="/databases"
             className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-muted transition hover:text-ink"
@@ -227,8 +227,7 @@ export default async function DatabaseDetailPage({ params }: { params: { id: str
               </table>
             )}
           </section>
-        </div>
-      </div>
+      </PageContainer>
     </>
   );
 }

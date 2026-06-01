@@ -18,6 +18,8 @@ import { LogsTimeline } from "@/components/api-detail/logs-timeline";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
 import { VariablesPanel } from "@/components/api-detail/variables-panel";
+import { PageContainer } from "@/components/ui/page-container";
+import { StatusPill } from "@/components/ui/status-pill";
 import {
   buildDeployConfigs,
   buildOpenApiSpec,
@@ -28,17 +30,9 @@ import { extractVersion, readSpec, extractAuthMode } from "@/lib/job-helpers";
 import { formatRelativeTime } from "@/lib/utils";
 import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
 import { coolifyConfigured } from "@/lib/coolify";
-import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client";
+import type { DeployPlatform, DeploymentStatus } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
-  PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
-  RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
-  READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
-  DEPLOYED: { label: "EN LIGNE", className: "bg-accent text-accent-ink" },
-  FAILED: { label: "ÉCHEC", className: "bg-danger-soft text-danger" },
-};
 
 const PLATFORM_TO_TARGET: Record<DeployPlatform, "railway" | "render" | "vercel" | "flyio" | null> = {
   RAILWAY: "railway",
@@ -65,7 +59,6 @@ export default async function JobDetailPage({ params }: { params: { id: string }
     job.deployment?.platform === "ZEROAPI_CLOUD" ? job.deployment.url : null;
 
   const spec = readSpec(job.spec);
-  const pill = STATUS_PILL[job.status];
   const isReady = job.status === "READY" || job.status === "DEPLOYED";
   const isCodeAvailable = isReady && spec !== null;
   const version = extractVersion(job);
@@ -98,8 +91,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
           { label: job.name },
         ]}
       />
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-8">
+      <PageContainer width="default">
           <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2.5">
@@ -109,14 +101,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 <span className="rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
                   {version}
                 </span>
-                <span
-                  className={
-                    "ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] " +
-                    pill.className
-                  }
-                >
-                  {pill.label}
-                </span>
+                <StatusPill status={job.status} className="ml-2" />
               </div>
               <p className="mt-2 max-w-2xl text-[14.5px] text-muted">
                 {job.description}
@@ -317,8 +302,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                 ),
             }}
           />
-        </div>
-      </div>
+      </PageContainer>
     </>
   );
 }

@@ -4,6 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { JobLinkChip } from "@/components/databases/job-link-chip";
+import { PageContainer } from "@/components/ui/page-container";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Button } from "@/components/ui/button";
 import { formatNumber, formatRelativeTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -40,41 +44,44 @@ export default async function DatabasesPage() {
         ]}
       />
 
-      <div className="flex-1 overflow-y-auto scrollbar-thin">
-        <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-                Tes <em className="italic">bases de données</em>.
-              </h1>
-              <p className="mt-2 text-[14.5px] text-muted">
-                {dbs.length} base{dbs.length > 1 ? "s" : ""} · une par API générée
-              </p>
-            </div>
-          </header>
+      <PageContainer width="default">
+        <PageHeader
+          title={
+            <>
+              Tes <em>bases de données</em>.
+            </>
+          }
+          description={
+            <>
+              {dbs.length} base{dbs.length > 1 ? "s" : ""} · une par API générée
+            </>
+          }
+        />
 
-          {dbs.length === 0 ? (
-            <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
-              <DatabaseIcon className="mx-auto mb-3 h-5 w-5 text-muted-2" />
-              <p className="font-serif text-[26px] leading-tight">
-                Aucune base <em className="italic">pour l&apos;instant</em>.
-              </p>
-              <p className="mt-2 text-muted">
-                Une base est créée automatiquement pour chaque API prête.
-              </p>
-              <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
+        {dbs.length === 0 ? (
+          <EmptyState
+            icon={<DatabaseIcon className="h-5 w-5" />}
+            title={
+              <>
+                Aucune base <em>pour l&apos;instant</em>.
+              </>
+            }
+            description="Une base est créée automatiquement pour chaque API prête."
+            action={
+              <Button href="/generate" variant="accent">
                 Générer une API
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+              </Button>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               {dbs.map((d) => {
                 const isOnline = d.status === "online";
                 return (
                   <Link
                     key={d.id}
                     href={`/databases/${d.id}`}
-                    className="group overflow-hidden rounded-[14px] border border-line bg-surface transition hover:-translate-y-px hover:border-line-2 hover:shadow-md"
+                    className="group overflow-hidden rounded-card border border-line bg-surface transition hover:-translate-y-px hover:border-line-2 hover:shadow-md"
                   >
                     <header className="flex items-center justify-between border-b border-line bg-bg-2 px-4 py-2.5">
                       <div className="flex items-center gap-2">
@@ -136,10 +143,9 @@ export default async function DatabasesPage() {
                   </Link>
                 );
               })}
-            </div>
-          )}
-        </div>
-      </div>
+          </div>
+        )}
+      </PageContainer>
     </>
   );
 }
