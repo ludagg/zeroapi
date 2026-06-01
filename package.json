@@ -84,5 +84,13 @@
     "tailwindcss": "^3.4.17",
     "tsx": "^4.22.3",
     "typescript": "^5.7.2"
+  },
+  "overrides": {
+    "kysely": "0.28.17"
+  },
+  "pnpm": {
+    "overrides": {
+      "kysely": "0.28.17"
+    }
   }
 }
