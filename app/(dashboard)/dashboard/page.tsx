@@ -111,20 +111,17 @@ export default async function DashboardPage({
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <div className="mb-7 flex items-center justify-center gap-4 sm:gap-5">
-            <span
+          <div className="relative mb-7 flex justify-center">
+            <div
               aria-hidden
-              className="hidden h-px w-full max-w-[200px] flex-1 sm:block"
-              style={{ background: "linear-gradient(to right, transparent, var(--line))" }}
+              className="pointer-events-none absolute left-1/2 top-1/2 h-[150px] w-[460px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 blur-2xl"
+              style={{
+                background: "radial-gradient(ellipse at center, var(--accent-glow), transparent 70%)",
+              }}
             />
-            <h1 className="text-center font-serif text-[clamp(28px,4.4vw,46px)] leading-[1.05] tracking-[-0.01em]">
+            <h1 className="relative text-center font-serif text-[clamp(28px,4.4vw,46px)] leading-[1.05] tracking-[-0.01em]">
               Qu&apos;est-ce qu&apos;on <em className="italic">crée</em> aujourd&apos;hui&nbsp;?
             </h1>
-            <span
-              aria-hidden
-              className="hidden h-px w-full max-w-[200px] flex-1 sm:block"
-              style={{ background: "linear-gradient(to left, transparent, var(--line))" }}
-            />
           </div>
 
           <DashboardChatbox />
