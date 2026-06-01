@@ -145,7 +145,7 @@ RÈGLES :
  * `env`, `features`. Since v0.15.0, relations to the reserved `User` resource
  * are forwarded as-is to the runtime (real FK + cascade + ?include=user).
  */
-export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.20.
+export const SPEC_SYSTEM_PROMPT = `Tu génères UNIQUEMENT une Spec JSON validée par \`parseSpec()\` de @ludagg/zeroapi-runtime v0.23.
 Le framework cible est TOUJOURS Hono.js — ne mentionne jamais Express, FastAPI ou un autre framework.
 
 SHAPE EXACTE — tout écart sera rejeté :
