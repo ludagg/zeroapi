@@ -2,9 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ChevronDown, Sparkles, Zap } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-import { TEMPLATES, type Template } from "@/lib/templates";
 
 const PLACEHOLDERS = [
   "API e-commerce avec paiement Wave et livraison à domicile…",
@@ -20,7 +19,6 @@ export function DashboardChatbox() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [templatesOpen, setTemplatesOpen] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
 
   useEffect(() => {
@@ -59,43 +57,41 @@ export function DashboardChatbox() {
     }
   }
 
-  function useTemplate(template: Template) {
-    setTemplatesOpen(false);
-    setValue(template.prompt);
-    setTimeout(() => {
-      resizeTextarea();
-      void submit(template.prompt);
-    }, 0);
-  }
-
   const canSubmit = value.trim().length > 0 && !submitting;
   const placeholder = PLACEHOLDERS[placeholderIdx];
 
   return (
-    <div className="relative mb-7 overflow-hidden rounded-[14px] bg-ink px-5 py-5 text-bg">
+    <div className="relative mb-7 rounded-[16px] border border-line bg-surface px-[18px] pb-[14px] pt-[18px] text-left shadow-lg">
       <div
         aria-hidden
-        className="pointer-events-none absolute -right-[10%] -top-[60%] h-[320px] w-[320px] opacity-90"
+        className="pointer-events-none absolute"
         style={{
-          background: "radial-gradient(circle, var(--accent-glow), transparent 60%)",
+          inset: "-1px",
+          borderRadius: "17px",
+          padding: "1px",
+          background: "linear-gradient(180deg, var(--accent), transparent 60%)",
+          WebkitMask:
+            "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          mask: "linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0)",
+          WebkitMaskComposite: "xor",
+          maskComposite: "exclude",
+          opacity: 0.5,
         }}
       />
 
-      <div className="relative z-10 mb-4 flex flex-wrap items-center gap-3">
-        <div className="grid h-[42px] w-[42px] flex-shrink-0 place-items-center rounded-[10px] bg-accent text-accent-ink">
-          <Zap className="h-5 w-5" strokeWidth={2.4} />
+      <div className="mb-3.5 flex items-center gap-2.5 border-b border-dashed border-line pb-3 font-mono text-[12px] text-muted">
+        <div className="flex gap-1.5">
+          <i className="h-[9px] w-[9px] rounded-full bg-accent" />
+          <i className="h-[9px] w-[9px] rounded-full bg-line-2" />
+          <i className="h-[9px] w-[9px] rounded-full bg-line-2" />
         </div>
-        <div className="min-w-0 flex-1">
-          <div className="font-serif text-[22px] leading-tight">
-            Décris ta prochaine <em className="italic">API</em>.
-          </div>
-          <div className="mt-0.5 text-[13px] text-white/65">
-            Génération asynchrone · ferme l&apos;onglet, on te prévient quand c&apos;est prêt.
-          </div>
-        </div>
+        <span>nouveau-projet · prompt.md</span>
       </div>
 
-      <div className="relative z-10 rounded-[12px] border border-white/[0.14] bg-white/[0.06] focus-within:border-white/30">
+      <div className="flex min-h-[76px] items-start gap-3">
+        <div className="mt-0.5 grid h-7 w-7 flex-shrink-0 place-items-center rounded-[8px] bg-accent-soft font-mono text-[13px] font-semibold text-accent-ink">
+          ›_
+        </div>
         <textarea
           ref={textareaRef}
           value={value}
@@ -112,60 +108,30 @@ export function DashboardChatbox() {
           placeholder={placeholder}
           rows={1}
           disabled={submitting}
-          className="block min-h-12 w-full resize-none rounded-t-[12px] border-0 bg-transparent px-4 pb-1.5 pt-3.5 text-[15px] leading-snug text-bg outline-none placeholder:text-white/40"
+          className="min-h-[56px] flex-1 resize-none border-0 bg-transparent text-[clamp(16px,1.8vw,19px)] leading-[1.45] text-ink outline-none placeholder:text-muted-2"
         />
-        <div className="flex items-center justify-between gap-2 px-2 pb-2 pt-1.5">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setTemplatesOpen((v) => !v)}
-              className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-white/[0.14] bg-white/[0.08] px-3 text-[13px] font-medium text-bg transition hover:bg-white/[0.14]"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Templates
-              <ChevronDown
-                className={
-                  "h-3 w-3 transition " + (templatesOpen ? "rotate-180" : "rotate-0")
-                }
-              />
-            </button>
-            {templatesOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setTemplatesOpen(false)}
-                  aria-hidden
-                />
-                <div className="absolute bottom-full left-0 z-30 mb-2 w-[340px] max-h-[60vh] overflow-y-auto rounded-[10px] border border-line bg-surface text-ink shadow-xl scrollbar-thin">
-                  {TEMPLATES.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => useTemplate(t)}
-                      className="flex w-full items-start gap-3 border-b border-line px-3.5 py-3 text-left transition hover:bg-bg-2 last:border-b-0"
-                    >
-                      <span className="mt-0.5 text-[18px] leading-none">{t.emoji}</span>
-                      <span className="flex min-w-0 flex-col gap-1">
-                        <span className="text-[13.5px] font-medium">{t.name}</span>
-                        <span className="line-clamp-2 text-[12px] text-muted">{t.prompt}</span>
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+      </div>
 
-          <button
-            type="button"
-            onClick={() => submit()}
-            disabled={!canSubmit}
-            className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-accent px-4 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
-          >
-            {submitting ? "Création…" : "Démarrer"}
-            <ArrowRight className="h-3.5 w-3.5" />
-          </button>
-        </div>
+      <div className="mt-3.5 flex items-center justify-between gap-3">
+        <span className="font-mono text-[11px] tracking-[0.04em] text-muted-2">
+          <kbd className="rounded-[5px] border border-b-2 border-line bg-bg px-1.5 py-0.5 text-ink-2">
+            ⏎
+          </kbd>{" "}
+          pour générer ·{" "}
+          <kbd className="rounded-[5px] border border-b-2 border-line bg-bg px-1.5 py-0.5 text-ink-2">
+            ⇧⏎
+          </kbd>{" "}
+          nouvelle ligne
+        </span>
+        <button
+          type="button"
+          onClick={() => submit()}
+          disabled={!canSubmit}
+          className="inline-flex h-[34px] items-center gap-1.5 rounded-[8px] bg-ink px-3.5 text-[13px] font-medium text-bg transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
+        >
+          {submitting ? "Création…" : "Générer"}
+          <ArrowRight className="h-3 w-3" strokeWidth={2.4} />
+        </button>
       </div>
     </div>
   );
