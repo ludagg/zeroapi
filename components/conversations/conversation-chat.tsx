@@ -88,12 +88,14 @@ export function ConversationChat({
   // Resizable split (desktop): chat width as a % of the content area. The right
   // panel (Spec/Graphe/Endpoints) takes the rest — kept large on purpose.
   const splitRef = useRef<HTMLDivElement>(null);
-  const [chatPct, setChatPct] = useState(35);
+  // Graph-first layout: the chat is the control, the graph is the result, so
+  // the chat starts narrow and can be squeezed further to give the graph room.
+  const [chatPct, setChatPct] = useState(32);
 
   useEffect(() => {
     try {
       const saved = Number(sessionStorage.getItem(CHAT_PCT_KEY));
-      if (saved >= 30 && saved <= 50) setChatPct(saved);
+      if (saved >= 28 && saved <= 50) setChatPct(saved);
     } catch {
       /* ignore */
     }
@@ -114,7 +116,7 @@ export function ConversationChat({
     const rect = container.getBoundingClientRect();
     const onMove = (ev: PointerEvent) => {
       const pct = ((ev.clientX - rect.left) / rect.width) * 100;
-      setChatPct(Math.min(50, Math.max(30, pct)));
+      setChatPct(Math.min(50, Math.max(28, pct)));
     };
     const onUp = () => {
       window.removeEventListener("pointermove", onMove);

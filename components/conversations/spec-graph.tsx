@@ -501,16 +501,25 @@ export default function SpecGraph({
   }
 
   if (flow.nodes.length === 0) {
+    // Keep the canvas itself visible (dotted grid) even when empty, with the
+    // invite centred on top — the graph is the default view, so it shouldn't
+    // collapse into a plain message before the first resource exists.
     return (
-      <div className="grid h-full place-items-center p-8 text-center">
+      <div
+        className="grid h-full w-full place-items-center bg-bg p-8 text-center"
+        style={{
+          backgroundImage: "radial-gradient(var(--line) 1px, transparent 1px)",
+          backgroundSize: "18px 18px",
+        }}
+      >
         <div>
-          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[12px] border border-line bg-bg-2 text-muted">
+          <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[12px] border border-line bg-surface text-muted shadow-sm">
             <Share2 className="h-5 w-5" />
           </div>
-          <div className="text-[13px] font-medium text-ink-2">Aucune ressource à afficher</div>
-          <p className="mx-auto mt-1.5 max-w-[230px] text-[12px] leading-snug text-muted">
-            Décris ou génère ton API : les ressources et leurs relations
-            apparaîtront ici sous forme de schéma.
+          <div className="text-[13px] font-medium text-ink-2">Le schéma apparaîtra ici</div>
+          <p className="mx-auto mt-1.5 max-w-[240px] text-[12px] leading-snug text-muted">
+            Décris ta première ressource dans le chat : tables, champs et
+            relations se dessineront sur ce canvas.
           </p>
         </div>
       </div>

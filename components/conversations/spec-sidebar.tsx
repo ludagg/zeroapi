@@ -45,11 +45,13 @@ const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"),
 
 type TabKey = "summary" | "spec" | "endpoints" | "graph";
 
+// Graph-first: the schema is the visual "result" of the conversation, so it
+// leads and is selected by default. The other views stay one click away.
 const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
-  { key: "summary", label: "Résumé", icon: <Sparkles className="h-3 w-3" /> },
-  { key: "spec", label: "Spec", icon: <FileJson className="h-3 w-3" /> },
-  { key: "endpoints", label: "Endpoints", icon: <ListTree className="h-3 w-3" /> },
   { key: "graph", label: "Graphe", icon: <Share2 className="h-3 w-3" /> },
+  { key: "summary", label: "Résumé", icon: <Sparkles className="h-3 w-3" /> },
+  { key: "endpoints", label: "Endpoints", icon: <ListTree className="h-3 w-3" /> },
+  { key: "spec", label: "Spec", icon: <FileJson className="h-3 w-3" /> },
 ];
 
 /**
@@ -82,7 +84,7 @@ export function SpecPanel({
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [tab, setTab] = useState<TabKey>("summary");
+  const [tab, setTab] = useState<TabKey>("graph");
 
   const insights = useMemo(() => computeInsights(messages, spec), [messages, spec]);
   const tone = confidenceTone(insights.confidence);
