@@ -10,6 +10,7 @@ import { ModelsList } from "@/components/api-detail/models-list";
 import { AgentsProgress } from "@/components/api-detail/agents-progress";
 import { ExportButton } from "@/components/api-detail/export-button";
 import { RegenerateButton } from "@/components/api-detail/regenerate-button";
+import { StartGenerationButton } from "@/components/api-detail/start-generation-button";
 import { JobTabs } from "@/components/api-detail/job-tabs";
 import { JobStatusPoller } from "@/components/api-detail/job-status-poller";
 import { CodeViewer } from "@/components/api-detail/code-viewer";
@@ -33,6 +34,7 @@ import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client
 export const dynamic = "force-dynamic";
 
 const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
+  DRAFT: { label: "BROUILLON", className: "border border-dashed border-line-2 text-muted-2" },
   PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
   RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
   READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
@@ -128,16 +130,22 @@ export default async function JobDetailPage({ params }: { params: { id: string }
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <RegenerateButton jobId={job.id} disabled={!spec} />
-              <ExportButton jobId={job.id} disabled={!isReady} />
-              {isReady && (
-                <Link
-                  href={`/jobs/${job.id}/deploy`}
-                  className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
-                >
-                  Déployer une nouvelle version
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </Link>
+              {job.status === "DRAFT" ? (
+                <StartGenerationButton jobId={job.id} />
+              ) : (
+                <>
+                  <RegenerateButton jobId={job.id} disabled={!spec} />
+                  <ExportButton jobId={job.id} disabled={!isReady} />
+                  {isReady && (
+                    <Link
+                      href={`/jobs/${job.id}/deploy`}
+                      className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+                    >
+                      Déployer une nouvelle version
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </Link>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -156,6 +164,13 @@ export default async function JobDetailPage({ params }: { params: { id: string }
             <Meta label="Ressources" value={spec?.resources.length ?? "—"} />
             <Meta label="Auth" value={authStrategy ?? "—"} />
           </div>
+
+          {job.status === "DRAFT" && (
+            <div className="mb-6 rounded-[12px] border border-dashed border-line-2 bg-bg-2 px-4 py-3 text-[13px] text-muted">
+              Brouillon — la spec est prête. Lance la génération pour produire le backend
+              (code, tests, docs, déploiement).
+            </div>
+          )}
 
           {job.status === "FAILED" && job.errorMessage && (
             <div className="mb-6 rounded-[12px] border border-danger/30 bg-danger-soft px-4 py-3 text-[13px] text-danger">

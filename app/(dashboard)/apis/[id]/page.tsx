@@ -16,6 +16,7 @@ import type { Job, JobStatus } from "@prisma/client";
 export const dynamic = "force-dynamic";
 
 const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
+  DRAFT: { label: "BROUILLON", className: "border border-dashed border-line-2 text-muted-2" },
   PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
   RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
   READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
