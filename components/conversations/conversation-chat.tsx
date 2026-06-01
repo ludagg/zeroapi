@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { BrandMark } from "@/components/brand-mark";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowLeft, Check, ListChecks, Send, ShieldCheck, X } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Check, ListChecks, Send, X } from "lucide-react";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import type { JobStatus } from "@prisma/client";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -460,27 +460,33 @@ export function ConversationChat({
       style={{ "--chat-col": `${chatPct}%` } as React.CSSProperties}
     >
       <div className="flex min-h-0 min-w-0 flex-col bg-bg">
-        <header className="flex h-[60px] flex-shrink-0 items-center gap-2 border-b border-line bg-bg px-4 sm:gap-3 sm:px-6">
+        <header className="flex h-[60px] flex-shrink-0 items-center gap-2.5 border-b border-line bg-bg px-3 sm:px-5">
           <Link
             href="/conversations"
             aria-label="Toutes les conversations"
-            className="inline-flex items-center gap-2 rounded-[9px] px-2 py-1.5 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink sm:px-2.5"
+            title="Toutes les conversations"
+            className="grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-[9px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
-            <ArrowLeft className="h-3 w-3" />
-            <span className="hidden sm:inline">Conversations</span>
+            <ArrowLeft className="h-4 w-4" />
           </Link>
 
-          <div className="min-w-0 flex-1 sm:ml-2">
-            <div className="flex items-center gap-1.5 truncate text-[13.5px] font-medium">
-              <ShieldCheck className="hidden h-3 w-3 text-muted sm:block" />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span
+                aria-hidden
+                className={
+                  "h-1.5 w-1.5 flex-shrink-0 rounded-full " + (job ? "bg-accent" : "bg-warn")
+                }
+                style={job ? { boxShadow: "0 0 0 3px var(--accent-glow)" } : undefined}
+              />
               <EditableTitle id={conversationId} initialTitle={initialTitle} />
             </div>
-            <div className="hidden font-mono text-[10.5px] uppercase tracking-[0.04em] text-muted sm:block">
-              {job ? `liée au job · ${job.name}` : "brouillon · auto-save"}
+            <div className="truncate pl-3.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
+              {job ? `liée au job · ${job.name}` : "brouillon · sauvegarde auto"}
             </div>
           </div>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => setSpecOpen(true)}
