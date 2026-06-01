@@ -173,6 +173,8 @@ model Conversation {
   specHistory Json   @default("[]")
   // Index of the active snapshot in specHistory (-1 = none yet).
   specVersion Int    @default(-1)
+  // Public read-only share token (null = not shared).
+  shareSlug String? @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

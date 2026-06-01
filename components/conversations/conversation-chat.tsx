@@ -11,6 +11,7 @@ import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { Markdown } from "@/components/generate/markdown";
 import { EditableTitle } from "@/components/conversations/editable-title";
 import { SpecPanel } from "@/components/conversations/spec-sidebar";
+import { ShareButton } from "@/components/conversations/share-button";
 import { computeInsights, type ChatMessage } from "@/lib/conversation-helpers";
 import { describeOperation } from "@/lib/agent/operation-descriptions";
 import type { ApplyOperationResult } from "@/components/conversations/spec-graph";
@@ -69,6 +70,7 @@ export function ConversationChat({
   spec: initialSpec,
   initialVersion,
   initialHistory,
+  initialShareSlug,
   job,
   user,
 }: {
@@ -78,6 +80,7 @@ export function ConversationChat({
   spec: ZeroAPISpec | null;
   initialVersion: number;
   initialHistory: HistoryEntry[];
+  initialShareSlug: string | null;
   job: { id: string; name: string; status: JobStatus } | null;
   user: { name: string | null; email: string; initials: string };
 }) {
@@ -484,6 +487,7 @@ export function ConversationChat({
                 {insights.confidence}%
               </span>
             </button>
+            <ShareButton conversationId={conversationId} initialSlug={initialShareSlug} />
             <ThemeToggle className="hidden sm:grid" />
           </div>
         </header>

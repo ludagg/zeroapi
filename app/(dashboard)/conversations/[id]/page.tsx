@@ -32,6 +32,7 @@ export default async function ConversationDetailPage({
       spec={spec}
       initialVersion={conv.specVersion}
       initialHistory={historyEntries}
+      initialShareSlug={conv.shareSlug ?? null}
       job={conv.job ?? null}
       user={{
         name: user.name,
