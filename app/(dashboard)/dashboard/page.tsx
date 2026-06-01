@@ -138,6 +138,8 @@ export default async function DashboardPage({
             </div>
           </div>
 
+          <DashboardChatbox />
+
           <StatsCards
             stats={[
               {
@@ -175,8 +177,6 @@ export default async function DashboardPage({
               },
             ]}
           />
-
-          <DashboardChatbox />
 
           <div className="mb-3.5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="flex items-center gap-2.5 text-[17px] font-semibold tracking-[-0.01em]">
