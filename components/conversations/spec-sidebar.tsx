@@ -4,7 +4,6 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
-  ArrowRight,
   Check,
   FileJson,
   FileText,
@@ -14,7 +13,7 @@ import {
   Key,
   ListTree,
   Lock,
-  RefreshCw,
+  Save,
   Search,
   Share2,
   Shield,
@@ -82,24 +81,27 @@ export function SpecPanel({
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
-  const [tab, setTab] = useState<TabKey>("summary");
+  // The graph is the hero of this panel — open on it by default.
+  const [tab, setTab] = useState<TabKey>("graph");
 
   const insights = useMemo(() => computeInsights(messages, spec), [messages, spec]);
   const tone = confidenceTone(insights.confidence);
-  const canLaunch = insights.confidence >= 50 && !pending && !submitting;
+  const resourceCount = spec?.resources.length ?? 0;
+  const canSave = resourceCount > 0 && !submitting && !pending;
 
-  async function generate() {
-    if (!canLaunch) return;
+  // Promote the live conversation spec to a DRAFT job (no generation yet).
+  async function saveJob() {
+    if (!canSave) return;
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/conversations/${conversationId}/generate`, {
+      const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
         method: "POST",
       });
       const data = (await res.json()) as { jobId?: string; error?: string };
       if (!res.ok || !data.jobId) {
-        throw new Error(data.error ?? "Génération impossible.");
+        throw new Error(data.error ?? "Sauvegarde impossible.");
       }
-      toast.success(jobId ? "Régénération lancée." : "Génération lancée.");
+      toast.success("Job sauvegardé en brouillon.");
       onLaunch?.();
       router.push(`/jobs/${data.jobId}`);
     } catch (err) {
@@ -110,7 +112,6 @@ export function SpecPanel({
   }
 
   const isDrawer = variant === "drawer";
-  const isModification = Boolean(jobId);
 
   return (
     <aside
@@ -120,43 +121,64 @@ export function SpecPanel({
           : "hidden flex-col overflow-hidden border-l border-line bg-bg-2 lg:flex"
       }
     >
-      <div className="flex items-center justify-between border-b border-line px-4.5 py-4">
-        <div className="flex items-center gap-2 text-[13.5px] font-semibold">
-          <span
-            className={
-              "h-1.5 w-1.5 rounded-full " +
-              (tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger")
-            }
-            style={tone === "high" ? { boxShadow: "0 0 0 3px var(--accent-glow)" } : undefined}
-          />
-          Spec en cours
+      {/* Top bar : petits onglets espacés + confiance + action discrète. */}
+      <div className="flex items-center gap-2 border-b border-line px-3 py-2.5">
+        <div className="flex items-center gap-1">
+          {TABS.map((t) => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                title={t.label}
+                className={
+                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11.5px] font-medium transition " +
+                  (active ? "bg-ink text-bg" : "text-muted hover:bg-bg-3 hover:text-ink-2")
+                }
+              >
+                {t.icon}
+                <span className="hidden sm:inline">{t.label}</span>
+              </button>
+            );
+          })}
         </div>
-        <span className="rounded-full border border-line bg-surface px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-ink-2">
-          {insights.confidence}% prête
-        </span>
-      </div>
 
-      {/* Tab bar */}
-      <div className="flex items-center gap-1 border-b border-line bg-surface/40 px-2.5 py-2">
-        {TABS.map((t) => {
-          const active = tab === t.key;
-          return (
-            <button
-              key={t.key}
-              type="button"
-              onClick={() => setTab(t.key)}
+        <div className="ml-auto flex items-center gap-2">
+          <span className="hidden items-center gap-1.5 rounded-full border border-line bg-surface px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-ink-2 sm:inline-flex">
+            <span
               className={
-                "inline-flex flex-1 items-center justify-center gap-1.5 rounded-[8px] px-2 py-1.5 text-[11.5px] font-medium transition " +
-                (active
-                  ? "border border-accent/40 bg-accent-soft text-accent-ink"
-                  : "border border-transparent text-muted hover:bg-bg-2 hover:text-ink-2")
+                "h-1.5 w-1.5 rounded-full " +
+                (tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger")
+              }
+            />
+            {insights.confidence}%
+          </span>
+          {jobId ? (
+            <a
+              href={`/jobs/${jobId}`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
+            >
+              Voir le job
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={saveJob}
+              disabled={!canSave}
+              title={canSave ? "Sauvegarder en brouillon" : "Décris au moins une ressource"}
+              className={
+                "inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition " +
+                (canSave
+                  ? "bg-accent text-accent-ink hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+                  : "cursor-not-allowed bg-bg-3 text-muted-2")
               }
             >
-              {t.icon}
-              <span className="hidden sm:inline">{t.label}</span>
+              <Save className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">{submitting ? "Sauvegarde…" : "Sauvegarder le job"}</span>
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
@@ -165,45 +187,11 @@ export function SpecPanel({
           <SpecGraph spec={spec} onApplyOperation={onApplyOperation} />
         ) : (
           <div className="flex-1 overflow-y-auto p-4.5 scrollbar-thin">
-            {tab === "summary" && (
-              <SummaryTab
-                insights={insights}
-                generate={generate}
-                submitting={submitting}
-                canLaunch={canLaunch}
-                isModification={isModification}
-              />
-            )}
+            {tab === "summary" && <SummaryTab insights={insights} />}
             {tab === "spec" && <SpecJsonTab spec={spec} />}
             {tab === "endpoints" && <EndpointsTab spec={spec} />}
           </div>
         )}
-      </div>
-
-      <div className="flex flex-col gap-2.5 border-t border-line bg-surface px-4.5 py-4">
-        <button
-          type="button"
-          onClick={generate}
-          disabled={!canLaunch}
-          className={
-            "group inline-flex h-11 w-full items-center justify-center gap-2 rounded-[10px] text-[14px] font-medium transition " +
-            (canLaunch
-              ? "bg-ink text-bg hover:-translate-y-px hover:shadow-md"
-              : "cursor-not-allowed bg-bg-3 text-muted-2")
-          }
-        >
-          {submitting ? (
-            "Lancement…"
-          ) : (
-            <>
-              {isModification ? "Régénérer" : "Générer le backend"}
-              <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
-            </>
-          )}
-        </button>
-        <div className="text-center font-mono text-[10.5px] tracking-[0.03em] text-muted">
-          <b className="font-medium text-ink">~ 2 min</b> · asynchrone · on te prévient
-        </div>
       </div>
     </aside>
   );
@@ -211,19 +199,7 @@ export function SpecPanel({
 
 // ── Résumé tab (the original sidebar body) ───────────────────────────────────
 
-function SummaryTab({
-  insights,
-  generate,
-  submitting,
-  canLaunch,
-  isModification,
-}: {
-  insights: ConversationInsights;
-  generate: () => void;
-  submitting: boolean;
-  canLaunch: boolean;
-  isModification: boolean;
-}) {
+function SummaryTab({ insights }: { insights: ConversationInsights }) {
   const tone = confidenceTone(insights.confidence);
   const detectedModelVisible = insights.confidence >= 70;
 
@@ -310,27 +286,12 @@ function SummaryTab({
             Modèle détecté
           </div>
           <div className="mt-2 text-[14px] font-medium text-ink">{insights.summary}</div>
-          <button
-            type="button"
-            onClick={generate}
-            disabled={!canLaunch}
-            className="mt-3 inline-flex h-10 w-full items-center justify-center gap-2 rounded-[10px] bg-accent text-[14px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {submitting ? (
-              "Lancement…"
-            ) : (
-              <>
-                {isModification && <RefreshCw className="h-3.5 w-3.5" />}
-                {isModification ? "Régénérer" : "Générer le backend"} →
-              </>
-            )}
-          </button>
         </div>
       ) : (
         <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-4 text-center text-[12px] text-muted">
           <FileText className="mx-auto mb-2 h-4 w-4" />
-          Continue à préciser ton API : ressources, authentification, rôles. Le modèle s&apos;active
-          quand la confiance dépasse 70 %.
+          Continue à décrire ton API à Kia : ressources, authentification, rôles. Le graphe et les
+          endpoints se mettent à jour en direct.
         </div>
       )}
     </div>
@@ -344,7 +305,7 @@ function SpecJsonTab({ spec }: { spec: ZeroAPISpec | null }) {
     return (
       <EmptyState
         icon={<FileJson className="mx-auto mb-2 h-4 w-4" />}
-        text="Pas encore de spec. Génère d'abord le backend pour la voir ici."
+        text="La spec se construit au fil de la discussion avec Kia — elle apparaîtra ici."
       />
     );
   }
@@ -376,7 +337,7 @@ function EndpointsTab({ spec }: { spec: ZeroAPISpec | null }) {
     return (
       <EmptyState
         icon={<ListTree className="mx-auto mb-2 h-4 w-4" />}
-        text="Pas encore de spec. Les routes s'afficheront ici une fois le backend généré."
+        text="Décris des ressources à Kia — les routes apparaîtront ici en direct."
       />
     );
   }

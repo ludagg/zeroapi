@@ -25,6 +25,7 @@ export type DashboardJob = {
 };
 
 const STATUS_CLASS: Record<JobStatus, string> = {
+  DRAFT: "text-muted-2 border border-dashed border-line-2",
   PENDING: "text-muted border border-dashed border-line-2",
   RUNNING: "bg-warn-soft text-warn-ink",
   READY: "bg-accent text-accent-ink",
@@ -33,6 +34,7 @@ const STATUS_CLASS: Record<JobStatus, string> = {
 };
 
 const STATUS_LABEL: Record<JobStatus, string> = {
+  DRAFT: "BROUILLON",
   PENDING: "EN FILE",
   RUNNING: "EN COURS",
   READY: "PRÊT",

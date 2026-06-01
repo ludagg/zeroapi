@@ -257,6 +257,7 @@ enum Plan {
 }
 
 enum JobStatus {
+  DRAFT
   PENDING
   RUNNING
   READY

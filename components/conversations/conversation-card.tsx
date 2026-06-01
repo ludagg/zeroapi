@@ -18,6 +18,7 @@ export type ConversationCardData = {
 };
 
 const JOB_STATUS_LABEL: Record<JobStatus, string> = {
+  DRAFT: "Brouillon",
   PENDING: "En file",
   RUNNING: "En cours",
   READY: "Prêt",
@@ -26,6 +27,7 @@ const JOB_STATUS_LABEL: Record<JobStatus, string> = {
 };
 
 const JOB_STATUS_CLASS: Record<JobStatus, string> = {
+  DRAFT: "border border-dashed border-line-2 text-muted-2",
   PENDING: "border border-dashed border-line-2 text-muted",
   RUNNING: "bg-warn-soft text-warn-ink",
   READY: "bg-accent text-accent-ink",

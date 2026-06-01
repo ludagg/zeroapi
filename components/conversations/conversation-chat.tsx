@@ -149,7 +149,7 @@ export function ConversationChat({
 
   useEffect(() => {
     if (needsInitialReply) {
-      void streamReply();
+      void fireInitialReply();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [needsInitialReply]);
@@ -160,24 +160,21 @@ export function ConversationChat({
   );
   const canSend = draft.trim().length > 0 && !pending;
 
-  async function streamReply() {
-    // Replay the latest assistant turn for the LAST user message that's
-    // already persisted (case: conversation was just created and the only
-    // message is the user's seed). Creation flow only.
+  // Kick off Kia on the seed message of a freshly created conversation. The user
+  // message is already persisted, so replay (don't re-add / re-persist it).
+  async function fireInitialReply() {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");
     if (!lastUser) return;
-    await runStream({ content: lastUser.content, replay: true });
+    await callAgent({ content: lastUser.content, addUser: false, replay: true });
   }
 
+  // The conversation is agentic from message 1: every turn runs the Kia agent,
+  // which builds/edits the spec live (graph, endpoints, résumé update in place).
   async function send(text: string) {
     const content = text.trim();
     if (!content || pending) return;
     setDraft("");
-    if (isModification) {
-      await callAgent({ content, addUser: true });
-    } else {
-      await runStream({ content });
-    }
+    await callAgent({ content, addUser: true });
   }
 
   // ── Kia agent (modification) ───────────────────────────────────────────────
@@ -186,10 +183,13 @@ export function ConversationChat({
     content,
     confirm,
     addUser,
+    replay,
   }: {
     content: string;
     confirm?: OperationType[];
     addUser: boolean;
+    /** The user message is already persisted (seed of a new conversation). */
+    replay?: boolean;
   }) {
     const assistantId = `a-${Date.now()}`;
     setPending(true);
@@ -206,7 +206,7 @@ export function ConversationChat({
       const res = await fetch(`/api/conversations/${conversationId}/agent`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, confirm }),
+        body: JSON.stringify({ content, confirm, replay: replay ?? false }),
       });
       const data = (await res.json().catch(() => ({}))) as AgentResponse;
       if (!res.ok) {
@@ -248,6 +248,15 @@ export function ConversationChat({
               : msg,
           ),
         );
+      }
+
+      // Once, after the first assistant reply, ask the server to generate a real
+      // title from the conversation.
+      if (initialAssistantCount.current === 0 && !titleRegenAttempted.current) {
+        titleRegenAttempted.current = true;
+        void fetch(`/api/conversations/${conversationId}/title`, { method: "POST" })
+          .then(() => router.refresh())
+          .catch(() => undefined);
       }
     } catch (err) {
       setMessages((m) => m.filter((msg) => msg.id !== assistantId));
@@ -331,125 +340,6 @@ export function ConversationChat({
       const error = err instanceof Error ? err.message : "Erreur réseau.";
       toast.error(error);
       return { ok: false, error };
-    }
-  }
-
-  // ── Conversational stream (creation mode, unchanged) ───────────────────────
-
-  async function runStream({
-    content,
-    replay,
-  }: {
-    content: string;
-    replay?: boolean;
-  }) {
-    const userId = `u-${Date.now()}`;
-    const assistantId = `a-${Date.now()}`;
-    setPending(true);
-
-    setMessages((m) => {
-      const next: Message[] = replay
-        ? [...m]
-        : [
-            ...m,
-            {
-              id: userId,
-              role: "user",
-              content,
-              ts: Date.now(),
-            },
-          ];
-      next.push({
-        id: assistantId,
-        role: "assistant",
-        content: "",
-        ts: Date.now(),
-        streaming: true,
-      });
-      return next;
-    });
-
-    try {
-      const res = await fetch(`/api/conversations/${conversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, replay: replay ?? false }),
-      });
-      if (!res.ok || !res.body) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Erreur de génération.");
-      }
-
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let errorMessage: string | null = null;
-
-      streamLoop: while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let idx: number;
-        while ((idx = buffer.indexOf("\n")) >= 0) {
-          const line = buffer.slice(0, idx).trim();
-          buffer = buffer.slice(idx + 1);
-          if (!line) continue;
-          let event: {
-            type: string;
-            text?: string;
-            provider?: string;
-            model?: string;
-            error?: string;
-          };
-          try {
-            event = JSON.parse(line);
-          } catch {
-            continue;
-          }
-          if (event.type === "meta") {
-            const meta = `${event.provider} · ${event.model}`;
-            setMessages((m) =>
-              m.map((msg) => (msg.id === assistantId ? { ...msg, meta } : msg)),
-            );
-          } else if (event.type === "chunk" && event.text) {
-            const chunk = event.text;
-            setMessages((m) =>
-              m.map((msg) =>
-                msg.id === assistantId
-                  ? { ...msg, content: msg.content + chunk }
-                  : msg,
-              ),
-            );
-          } else if (event.type === "error") {
-            errorMessage = event.error ?? "Erreur de stream.";
-            break streamLoop;
-          }
-        }
-      }
-      setMessages((m) =>
-        m
-          .filter((msg) => msg.id !== assistantId || msg.content.length > 0)
-          .map((msg) => (msg.id === assistantId ? { ...msg, streaming: false } : msg)),
-      );
-      if (errorMessage) throw new Error(errorMessage);
-
-      // Once per session, after the very first assistant reply arrives, ask
-      // the server to generate a real title from the conversation.
-      if (initialAssistantCount.current === 0 && !titleRegenAttempted.current) {
-        titleRegenAttempted.current = true;
-        void fetch(`/api/conversations/${conversationId}/title`, { method: "POST" })
-          .then(() => router.refresh())
-          .catch(() => undefined);
-      }
-    } catch (err) {
-      setMessages((m) =>
-        m
-          .filter((msg) => msg.id !== assistantId || msg.content.length > 0)
-          .map((msg) => (msg.id === assistantId ? { ...msg, streaming: false } : msg)),
-      );
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
-    } finally {
-      setPending(false);
     }
   }
 
@@ -591,7 +481,7 @@ export function ConversationChat({
         jobId={job?.id ?? null}
         variant="desktop"
         pending={pending}
-        onApplyOperation={isModification ? applyGraphOperation : undefined}
+        onApplyOperation={applyGraphOperation}
       />
 
       <MobileDrawer
@@ -610,7 +500,7 @@ export function ConversationChat({
           variant="drawer"
           pending={pending}
           onLaunch={() => setSpecOpen(false)}
-          onApplyOperation={isModification ? applyGraphOperation : undefined}
+          onApplyOperation={applyGraphOperation}
         />
       </MobileDrawer>
     </div>
