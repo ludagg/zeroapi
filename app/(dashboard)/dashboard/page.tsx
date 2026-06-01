@@ -111,17 +111,22 @@ export default async function DashboardPage({
 
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
-          <div className="relative mb-7 flex justify-center">
-            <div
-              aria-hidden
-              className="pointer-events-none absolute left-1/2 top-1/2 h-[150px] w-[460px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 blur-2xl"
-              style={{
-                background: "radial-gradient(ellipse at center, var(--accent-glow), transparent 70%)",
-              }}
-            />
-            <h1 className="relative text-center font-serif text-[clamp(28px,4.4vw,46px)] leading-[1.05] tracking-[-0.01em]">
-              Qu&apos;est-ce qu&apos;on <em className="italic">crée</em> aujourd&apos;hui&nbsp;?
-            </h1>
+          <div className="mb-7 flex flex-col items-center">
+            <span className="mb-2 font-mono text-[12px] uppercase tracking-[0.18em] text-muted">
+              {greetingFor(new Date())}
+            </span>
+            <div className="relative flex justify-center">
+              <div
+                aria-hidden
+                className="pointer-events-none absolute left-1/2 top-1/2 h-[150px] w-[460px] max-w-[90%] -translate-x-1/2 -translate-y-1/2 blur-2xl"
+                style={{
+                  background: "radial-gradient(ellipse at center, var(--accent-glow), transparent 70%)",
+                }}
+              />
+              <h1 className="relative text-center font-serif text-[clamp(28px,4.4vw,46px)] leading-[1.05] tracking-[-0.01em]">
+                Qu&apos;est-ce qu&apos;on <em className="italic">crée</em> aujourd&apos;hui&nbsp;?
+              </h1>
+            </div>
           </div>
 
           <DashboardChatbox />
@@ -191,6 +196,14 @@ export default async function DashboardPage({
       </div>
     </>
   );
+}
+
+function greetingFor(d: Date): string {
+  const h = d.getHours();
+  if (h < 6) return "Bonne nuit";
+  if (h < 12) return "Bonjour";
+  if (h < 18) return "Bon après-midi";
+  return "Bonsoir";
 }
 
 function costForPlan(plan: "FREE" | "STARTER" | "PRO" | "BUSINESS"): string {
