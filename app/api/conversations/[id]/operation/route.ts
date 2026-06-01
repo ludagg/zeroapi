@@ -25,16 +25,9 @@ export const dynamic = "force-dynamic";
  * original spec is left untouched.
  *
  * Allow-list: only the operations the graph UI currently supports are accepted.
- * It grows as graph editing expands (relations now; fields/rename/remove later).
+ * The graph UI can now emit ANY known operation (full visual editing) — every one
+ * still goes through the same zod validation, danger/confirmation gate and engine.
  */
-const GRAPH_OPERATIONS = new Set<OperationType>([
-  "addRelation",
-  "addField",
-  "removeField",
-  "renameResource",
-  "removeResource",
-]);
-
 const RequestSchema = z.object({
   type: z.string(),
   params: z.record(z.string(), z.unknown()).optional(),
@@ -59,8 +52,8 @@ export async function POST(req: Request, { params }: { params: { id: string } })
   }
 
   const type = body.type as OperationType;
-  if (!(type in OPERATION_DANGER) || !GRAPH_OPERATIONS.has(type)) {
-    return jsonError(`Opération "${body.type}" non supportée par l'éditeur de graphe.`, 400);
+  if (!(type in OPERATION_DANGER)) {
+    return jsonError(`Opération "${body.type}" inconnue.`, 400);
   }
 
   // Validate params with the same schema that powers the agent's tools.

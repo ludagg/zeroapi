@@ -40,6 +40,9 @@ export interface KiaAgentParams {
   temperature?: number;
   /** Per-operation logger (success or failure). */
   logger?: (entry: AppliedOperationLog) => void;
+  /** Live callback fired with the post-op spec as each operation is applied
+   *  (used to stream the build to the client). */
+  onOperationApplied?: (entry: AppliedOperationLog, currentSpec: ZeroAPISpec) => void;
 }
 
 export interface KiaAgentResult {
@@ -195,11 +198,16 @@ export async function runKiaAgent(params: KiaAgentParams): Promise<KiaAgentResul
     approvedConfirmations,
     temperature = 0.2,
     logger,
+    onOperationApplied,
   } = params;
 
   const toolset = createOperationToolset(spec, {
     approvedConfirmations,
-    onOperation: logger,
+    onOperation: (entry) => {
+      logger?.(entry);
+      // Live stream: emit the post-op spec as each operation lands.
+      if (entry.outcome === "applied") onOperationApplied?.(entry, toolset.getSpec());
+    },
   });
 
   const system = buildSystemPrompt(apiName, spec);

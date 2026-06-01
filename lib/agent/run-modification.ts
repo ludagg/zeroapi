@@ -24,6 +24,8 @@ export interface RunKiaModificationParams {
   task?: RoutingTask;
   maxSteps?: number;
   approvedConfirmations?: Iterable<OperationType>;
+  /** Live callback fired with the post-op spec as each operation is applied. */
+  onOperationApplied?: (entry: AppliedOperationLog, currentSpec: ZeroAPISpec) => void;
 }
 
 export interface RunKiaModificationResult extends KiaAgentResult {
