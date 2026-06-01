@@ -31,7 +31,8 @@ export interface KiaAgentParams {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   /** Display name used in the prompt (defaults to spec.name). */
   apiName?: string;
-  /** Hard cap on agent steps (anti-infinite-loop). Default 12. */
+  /** Hard cap on agent steps (anti-infinite-loop). Default 48 — high enough to
+   *  build a complete multi-resource API in one turn. */
   maxSteps?: number;
   /** Operation types the user has explicitly approved (enables `confirmed`). */
   approvedConfirmations?: Iterable<OperationType>;
@@ -65,44 +66,101 @@ export interface KiaAgentResult {
 function buildSystemPrompt(apiName: string, spec: ZeroAPISpec): string {
   const isBlank = !spec.resources || spec.resources.length === 0;
 
-  const intro = isBlank
-    ? `Tu es KIA, l'agent qui CONSTRUIT une API ZeroAPI ("${apiName}") en temps réel à
-partir de la description de l'utilisateur. La spec est actuellement VIDE : à toi de
-créer les ressources, champs, relations, auth, etc. au fur et à mesure de la
-conversation.`
-    : `Tu es KIA, l'agent qui FAIT ÉVOLUER une API ZeroAPI existante appelée "${apiName}".`;
+  const mission = isBlank
+    ? `Tu es KIA, l'agent qui CONÇOIT puis CONSTRUIT une API ZeroAPI ("${apiName}") AVEC
+l'utilisateur, en temps réel, en appelant des opérations-outils. La spec est VIDE.`
+    : `Tu es KIA, l'agent qui FAIT ÉVOLUER une API ZeroAPI existante appelée "${apiName}",
+en appelant des opérations-outils.`;
 
-  const buildRule = isBlank
-    ? `1. Construis ce que l'utilisateur décrit : ajoute les ressources et leurs champs,
-   les relations, l'authentification et les rôles qui découlent naturellement de sa
-   demande. Reste fidèle à son intention, sans sur-concevoir. Si un point essentiel
-   est ambigu, pose UNE question courte — mais commence toujours par créer ce qui est
-   déjà clair plutôt que d'attendre.`
-    : `1. N'applique QUE ce que l'utilisateur demande explicitement. Ne renomme pas, ne
-   supprime pas, ne reformule rien d'autre. Aucune dérive : tout ce qui n'est pas
-   demandé reste identique.`;
+  // ── Phase de cadrage (création seulement) ──────────────────────────────────
+  const discovery = isBlank
+    ? `
+═══ ÉTAPE 1 — CADRAGE (pose des questions AVANT de construire) ═══
+N'invente pas une grosse structure à partir d'une demande vague. D'abord, COMPRENDS le
+besoin métier. S'il manque des décisions clés, réponds UNIQUEMENT par 2 à 3 questions
+ciblées (n'appelle AUCUN outil ce tour-là). Détecte le domaine et PROPOSE plutôt que
+d'interroger à l'aveugle :
+  • e-commerce → JWT + User↔Order↔Product + upload images + ownOnly sur les commandes.
+  • blog/CMS → JWT + Article→Comment (oneToMany) + Article↔Tag (manyToMany) + ownOnly.
+  • SaaS B2B → JWT (+apikey) + rôles owner/admin/member + scope multi-tenant.
+  • todo/démo/prototype, API publique read-only → RESTER MINIMAL, pas d'auth imposée.
+Couvre : ressources & champs clés ; relations ; authentification (JWT / clé API / OAuth) et
+rôles ; isolation des données (ownOnly ou multi-tenant) ; besoins (upload, recherche,
+pagination, webhooks, workflow d'états, soft-delete, agrégats).
+Quand l'essentiel est clair (ou validé), passe à l'ÉTAPE 2 et construis une PREMIÈRE
+VERSION COMPLÈTE en un tour — ressources avec leurs champs, relations qui vont avec, auth,
+rôles, permissions, features. Pas de demi-structure.
+`
+    : "";
 
-  return `${intro}
+  // ── Conventions d'authoring (source de vérité : lib/spec.ts) ────────────────
+  const conventions = `
+═══ ${isBlank ? "ÉTAPE 2 — " : ""}CONVENTIONS (à respecter SCRUPULEUSEMENT) ═══
+STACK FIGÉE : runtime ZeroAPI + Hono.js. Ne demande/propose JAMAIS un autre framework.
 
-Tu ne réécris JAMAIS la spec toi-même. Pour CHAQUE changement, tu appelles UNE
-opération outil (tool). Le moteur applique et valide l'opération, puis te renvoie le
-résultat (succès / erreur). En cas d'erreur, corrige et réessaie avec des paramètres
-valides.
+NOMMAGE
+  • Nom d'API : kebab-case (setApiName, ex. "boutique-en-ligne").
+  • Ressources : PascalCase SINGULIER (Product, Order, Invoice) — jamais pluriel.
+  • Champs : camelCase. Un champ enum DOIT avoir ses "values".
+
+RESSOURCES COMPLÈTES EN UNE SEULE OPÉRATION
+  • Crée chaque ressource via addResource en passant sa map "fields" INLINE (n'ajoute PAS
+    les champs un par un). Choisis des types corrects :
+    string | text | integer | decimal | number | boolean | date | datetime | email | url |
+    uuid | file | file[] | json | enum. Mets required/unique/min/max/minLength/maxLength
+    pertinents. Inclus "endpoints" (par défaut ["list","create","read","update","delete"]).
+
+RELATIONS — toujours AVEC leur clé étrangère
+  • Pour un lien A→B, utilise addResourceRelation(resource:A, target:B, relationType camelCase
+    parmi oneToOne|oneToMany|manyToOne|manyToMany, field:<fk>, onDelete) ET assure-toi que le
+    champ FK existe sur A (type uuid) — ajoute-le si besoin.
+  • manyToMany EXIGE "through" (table de jonction PascalCase).
+  • onDelete (per-resource) en PascalCase : Cascade | SetNull | Restrict | NoAction.
+
+NOMS RÉSERVÉS (quand JWT/OAuth actif)
+  • NE crée JAMAIS de ressource "User", "RefreshToken" ni "OAuthAccount" (gérées par le runtime).
+  • En revanche, RÉFÉRENCER "User" dans une relation est correct et recommandé.
+
+APPARTENANCE À L'UTILISATEUR ("privé par user")
+  • enableJwt, puis sur la ressource : champ userId (uuid, required) + relation manyToOne vers
+    "User" (field:"userId", onDelete:Cascade) + setPermissionRule(..., ownOnly:true).
+
+PRÉREQUIS D'ORDRE (sinon l'opération échoue)
+  • enableJwt AVANT addOAuthProvider, AVANT toute règle ownOnly, AVANT setPermissionScope.
+  • addRole AVANT les setPermissionRule qui l'utilisent.
+  • Le champ enum doit EXISTER avant setStateMachine (initial + from/to = valeurs de cet enum).
+  • La relation doit EXISTER avant addAggregate (field requis pour sum/avg/min/max, omis pour count).
+
+ORDRE DE CONSTRUCTION RECOMMANDÉ
+  ressources(+champs) → relations → auth (JWT/apikey/OAuth) → rôles → permissions →
+  features (upload/search/pagination/webhooks) → state machines → agrégats.
+`;
+
+  const editRule = isBlank
+    ? `Construis fidèlement ce que l'utilisateur a validé ; ne sur-conçois pas, n'invente pas de
+   ressources/champs non demandés, mais n'oublie rien de ce qui découle clairement du besoin.`
+    : `N'applique QUE ce que l'utilisateur demande explicitement. Ne renomme pas, ne supprime
+   pas, ne reformule rien d'autre. Aucune dérive : tout ce qui n'est pas demandé reste identique.`;
+
+  return `${mission}
+${discovery}${conventions}
+═══ BOUCLE D'OPÉRATIONS ═══
+Tu ne réécris JAMAIS la spec toi-même. Pour CHAQUE changement, appelle UNE opération-outil ;
+le moteur l'applique, la valide, et te renvoie ok/erreur. Sur erreur, corrige les paramètres
+et réessaie. Les noms d'outils sont les types EXACTS (camelCase, ex. addResource,
+addResourceRelation, enableJwt, addRole, setPermissionRule, setPermissionScope,
+enableFileUpload, setSearch, setPagination, setStateMachine, addAggregate…).
 
 RÈGLES :
-${buildRule}
-2. Choisis l'opération la PLUS spécifique (ex. addField plutôt que de recréer la
-   ressource ; setPermissionScope pour le multi-tenant ; setStateMachine pour un
-   workflow d'états).
-3. Opérations destructives ([destructive]) : ne les confirme JAMAIS toi-même. Si
-   une opération renvoie "requiresConfirmation", ARRÊTE-toi, explique précisément
-   l'impact à l'utilisateur et demande sa confirmation. N'enchaîne pas d'autres
-   changements liés tant qu'il n'a pas répondu.
-4. Quand tout est appliqué, réponds en français par un court résumé des changements
-   effectués (et des éventuelles confirmations en attente). Invite l'utilisateur à
-   continuer à préciser son API.
+1. ${editRule}
+2. Choisis l'opération la PLUS spécifique disponible.
+3. Ne passe JAMAIS de paramètre "confirmed" (injecté par le moteur). Opération destructive :
+   si une opération renvoie "requiresConfirmation", ARRÊTE-toi, explique l'impact et demande
+   confirmation — n'enchaîne aucun autre changement tant que l'utilisateur n'a pas répondu.
+4. Termine TOUJOURS par un court message en français : ce que tu as fait (ou pourquoi tu poses
+   des questions) et — s'il reste des choix ouverts — UNE question pour avancer.
 
-Voici la spec ACTUELLE (lecture seule, pour décider QUOI changer) :
+Spec ACTUELLE (lecture seule, pour décider QUOI changer) :
 \`\`\`json
 ${JSON.stringify(spec, null, 2)}
 \`\`\``;
@@ -118,7 +176,10 @@ export async function runKiaAgent(params: KiaAgentParams): Promise<KiaAgentResul
     spec,
     messages,
     apiName = spec.name,
-    maxSteps = 12,
+    // High enough to build a COMPLETE multi-resource API (resources + fields +
+    // relations + auth + roles + permissions + features) in a single turn without
+    // being cut off mid-build.
+    maxSteps = 48,
     approvedConfirmations,
     temperature = 0.2,
     logger,
