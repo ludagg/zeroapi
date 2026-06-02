@@ -8,11 +8,16 @@ type Tab = { id: string; label: string; n?: number };
 export function JobTabs({
   tabs,
   panels,
+  defaultTab,
 }: {
   tabs: Tab[];
   panels: Record<string, React.ReactNode>;
+  /** Initially selected tab id (falls back to the first tab). */
+  defaultTab?: string;
 }) {
-  const [active, setActive] = useState(tabs[0].id);
+  const [active, setActive] = useState(
+    () => (defaultTab && tabs.some((t) => t.id === defaultTab) ? defaultTab : tabs[0].id),
+  );
   return (
     <>
       <div

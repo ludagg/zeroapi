@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Check, Cloud, Copy, ExternalLink, Lock, Rocket, Sparkles, X } from "lucide-react";
+import { Check, Cloud, Copy, ExternalLink, Lock, Rocket, Sparkles, Terminal, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { DeployTarget } from "@/lib/api-detail";
+import {
+  parseDeploymentLogs,
+  type DeploymentLogEntry,
+} from "@/lib/deployment-logs";
 
 const ICON_BG: Record<DeployTarget["id"], string> = {
   railway: "bg-[#0B0D0E] text-white",
@@ -27,6 +31,8 @@ export type ZeroApiCloudStatus = {
   unlocked: boolean;
   liveUrl?: string | null;
   status?: "PENDING" | "DEPLOYING" | "ONLINE" | "FAILED" | null;
+  /** Persisted deployment journal (raw JSON from the DB). */
+  logs?: unknown;
 };
 
 export function JobDeployPanel({
@@ -110,7 +116,24 @@ export function JobDeployPanel({
   );
 }
 
-type Phase = "idle" | "provisioning" | "starting" | "online" | "error";
+type Phase = "idle" | "deploying" | "online" | "error";
+
+/** How often we ask the server (which asks Coolify) for the real status. */
+const POLL_MS = 4000;
+
+function phaseFromStatus(status: ZeroApiCloudStatus["status"]): Phase {
+  if (status === "ONLINE") return "online";
+  if (status === "DEPLOYING" || status === "PENDING") return "deploying";
+  if (status === "FAILED") return "error";
+  return "idle";
+}
+
+type StatusResponse = {
+  status?: "NONE" | "PENDING" | "DEPLOYING" | "ONLINE" | "FAILED";
+  url?: string | null;
+  error?: string;
+  logs?: unknown;
+};
 
 function ZeroApiCloudCard({
   jobId,
@@ -120,15 +143,51 @@ function ZeroApiCloudCard({
   state: ZeroApiCloudStatus;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>(() => {
-    if (state.status === "ONLINE") return "online";
-    if (state.status === "DEPLOYING") return "starting";
-    return "idle";
-  });
+  const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(state.status));
   const [liveUrl, setLiveUrl] = useState<string | null>(state.liveUrl ?? null);
   const [error, setError] = useState<string | null>(null);
+  const [logs, setLogs] = useState<DeploymentLogEntry[]>(() =>
+    parseDeploymentLogs(state.logs),
+  );
 
-  async function deploy() {
+  // Live polling: while a build is in flight, ask the server for Coolify's
+  // real state every few seconds. The server flips ONLINE/FAILED only when
+  // Coolify confirms, so the UI can never claim "en ligne" too early.
+  useEffect(() => {
+    if (phase !== "deploying") return;
+    let cancelled = false;
+
+    async function tick() {
+      try {
+        const res = await fetch(`/api/jobs/${jobId}/deploy/zeroapi`, {
+          cache: "no-store",
+        });
+        const data = (await res.json()) as StatusResponse;
+        if (cancelled) return;
+        if (Array.isArray(data.logs)) setLogs(parseDeploymentLogs(data.logs));
+        if (data.url) setLiveUrl(data.url);
+        if (data.status === "ONLINE") {
+          setPhase("online");
+          toast.success("API en ligne ✓");
+          router.refresh();
+        } else if (data.status === "FAILED") {
+          setPhase("error");
+          setError("Le déploiement a échoué côté serveur. Consulte les logs ci-dessous.");
+        }
+      } catch {
+        // Transient network error — keep polling.
+      }
+    }
+
+    const id = setInterval(tick, POLL_MS);
+    void tick();
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+    };
+  }, [phase, jobId, router]);
+
+  const deploy = useCallback(async () => {
     if (!state.unlocked) {
       toast.error("Passe au plan Pro ou Business pour activer ZeroAPI Cloud.");
       return;
@@ -138,30 +197,29 @@ function ZeroApiCloudCard({
       return;
     }
     setError(null);
-    setPhase("provisioning");
+    setPhase("deploying");
+    setLogs([]);
     try {
-      // Tiny client-side step animation to give feedback before the long call.
-      await new Promise((r) => setTimeout(r, 600));
-      setPhase("starting");
       const res = await fetch(`/api/jobs/${jobId}/deploy/zeroapi`, { method: "POST" });
-      const data = (await res.json()) as { url?: string; error?: string };
-      if (!res.ok || !data.url) {
+      const data = (await res.json()) as StatusResponse;
+      if (Array.isArray(data.logs)) setLogs(parseDeploymentLogs(data.logs));
+      if (!res.ok || data.status === "FAILED") {
         throw new Error(data.error ?? "Échec du déploiement.");
       }
-      setLiveUrl(data.url);
-      setPhase("online");
-      toast.success("API live ✓");
-      router.refresh();
+      if (data.url) setLiveUrl(data.url);
+      // Stay in "deploying": the polling effect will confirm ONLINE/FAILED.
+      toast.message("Déploiement lancé — build en cours…");
     } catch (err) {
       const message = err instanceof Error ? err.message : "Réessaie dans un instant.";
       setError(message);
       setPhase("error");
       toast.error(message);
     }
-  }
+  }, [jobId, state.enabled, state.unlocked]);
 
   const locked = !state.unlocked;
   const disabled = !state.enabled;
+  const busy = phase === "deploying";
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-accent/30 bg-gradient-to-br from-accent-soft via-surface to-surface">
@@ -172,6 +230,9 @@ function ZeroApiCloudCard({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="text-[15px] font-semibold">ZeroAPI Cloud</h3>
+            <span className="inline-flex items-center gap-1 rounded-full border border-warn/40 bg-warn-soft px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-warn-ink">
+              BÊTA
+            </span>
             {locked && (
               <span className="inline-flex items-center gap-1 rounded-full bg-bg-3 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-muted">
                 <Lock className="h-2.5 w-2.5" />
@@ -187,6 +248,12 @@ function ZeroApiCloudCard({
                 EN LIGNE
               </span>
             )}
+            {busy && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-warn-soft px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-warn-ink">
+                <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                EN DÉPLOIEMENT
+              </span>
+            )}
           </div>
           <p className="mt-1 text-[13px] text-muted">
             Container Docker isolé, Postgres dédié, sous-domaine{" "}
@@ -194,6 +261,13 @@ function ZeroApiCloudCard({
               api-….zeroapi.app
             </code>{" "}
             · sans config.
+          </p>
+
+          {/* Beta disclaimer — the deploy pipeline is still being hardened. */}
+          <p className="mt-2 rounded-[8px] border border-warn/30 bg-warn-soft/60 px-2.5 py-1.5 text-[12px] text-warn-ink">
+            Fonctionnalité en cours d&apos;implémentation. Le déploiement peut prendre
+            quelques minutes et le statut ci-dessous reflète l&apos;état réel du build
+            côté serveur — l&apos;API n&apos;est joignable qu&apos;une fois « En ligne ».
           </p>
 
           {liveUrl ? (
@@ -208,22 +282,18 @@ function ZeroApiCloudCard({
             </a>
           ) : null}
 
-          {phase === "provisioning" && (
-            <ProgressLine label="Provisionnement de la base Postgres…" />
-          )}
-          {phase === "starting" && (
-            <ProgressLine label="Démarrage du container Docker…" />
-          )}
           {phase === "error" && error && (
             <p className="mt-3 text-[12.5px] text-danger">{error}</p>
           )}
+
+          {logs.length > 0 && <DeployLogs logs={logs} live={busy} />}
         </div>
 
         <div className="flex-shrink-0">
           <button
             type="button"
             onClick={deploy}
-            disabled={locked || disabled || phase === "provisioning" || phase === "starting"}
+            disabled={locked || disabled || busy}
             className={cn(
               "inline-flex h-10 items-center gap-2 rounded-[10px] px-4 text-[13px] font-medium transition",
               locked || disabled
@@ -253,9 +323,7 @@ function ZeroApiCloudCard({
             ) : (
               <>
                 <Rocket className="h-3.5 w-3.5" />
-                {phase === "provisioning" || phase === "starting"
-                  ? "Déploiement…"
-                  : "Déployer"}
+                {busy ? "Déploiement…" : "Déployer"}
               </>
             )}
           </button>
@@ -265,11 +333,43 @@ function ZeroApiCloudCard({
   );
 }
 
-function ProgressLine({ label }: { label: string }) {
+/** Server-side deployment journal, surfaced so the user can follow progress. */
+function DeployLogs({ logs, live }: { logs: DeploymentLogEntry[]; live: boolean }) {
+  const endRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "nearest" });
+  }, [logs.length]);
+
   return (
-    <div className="mt-3 flex items-center gap-2 text-[12.5px] text-muted">
-      <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-      {label}
+    <div className="mt-3 overflow-hidden rounded-[10px] border border-line bg-bg">
+      <div className="flex items-center gap-1.5 border-b border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
+        <Terminal className="h-3 w-3" />
+        Logs de déploiement
+        {live && (
+          <span className="ml-auto inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
+        )}
+      </div>
+      <div className="max-h-44 overflow-auto px-3 py-2 scrollbar-thin">
+        {logs.map((l, i) => (
+          <div
+            key={`${l.ts}-${i}`}
+            className={cn(
+              "flex gap-2 py-0.5 font-mono text-[11.5px] leading-relaxed",
+              l.level === "error" ? "text-danger" : "text-ink-2",
+            )}
+          >
+            <span className="flex-shrink-0 text-muted-2">
+              {new Date(l.ts).toLocaleTimeString("fr-FR", {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+              })}
+            </span>
+            <span className="min-w-0">{l.message}</span>
+          </div>
+        ))}
+        <div ref={endRef} />
+      </div>
     </div>
   );
 }

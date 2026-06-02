@@ -252,11 +252,15 @@ export interface DeployAppArgs {
   databaseUrl: string;
   envVars: Array<{ key: string; value: string }>;
   zipUrl: string;
+  /** Optional sink for human-readable progress lines (shown to the user). */
+  onLog?: (message: string) => void;
 }
 
 export interface DeployAppResult {
   uuid: string;
   publicUrl: string;
+  /** Coolify deployment id from the trigger call — used to poll build state. */
+  deploymentUuid: string | null;
 }
 
 interface CreateAppResponse {
@@ -326,12 +330,14 @@ export async function deployApplication(
 ): Promise<DeployAppResult> {
   const fqdn = `api-${args.apiSlug}.${cfg.cloudDomain}`;
   const appName = `api-${args.apiSlug}`;
+  const log = args.onLog ?? (() => {});
 
   // ---------- Step 0 : remove any existing application with the same name ----
   // A redeploy after a previous failure can leave an orphan app behind, which
   // makes Coolify reject the new create call (name + domain collision). Drop
   // any duplicate before recreating to keep the deploy idempotent.
   console.log("[coolify] step 0/4 dedupe →", { name: appName });
+  log("Nettoyage des déploiements précédents…");
   await removeExistingApplications(cfg, appName);
 
   // ---------- Step 1 : create the application (minimal body) ----------
@@ -353,6 +359,7 @@ export async function deployApplication(
     apiSlug: args.apiSlug,
     payload: { ...createPayload, dockerfile: `<${dockerfile.length} bytes, b64>` },
   });
+  log("Création du conteneur applicatif…");
   const created = await call<CreateAppResponse>(
     cfg,
     "/api/v1/applications/dockerfile",
@@ -371,6 +378,7 @@ export async function deployApplication(
     force_domain_override: true,
   };
   console.log("[coolify] step 2/4 setDomain →", { uuid: created.uuid, ...domainPayload });
+  log(`Attribution du domaine ${fqdn}…`);
   await call(cfg, `/api/v1/applications/${encodeURIComponent(created.uuid)}`, {
     method: "PATCH",
     body: JSON.stringify(domainPayload),
@@ -386,20 +394,48 @@ export async function deployApplication(
     ...args.envVars.map((e) => ({ key: e.key, value: e.value })),
   ];
   console.log("[coolify] step 3/4 pushEnvVars →", { uuid: created.uuid, count: envVars.length });
+  log(`Injection de ${envVars.length} variables d'environnement…`);
   await pushEnvVars(cfg, created.uuid, envVars);
   console.log("[coolify] step 3/4 env vars pushed");
 
   // ---------- Step 4 : trigger the deploy ----------
+  // The trigger returns immediately; Coolify builds and starts the container
+  // asynchronously on the VPS. We capture the deployment uuid so the status
+  // endpoint can poll the real build state instead of assuming success.
   console.log("[coolify] step 4/4 triggerDeploy →", { uuid: created.uuid });
-  await call(cfg, `/api/v1/deploy?uuid=${encodeURIComponent(created.uuid)}`, {
-    method: "GET",
-  });
-  console.log("[coolify] step 4/4 deploy triggered", { fqdn });
+  log("Build déclenché sur le serveur — compilation en cours…");
+  const triggered = await call<TriggerDeployResponse>(
+    cfg,
+    `/api/v1/deploy?uuid=${encodeURIComponent(created.uuid)}`,
+    { method: "GET" },
+  );
+  const deploymentUuid = extractDeploymentUuid(triggered);
+  console.log("[coolify] step 4/4 deploy triggered", { fqdn, deploymentUuid });
 
   return {
     uuid: created.uuid,
     publicUrl: `https://${created.fqdn ?? fqdn}`,
+    deploymentUuid,
   };
+}
+
+/**
+ * Shape of the `GET /api/v1/deploy?uuid=` response. Coolify returns a
+ * `deployments` array (one entry per resource); we only need the deployment
+ * uuid to poll build progress afterwards. Parsed defensively because the
+ * exact envelope has shifted across Coolify v4 minor releases.
+ */
+interface TriggerDeployResponse {
+  deployments?: Array<{ deployment_uuid?: string; resource_uuid?: string }>;
+  deployment_uuid?: string;
+}
+
+function extractDeploymentUuid(res: TriggerDeployResponse | null): string | null {
+  if (!res) return null;
+  if (typeof res.deployment_uuid === "string") return res.deployment_uuid;
+  const first = res.deployments?.[0];
+  if (first && typeof first.deployment_uuid === "string") return first.deployment_uuid;
+  return null;
 }
 
 /**
@@ -576,6 +612,104 @@ export async function getApplicationStatus(
   uuid: string,
 ): Promise<ApplicationStatus> {
   return call<ApplicationStatus>(cfg, `/api/v1/applications/${uuid}`);
+}
+
+/** Normalised, ZeroAPI-side view of where a deployment really is. */
+export type LiveDeploymentState = "DEPLOYING" | "ONLINE" | "FAILED";
+
+interface DeploymentDetail {
+  status?: string;
+}
+
+/**
+ * Reads the build-level status of a specific Coolify deployment
+ * (queued / in_progress / finished / failed / cancelled). Returns `null`
+ * when the deployment can't be found (404) so callers can fall back to the
+ * application container status.
+ */
+export async function getDeploymentStatus(
+  cfg: CoolifyConfig,
+  deploymentUuid: string,
+): Promise<string | null> {
+  try {
+    const body = await call<DeploymentDetail>(
+      cfg,
+      `/api/v1/deployments/${encodeURIComponent(deploymentUuid)}`,
+    );
+    return typeof body.status === "string" ? body.status : null;
+  } catch (err) {
+    if (err instanceof CoolifyError && err.status === 404) return null;
+    throw err;
+  }
+}
+
+function mapBuildStatus(raw: string): LiveDeploymentState {
+  const s = raw.toLowerCase();
+  if (s.includes("finish") || s.includes("success") || s.includes("done")) return "ONLINE";
+  if (s.includes("fail") || s.includes("error") || s.includes("cancel")) return "FAILED";
+  return "DEPLOYING";
+}
+
+function mapAppStatus(raw: string): LiveDeploymentState {
+  const s = raw.toLowerCase();
+  // Coolify reports e.g. "running:healthy", "exited:unhealthy", "restarting".
+  if (s.startsWith("running")) return "ONLINE";
+  if (s.startsWith("exited") || s.includes("error") || s.includes("failed")) return "FAILED";
+  return "DEPLOYING";
+}
+
+export interface PollResult {
+  state: LiveDeploymentState;
+  /** Raw Coolify status string(s), for the log line. */
+  raw: string | null;
+}
+
+/**
+ * Asks Coolify where the deployment actually is. Prefers the build-level
+ * deployment status; when the build is finished it confirms the container is
+ * genuinely running before reporting ONLINE (a finished build can still crash
+ * on boot). Network/parse failures degrade to DEPLOYING so we never flip a
+ * deployment ONLINE on incomplete information.
+ */
+export async function pollDeploymentState(
+  cfg: CoolifyConfig,
+  args: { appUuid?: string | null; deploymentUuid?: string | null },
+): Promise<PollResult> {
+  if (args.deploymentUuid) {
+    try {
+      const raw = await getDeploymentStatus(cfg, args.deploymentUuid);
+      if (raw) {
+        const state = mapBuildStatus(raw);
+        if (state === "ONLINE" && args.appUuid) {
+          try {
+            const app = await getApplicationStatus(cfg, args.appUuid);
+            return {
+              state: mapAppStatus(app.status ?? ""),
+              raw: `${raw} · ${app.status ?? "?"}`,
+            };
+          } catch {
+            return { state: "ONLINE", raw };
+          }
+        }
+        return { state, raw };
+      }
+    } catch (err) {
+      console.warn("[coolify] getDeploymentStatus failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  if (args.appUuid) {
+    try {
+      const app = await getApplicationStatus(cfg, args.appUuid);
+      return { state: mapAppStatus(app.status ?? ""), raw: app.status ?? null };
+    } catch (err) {
+      console.warn("[coolify] getApplicationStatus failed", {
+        err: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return { state: "DEPLOYING", raw: null };
 }
 
 /**

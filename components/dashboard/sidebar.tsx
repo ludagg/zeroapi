@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  Database,
   GitBranch,
   Home,
   MessageCircle,
@@ -146,9 +145,6 @@ export function Sidebar({
         </NavLink>
         <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate} rail={rail}>
           Déploiements
-        </NavLink>
-        <NavLink href="/databases" icon={<Database />} onNavigate={onNavigate} rail={rail}>
-          Bases de données
         </NavLink>
 
         <SectionLabel rail={rail}>Équipe</SectionLabel>

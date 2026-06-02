@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Command } from "cmdk";
 import {
   Briefcase,
-  Database,
   GitBranch,
   Home,
   Moon,
@@ -109,9 +108,6 @@ export function CommandPalette({
               </Item>
               <Item onSelect={() => go("/deployments")} icon={<GitBranch />}>
                 Déploiements
-              </Item>
-              <Item onSelect={() => go("/databases")} icon={<Database />}>
-                Bases de données
               </Item>
               <Item onSelect={() => go("/members")} icon={<Users />}>
                 Membres
