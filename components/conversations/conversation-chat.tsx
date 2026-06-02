@@ -5,7 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowLeft, Check, ListChecks, Send, X } from "lucide-react";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
-import type { JobStatus } from "@prisma/client";
+import type { JobStatus, TemplateVisibility } from "@prisma/client";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { Markdown } from "@/components/generate/markdown";
@@ -84,7 +84,7 @@ export function ConversationChat({
   initialVersion: number;
   initialHistory: HistoryEntry[];
   initialShareSlug: string | null;
-  job: { id: string; name: string; status: JobStatus } | null;
+  job: { id: string; name: string; status: JobStatus; visibility: TemplateVisibility } | null;
   /** The job's spec at its last save — used to detect unsaved spec changes. */
   savedSpec: ZeroAPISpec | null;
   /** Whether the job currently has a live (online/rolling out) deployment. */
@@ -101,6 +101,8 @@ export function ConversationChat({
   const [savedSpec, setSavedSpec] = useState<ZeroAPISpec | null>(initialSavedSpec);
   // Set once the user updates a job that still has a live deployment.
   const [deploymentStale, setDeploymentStale] = useState(false);
+  // Marketplace visibility of the linked job (null when no job yet).
+  const [jobVisibility, setJobVisibility] = useState<TemplateVisibility | null>(job?.visibility ?? null);
 
   // Called by the right panel after a successful "Mettre à jour le job".
   function onJobUpdated(updated: ZeroAPISpec, staleDeployment: boolean) {
@@ -600,6 +602,8 @@ export function ConversationChat({
         hasActiveDeployment={hasActiveDeployment}
         deploymentStale={deploymentStale}
         onJobUpdated={onJobUpdated}
+        jobVisibility={jobVisibility}
+        onVisibilityChange={setJobVisibility}
         variant="desktop"
         pending={pending}
         onApplyOperation={applyGraphOperation}
@@ -629,6 +633,8 @@ export function ConversationChat({
           hasActiveDeployment={hasActiveDeployment}
           deploymentStale={deploymentStale}
           onJobUpdated={onJobUpdated}
+          jobVisibility={jobVisibility}
+          onVisibilityChange={setJobVisibility}
           variant="drawer"
           pending={pending}
           onLaunch={() => setSpecOpen(false)}

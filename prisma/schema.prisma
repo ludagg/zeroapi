@@ -34,6 +34,7 @@ model User {
   accounts    Account[]
   conversations Conversation[]
   apiKeys     PersonalApiKey[]
+  templates   Template[]
 
   @@map("user")
 }
@@ -93,6 +94,8 @@ model Job {
   name          String
   description   String
   status        JobStatus @default(PENDING)
+  // PUBLIC = the job's spec is published as a community template in the marketplace.
+  visibility    TemplateVisibility @default(PRIVATE)
   spec          Json?
   zipUrl        String?
   errorMessage  String?
@@ -112,6 +115,7 @@ model Job {
   agentLogs    AgentLog[]
   envVariables EnvVariable[]
   conversations Conversation[]
+  template     Template?
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status])
@@ -191,6 +195,34 @@ model Conversation {
 
   @@index([userId, updatedAt(sort: Desc)])
   @@index([jobId])
+}
+
+// ============ MARKETPLACE TEMPLATES ============
+
+model Template {
+  id          String             @id @default(cuid())
+  title       String
+  description String
+  category    String
+  emoji       String             @default("✦")
+  spec        Json
+  // null author = official ZeroAPI template.
+  authorId    String?
+  // The community job this template was published from (null for official ones).
+  // Lets a re-save update the same template instead of creating duplicates.
+  jobId       String?            @unique
+  isOfficial  Boolean            @default(false)
+  visibility  TemplateVisibility @default(PRIVATE)
+  usageCount  Int                @default(0)
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  author User? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  job    Job?  @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  // Marketplace listing: public templates, most-used first.
+  @@index([visibility, isOfficial, usageCount(sort: Desc)])
+  @@index([authorId])
 }
 
 model TeamMember {
@@ -292,4 +324,9 @@ enum DeploymentStatus {
   DEPLOYING
   ONLINE
   FAILED
+}
+
+enum TemplateVisibility {
+  PUBLIC
+  PRIVATE
 }

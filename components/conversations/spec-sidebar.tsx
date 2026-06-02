@@ -10,6 +10,7 @@ import {
   FileText,
   Gauge,
   GitBranch,
+  Globe,
   History,
   Image,
   Key,
@@ -29,9 +30,12 @@ import {
   Terminal,
   Undo2,
   Webhook,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
+import type { TemplateVisibility } from "@prisma/client";
+import { TEMPLATE_CATEGORIES } from "@/lib/template-categories";
 import { formatRelativeTime } from "@/lib/utils";
 import { deriveEndpoints } from "@/components/api-detail/endpoints-list";
 import { DevTab } from "@/components/conversations/dev-tab";
@@ -103,6 +107,8 @@ export function SpecPanel({
   hasActiveDeployment = false,
   deploymentStale = false,
   onJobUpdated,
+  jobVisibility = null,
+  onVisibilityChange,
   variant,
   onLaunch,
   pending,
@@ -127,6 +133,10 @@ export function SpecPanel({
   deploymentStale?: boolean;
   /** Called after a successful "Mettre à jour le job". */
   onJobUpdated?: (updated: ZeroAPISpec, staleDeployment: boolean) => void;
+  /** Current marketplace visibility of the linked job (null when no job yet). */
+  jobVisibility?: TemplateVisibility | null;
+  /** Called after the visibility is persisted (publish / retire). */
+  onVisibilityChange?: (visibility: TemplateVisibility) => void;
   variant: "desktop" | "drawer";
   onLaunch?: () => void;
   pending?: boolean;
@@ -147,6 +157,15 @@ export function SpecPanel({
   const [tab, setTab] = useState<TabKey>("graph");
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  // Marketplace visibility (Phase 2). PRIVATE by default; PUBLIC publishes the
+  // job's spec as a community template.
+  const [visibility, setVisibility] = useState<TemplateVisibility>(jobVisibility ?? "PRIVATE");
+  const [publishOpen, setPublishOpen] = useState(false);
+  const [busyVisibility, setBusyVisibility] = useState(false);
+  const [pubTitle, setPubTitle] = useState("");
+  const [pubDesc, setPubDesc] = useState("");
+  const [pubCategory, setPubCategory] = useState<string>("Autre");
+
   const findings = useMemo(() => auditSpec(spec), [spec]);
   const score = useMemo(() => auditScore(findings), [findings]);
   const tone = confidenceTone(score);
@@ -161,24 +180,28 @@ export function SpecPanel({
   );
   const canUpdate = specChanged && !updating && !pending;
 
+  type PublishFields = { title: string; description: string; category: string };
+
   // Promote the live conversation spec to a DRAFT job (no generation yet).
-  async function saveJob() {
+  // `vis`/`template` carry the marketplace choice (Phase 2).
+  async function saveJob(vis: TemplateVisibility = "PRIVATE", template?: PublishFields) {
     if (!canSave) return;
     setSubmitting(true);
     try {
       const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: vis, template }),
       });
       const data = (await res.json()) as { jobId?: string; error?: string };
       if (!res.ok || !data.jobId) {
         throw new Error(data.error ?? "Sauvegarde impossible.");
       }
-      toast.success("Job sauvegardé en brouillon.");
+      toast.success(vis === "PUBLIC" ? "Job sauvegardé et publié." : "Job sauvegardé en brouillon.");
       onLaunch?.();
       router.push(`/jobs/${data.jobId}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
-    } finally {
       setSubmitting(false);
     }
   }
@@ -190,6 +213,8 @@ export function SpecPanel({
     try {
       const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
       });
       const data = (await res.json()) as { hasActiveDeployment?: boolean; error?: string };
       if (!res.ok) {
@@ -201,6 +226,85 @@ export function SpecPanel({
       toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
     } finally {
       setUpdating(false);
+    }
+  }
+
+  // ── Marketplace visibility (Phase 2) ───────────────────────────────────────
+
+  // Pick a visibility from the segmented control: PUBLIC always asks for the
+  // listing fields first (modal); PRIVATE retires immediately.
+  function pickVisibility(next: TemplateVisibility) {
+    if (next === visibility || busyVisibility) return;
+    if (next === "PUBLIC") {
+      setPubTitle(spec?.name ?? "");
+      setPubDesc(spec?.description ?? "");
+      setPubCategory("Autre");
+      setPublishOpen(true);
+    } else {
+      void makePrivate();
+    }
+  }
+
+  // Retire from the marketplace (or just set the intent before the first save).
+  async function makePrivate() {
+    if (!jobId) {
+      setVisibility("PRIVATE");
+      onVisibilityChange?.("PRIVATE");
+      return;
+    }
+    setBusyVisibility(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: "PRIVATE" }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Action impossible.");
+      setVisibility("PRIVATE");
+      onVisibilityChange?.("PRIVATE");
+      toast.success("Retiré de la marketplace.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+    } finally {
+      setBusyVisibility(false);
+    }
+  }
+
+  // Confirm the publish modal: create-or-update the job as PUBLIC + community template.
+  async function confirmPublish() {
+    const template: PublishFields = {
+      title: pubTitle.trim(),
+      description: pubDesc.trim(),
+      category: pubCategory,
+    };
+    if (!template.title) {
+      toast.error("Donne un titre à ton template.");
+      return;
+    }
+    // No job yet → create it directly as PUBLIC (redirects to the job page).
+    if (!jobId) {
+      setPublishOpen(false);
+      await saveJob("PUBLIC", template);
+      return;
+    }
+    setBusyVisibility(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ visibility: "PUBLIC", template }),
+      });
+      const data = (await res.json()) as { error?: string };
+      if (!res.ok) throw new Error(data.error ?? "Publication impossible.");
+      setVisibility("PUBLIC");
+      onVisibilityChange?.("PUBLIC");
+      setPublishOpen(false);
+      toast.success("Publié dans la marketplace.");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+    } finally {
+      setBusyVisibility(false);
     }
   }
 
@@ -321,10 +425,17 @@ export function SpecPanel({
             />
             {score}%
           </span>
+
+          {/* Marketplace visibility selector (Phase 2). Hidden until there is a
+              spec worth publishing. */}
+          {resourceCount > 0 && (
+            <VisibilityToggle visibility={visibility} busy={busyVisibility} onPick={pickVisibility} />
+          )}
+
           {!jobId ? (
             <button
               type="button"
-              onClick={saveJob}
+              onClick={() => saveJob("PRIVATE")}
               disabled={!canSave}
               title={canSave ? "Sauvegarder en brouillon" : "Décris au moins une ressource"}
               className={
@@ -411,7 +522,181 @@ export function SpecPanel({
           </div>
         )}
       </div>
+
+      {publishOpen && (
+        <PublishModal
+          title={pubTitle}
+          description={pubDesc}
+          category={pubCategory}
+          busy={busyVisibility || submitting}
+          onTitle={setPubTitle}
+          onDescription={setPubDesc}
+          onCategory={setPubCategory}
+          onCancel={() => setPublishOpen(false)}
+          onConfirm={confirmPublish}
+        />
+      )}
     </aside>
+  );
+}
+
+// ── Marketplace visibility (Phase 2) ─────────────────────────────────────────
+
+/** Segmented Privé / Public selector for the marketplace visibility. */
+function VisibilityToggle({
+  visibility,
+  busy,
+  onPick,
+}: {
+  visibility: TemplateVisibility;
+  busy: boolean;
+  onPick: (v: TemplateVisibility) => void;
+}) {
+  const isPublic = visibility === "PUBLIC";
+  return (
+    <div
+      className="inline-flex h-8 items-center rounded-[9px] border border-line bg-surface p-0.5"
+      title="Visibilité dans la marketplace"
+    >
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onPick("PRIVATE")}
+        title="Privé — visible de toi seul"
+        className={
+          "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-[11.5px] font-medium transition disabled:opacity-50 " +
+          (!isPublic ? "bg-ink text-bg" : "text-muted hover:text-ink-2")
+        }
+      >
+        <Lock className="h-3 w-3" />
+        <span className="hidden sm:inline">Privé</span>
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => onPick("PUBLIC")}
+        title="Public — publié comme template communauté"
+        className={
+          "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-[11.5px] font-medium transition disabled:opacity-50 " +
+          (isPublic ? "bg-accent text-accent-ink" : "text-muted hover:text-ink-2")
+        }
+      >
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
+        <span className="hidden sm:inline">Public</span>
+      </button>
+    </div>
+  );
+}
+
+/** Modal asking for the marketplace listing fields when publishing PUBLIC. */
+function PublishModal({
+  title,
+  description,
+  category,
+  busy,
+  onTitle,
+  onDescription,
+  onCategory,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  description: string;
+  category: string;
+  busy: boolean;
+  onTitle: (v: string) => void;
+  onDescription: (v: string) => void;
+  onCategory: (v: string) => void;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 grid place-items-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={busy ? undefined : onCancel} aria-hidden />
+      <div className="relative z-10 w-full max-w-[440px] overflow-hidden rounded-[16px] border border-line bg-surface shadow-xl">
+        <div className="flex items-center justify-between border-b border-line px-4 py-3">
+          <div className="flex items-center gap-2">
+            <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-accent-soft text-accent-ink">
+              <Globe className="h-3.5 w-3.5" />
+            </span>
+            <h3 className="text-[14px] font-semibold text-ink">Publier dans la marketplace</h3>
+          </div>
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            aria-label="Fermer"
+            className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink disabled:opacity-50"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        </div>
+
+        <div className="space-y-3.5 px-4 py-4">
+          <p className="text-[12.5px] leading-snug text-muted">
+            Ton template devient visible par la communauté. Tu peux le retirer à tout moment.
+          </p>
+
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Titre</span>
+            <input
+              value={title}
+              onChange={(e) => onTitle(e.target.value)}
+              maxLength={80}
+              placeholder="Ex : API de réservation de salles"
+              className="block h-9 w-full rounded-[9px] border border-line bg-bg-2 px-3 text-[13.5px] text-ink outline-none transition focus:border-ink placeholder:text-muted-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Description</span>
+            <textarea
+              value={description}
+              onChange={(e) => onDescription(e.target.value)}
+              maxLength={280}
+              rows={3}
+              placeholder="Ce que fait l'API, en une ou deux phrases…"
+              className="block w-full resize-none rounded-[9px] border border-line bg-bg-2 px-3 py-2 text-[13.5px] leading-snug text-ink outline-none transition focus:border-ink placeholder:text-muted-2"
+            />
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Catégorie</span>
+            <select
+              value={category}
+              onChange={(e) => onCategory(e.target.value)}
+              className="block h-9 w-full rounded-[9px] border border-line bg-bg-2 px-2.5 text-[13.5px] text-ink outline-none transition focus:border-ink"
+            >
+              {TEMPLATE_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="flex items-center justify-end gap-2 border-t border-line px-4 py-3">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={busy}
+            className="inline-flex h-9 items-center rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:border-line-2 disabled:opacity-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy}
+            className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:opacity-50"
+          >
+            {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
+            Publier
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 

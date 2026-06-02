@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
   Shield,
+  Store,
   Terminal,
   Users,
   Briefcase,
@@ -139,6 +140,9 @@ export function Sidebar({
         </NavLink>
         <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate} rail={rail}>
           Conversations
+        </NavLink>
+        <NavLink href="/marketplace" icon={<Store />} onNavigate={onNavigate} rail={rail}>
+          Marketplace
         </NavLink>
         <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate} rail={rail}>
           Playground
