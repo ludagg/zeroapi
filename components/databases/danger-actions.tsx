@@ -3,7 +3,7 @@
 import { useTransition } from "react";
 import { RotateCcw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { resetDatabase, deleteDatabase } from "@/app/(dashboard)/databases/[id]/actions";
+import { resetDatabase, deleteDatabase } from "@/app/(dashboard)/jobs/[id]/database-actions";
 
 export function DangerActions({
   dbId,

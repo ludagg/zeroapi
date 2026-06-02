@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,7 +11,7 @@ async function loadOwnedDatabase(dbId: string) {
 
   const db = await prisma.database.findUnique({
     where: { id: dbId },
-    select: { id: true, userId: true, managed: true, name: true },
+    select: { id: true, userId: true, managed: true, name: true, jobId: true },
   });
   if (!db) throw new Error("Base introuvable.");
   if (db.userId !== session.user.id) throw new Error("Accès refusé.");
@@ -27,7 +26,7 @@ export async function resetDatabase(dbId: string) {
     where: { id: db.id },
     data: { sizeBytes: 0, status: "online" },
   });
-  revalidatePath(`/databases/${db.id}`);
+  revalidatePath(`/jobs/${db.jobId}`);
 }
 
 export async function deleteDatabase(dbId: string) {
@@ -38,6 +37,5 @@ export async function deleteDatabase(dbId: string) {
     );
   }
   await prisma.database.delete({ where: { id: db.id } });
-  revalidatePath("/databases");
-  redirect("/databases");
+  revalidatePath(`/jobs/${db.jobId}`);
 }

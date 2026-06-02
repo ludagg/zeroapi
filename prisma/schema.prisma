@@ -153,6 +153,14 @@ model Deployment {
   platform  DeployPlatform
   url       String?
   status    DeploymentStatus @default(PENDING)
+  // Coolify identifiers, persisted so the status endpoint can poll the real
+  // server-side state after the (asynchronous) build is triggered. Without
+  // these we'd have nothing to ask Coolify about post-trigger.
+  coolifyAppUuid        String?
+  coolifyDeploymentUuid String?
+  // Step-by-step deployment journal, surfaced to the user on the job page.
+  // Array of { ts: number, level: "info" | "error", message: string }.
+  logs      Json             @default("[]")
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 

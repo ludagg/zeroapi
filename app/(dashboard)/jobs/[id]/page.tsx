@@ -18,6 +18,7 @@ import { TestsPanel } from "@/components/api-detail/tests-panel";
 import { LogsTimeline } from "@/components/api-detail/logs-timeline";
 import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
+import { DatabasePanel } from "@/components/api-detail/database-panel";
 import { VariablesPanel } from "@/components/api-detail/variables-panel";
 import {
   buildDeployConfigs,
@@ -50,21 +51,30 @@ const PLATFORM_TO_TARGET: Record<DeployPlatform, "railway" | "render" | "vercel"
   ZEROAPI_CLOUD: null,
 };
 
-export default async function JobDetailPage({ params }: { params: { id: string } }) {
+export default async function JobDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { id: string };
+  searchParams?: { tab?: string };
+}) {
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },
     include: {
       deployment: true,
+      database: true,
       agentLogs: { orderBy: { createdAt: "asc" } },
     },
   });
   if (!job) notFound();
   const planUnlocksCloud = user.plan === "PRO" || user.plan === "BUSINESS";
-  const zeroApiCloudStatus: DeploymentStatus | null =
-    job.deployment?.platform === "ZEROAPI_CLOUD" ? job.deployment.status : null;
-  const zeroApiCloudUrl =
-    job.deployment?.platform === "ZEROAPI_CLOUD" ? job.deployment.url : null;
+  const isZeroApiCloud = job.deployment?.platform === "ZEROAPI_CLOUD";
+  const zeroApiCloudStatus: DeploymentStatus | null = isZeroApiCloud
+    ? job.deployment!.status
+    : null;
+  const zeroApiCloudUrl = isZeroApiCloud ? job.deployment!.url : null;
+  const zeroApiCloudLogs = isZeroApiCloud ? job.deployment!.logs : undefined;
 
   const spec = readSpec(job.spec);
   const pill = STATUS_PILL[job.status];
@@ -179,10 +189,12 @@ export default async function JobDetailPage({ params }: { params: { id: string }
           )}
 
           <JobTabs
+            defaultTab={searchParams?.tab}
             tabs={[
               { id: "overview", label: "Aperçu" },
               { id: "endpoints", label: "Endpoints", n: endpointsList.length },
               { id: "models", label: "Ressources", n: spec?.resources.length ?? 0 },
+              { id: "database", label: "Base de données" },
               { id: "code", label: "Code source" },
               { id: "tests", label: "Tests", n: job.testsTotal ?? undefined },
               { id: "docs", label: "Docs OpenAPI", n: openApiEndpoints.length || undefined },
@@ -291,6 +303,25 @@ export default async function JobDetailPage({ params }: { params: { id: string }
               ),
               endpoints: <EndpointsList resources={spec?.resources ?? []} />,
               models: <ModelsList resources={spec?.resources ?? []} />,
+              database: job.database ? (
+                <DatabasePanel
+                  db={{
+                    id: job.database.id,
+                    name: job.database.name,
+                    provider: job.database.provider,
+                    sizeBytes: job.database.sizeBytes,
+                    tables: job.database.tables,
+                    status: job.database.status,
+                    managed: job.database.managed,
+                    jobId: job.id,
+                    updatedAt: job.database.updatedAt,
+                  }}
+                  spec={spec}
+                  plan={user.plan}
+                />
+              ) : (
+                <EmptyHint label="La base de données est créée automatiquement une fois l'API générée et prête." />
+              ),
               code: isCodeAvailable ? (
                 <div className="space-y-3">
                   <CodeViewer files={sourceFiles} />
@@ -325,6 +356,7 @@ export default async function JobDetailPage({ params }: { params: { id: string }
                       unlocked: planUnlocksCloud,
                       liveUrl: zeroApiCloudUrl,
                       status: zeroApiCloudStatus,
+                      logs: zeroApiCloudLogs,
                     }}
                   />
                 ) : (

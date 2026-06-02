@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
+import { Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import {
@@ -8,7 +9,9 @@ import {
   CoolifyError,
   deployApplication,
   describeCoolifyEnv,
+  pollDeploymentState,
   provisionPostgres,
+  readCoolifyConfig,
   readCoolifyConfigDetailed,
   removeExistingApplications,
   removeExistingDatabases,
@@ -17,8 +20,17 @@ import {
 import { decryptSecret, encryptSecret } from "@/lib/crypto-secrets";
 import { computeDeployReadiness, getNormalizedEnvVars } from "@/lib/env-vars";
 import { readSpec } from "@/lib/job-helpers";
+import {
+  appendLog,
+  parseDeploymentLogs,
+  type DeploymentLogEntry,
+} from "@/lib/deployment-logs";
 
 export const dynamic = "force-dynamic";
+
+/** Prisma's `Json` input rejects fixed-shape interfaces; cast at the boundary. */
+const asJson = (logs: DeploymentLogEntry[]): Prisma.InputJsonValue =>
+  logs as unknown as Prisma.InputJsonValue;
 
 const MISSING_VAR_HINT: Record<CoolifyEnvVar, string> = {
   COOLIFY_API_URL: "COOLIFY_API_URL",
@@ -168,6 +180,9 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     }
   }
 
+  // Fresh journal for this deploy attempt — a redeploy starts a clean log and
+  // clears the previous Coolify ids so the status poller never reads stale ones.
+  let logs: DeploymentLogEntry[] = appendLog([], "Démarrage du déploiement ZeroAPI Cloud…");
   const deployment = await prisma.deployment.upsert({
     where: { jobId: job.id },
     create: {
@@ -175,11 +190,15 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       jobId: job.id,
       platform: "ZEROAPI_CLOUD",
       status: "DEPLOYING",
+      logs: asJson(logs),
     },
     update: {
       platform: "ZEROAPI_CLOUD",
       status: "DEPLOYING",
       url: null,
+      coolifyAppUuid: null,
+      coolifyDeploymentUuid: null,
+      logs: asJson(logs),
     },
   });
 
@@ -189,6 +208,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     await removeExistingApplications(cfg, `api-${slug}`);
     await removeExistingDatabases(cfg, `db-${slug}`);
 
+    logs = appendLog(logs, "Provisionnement de la base Postgres dédiée…");
     const db = await provisionPostgres(cfg, { jobId: job.id, apiSlug: slug });
     if (!db.internalUrl) {
       throw new CoolifyError(
@@ -197,6 +217,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         null,
       );
     }
+    logs = appendLog(logs, "Base Postgres prête.");
 
     const app = await deployApplication(cfg, {
       jobId: job.id,
@@ -204,24 +225,44 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       databaseUrl: db.internalUrl,
       envVars,
       zipUrl: job.zipUrl,
+      onLog: (m) => {
+        logs = appendLog(logs, m);
+      },
     });
 
-    await prisma.$transaction([
-      prisma.deployment.update({
-        where: { id: deployment.id },
-        data: { status: "ONLINE", url: app.publicUrl },
-      }),
-      prisma.job.update({
-        where: { id: job.id },
-        data: { status: "DEPLOYED" },
-      }),
-    ]);
+    logs = appendLog(
+      logs,
+      "Build lancé côté serveur. Le statut passera à « En ligne » dès que le conteneur répond — ça peut prendre quelques minutes.",
+    );
 
-    console.log("[deploy-zeroapi] ok", { jobId: job.id, url: app.publicUrl });
+    // IMPORTANT: the Coolify build runs asynchronously. We deliberately keep
+    // the deployment in DEPLOYING here — the GET endpoint polls Coolify and
+    // only flips it to ONLINE (and the job to DEPLOYED) once the container is
+    // genuinely running. Marking ONLINE now is what produced the false
+    // "en ligne" status before the server had actually finished.
+    await prisma.deployment.update({
+      where: { id: deployment.id },
+      data: {
+        status: "DEPLOYING",
+        url: app.publicUrl,
+        coolifyAppUuid: app.uuid,
+        coolifyDeploymentUuid: app.deploymentUuid,
+        logs: asJson(logs),
+      },
+    });
+
+    console.log("[deploy-zeroapi] triggered", {
+      jobId: job.id,
+      url: app.publicUrl,
+      deploymentUuid: app.deploymentUuid,
+    });
     return NextResponse.json({
       url: app.publicUrl,
+      status: "DEPLOYING",
       applicationUuid: app.uuid,
+      deploymentUuid: app.deploymentUuid,
       databaseUuid: db.uuid,
+      logs,
     });
   } catch (err) {
     const isCoolify = err instanceof CoolifyError;
@@ -233,14 +274,17 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       message,
       fieldErrors,
     });
+    logs = appendLog(logs, `Échec du déploiement : ${message}`, "error");
     await prisma.deployment.update({
       where: { id: deployment.id },
-      data: { status: "FAILED" },
+      data: { status: "FAILED", logs: asJson(logs) },
     });
     return NextResponse.json(
       {
         error: `Déploiement ZeroAPI Cloud échoué : ${message}`,
         fieldErrors,
+        status: "FAILED",
+        logs,
       },
       { status: 502 },
     );
@@ -261,8 +305,50 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
     return NextResponse.json({ status: "NONE" });
   }
 
-  return NextResponse.json({
-    status: job.deployment.status,
-    url: job.deployment.url,
+  const dep = job.deployment;
+  let logs = parseDeploymentLogs(dep.logs);
+
+  // Terminal states need no polling — report what we stored.
+  if (dep.status === "ONLINE" || dep.status === "FAILED") {
+    return NextResponse.json({ status: dep.status, url: dep.url, logs });
+  }
+
+  // While DEPLOYING/PENDING, ask Coolify where the build actually is.
+  const cfg = readCoolifyConfig();
+  if (!cfg || (!dep.coolifyAppUuid && !dep.coolifyDeploymentUuid)) {
+    return NextResponse.json({ status: dep.status, url: dep.url, logs });
+  }
+
+  const poll = await pollDeploymentState(cfg, {
+    appUuid: dep.coolifyAppUuid,
+    deploymentUuid: dep.coolifyDeploymentUuid,
   });
+
+  if (poll.state === "ONLINE") {
+    logs = appendLog(logs, "Déploiement terminé — l'API est en ligne ✓");
+    await prisma.$transaction([
+      prisma.deployment.update({
+        where: { id: dep.id },
+        data: { status: "ONLINE", logs: asJson(logs) },
+      }),
+      prisma.job.update({ where: { id: job.id }, data: { status: "DEPLOYED" } }),
+    ]);
+    return NextResponse.json({ status: "ONLINE", url: dep.url, logs });
+  }
+
+  if (poll.state === "FAILED") {
+    logs = appendLog(
+      logs,
+      `Le build a échoué côté serveur${poll.raw ? ` (${poll.raw})` : ""}.`,
+      "error",
+    );
+    await prisma.deployment.update({
+      where: { id: dep.id },
+      data: { status: "FAILED", logs: asJson(logs) },
+    });
+    return NextResponse.json({ status: "FAILED", url: dep.url, logs });
+  }
+
+  // Still building — no DB write to avoid log spam; just report progress.
+  return NextResponse.json({ status: "DEPLOYING", url: dep.url, logs });
 }
