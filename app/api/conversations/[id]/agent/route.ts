@@ -57,7 +57,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   const conv = await prisma.conversation.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { job: { select: { id: true, name: true } } },
+    include: { job: { select: { id: true, name: true, status: true } } },
   });
   if (!conv) return jsonError("Conversation introuvable.", 404);
 
@@ -177,7 +177,11 @@ export async function POST(req: Request, { params }: { params: { id: string } })
               },
             }),
           ];
-          if (conv.job) {
+          // Only a DRAFT (not-yet-built) job tracks the live spec. Once a
+          // version has been built/deployed we must NOT overwrite it — the
+          // edit lives in the conversation until the user generates a new
+          // version (which creates a fresh build in the lineage).
+          if (conv.job && conv.job.status === "DRAFT") {
             writes.push(
               prisma.job.update({
                 where: { id: conv.job.id },

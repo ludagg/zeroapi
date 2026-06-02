@@ -18,6 +18,8 @@ export type DashboardJob = {
   estimatedTime: number | null;
   emoji: string;
   version: string;
+  /** Total number of versions in this API's lineage. */
+  versionCount?: number;
   authMode: string | null;
   createdAt: Date;
   completedAt: Date | null;
@@ -85,6 +87,11 @@ export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
               <span className="rounded-[4px] border border-line px-1.5 py-px font-mono text-[10.5px] text-muted">
                 {job.version}
               </span>
+              {job.versionCount && job.versionCount > 1 && (
+                <span className="font-mono text-[10.5px] text-muted-2">
+                  · {job.versionCount} versions
+                </span>
+              )}
             </div>
             <div className="mt-0.5 truncate text-[12.5px] text-muted">{job.description}</div>
             {job.status === "RUNNING" && (

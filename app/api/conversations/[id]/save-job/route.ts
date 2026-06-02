@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { countEndpoints } from "@/lib/spec";
 import { readSpec } from "@/lib/conversation-helpers";
+import { resolveNextVersion } from "@/lib/job-versions";
 
 export const dynamic = "force-dynamic";
 
@@ -20,11 +21,15 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   const conv = await prisma.conversation.findFirst({
     where: { id: params.id, userId: user.id },
+    include: { job: { select: { id: true, status: true, lineageId: true, version: true, name: true } } },
   });
   if (!conv) return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
 
-  // Idempotent — a conversation already linked to a job just returns it.
-  if (conv.jobId) return NextResponse.json({ jobId: conv.jobId });
+  // Idempotent while the linked job is still a DRAFT (we're editing it). Once it
+  // has been built, saving creates a NEW draft version instead of overwriting.
+  if (conv.job && conv.job.status === "DRAFT") {
+    return NextResponse.json({ jobId: conv.job.id });
+  }
 
   const spec = readSpec(conv.spec ?? null);
   if (!spec || spec.resources.length === 0) {
@@ -35,19 +40,25 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const job = await prisma.$transaction(async (tx) => {
+    const { lineageId, version } = await resolveNextVersion(tx, user.id, conv.job);
     const created = await tx.job.create({
       data: {
         userId: user.id,
-        // Display name = the (regenerated) conversation title; spec.name stays a
-        // code-safe slug used by the generator.
-        name: conv.title?.trim() || spec.name,
+        // Display name = the conversation title (or the job's name for later
+        // versions); spec.name stays a code-safe slug used by the generator.
+        name: conv.job?.name?.trim() || conv.title?.trim() || spec.name,
         description: spec.description ?? "",
         status: "DRAFT",
+        lineageId,
+        version,
         spec: spec as unknown as object,
         endpoints: countEndpoints(spec),
         estimatedTime: 120,
       },
     });
+    if (!lineageId) {
+      await tx.job.update({ where: { id: created.id }, data: { lineageId: created.id } });
+    }
     await tx.conversation.update({
       where: { id: conv.id },
       data: { jobId: created.id },

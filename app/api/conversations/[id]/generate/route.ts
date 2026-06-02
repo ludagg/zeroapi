@@ -6,6 +6,7 @@ import { countEndpoints, type ZeroAPISpec } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
 import { parseMessages, readSpec } from "@/lib/conversation-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
+import { resolveNextVersion } from "@/lib/job-versions";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +23,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   const conv = await prisma.conversation.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { job: { select: { name: true } } },
+    include: { job: { select: { id: true, name: true, lineageId: true, version: true } } },
   });
   if (!conv) return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
 
@@ -68,17 +69,25 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const job = await prisma.$transaction(async (tx) => {
+    // Each generation from a conversation is a new version of the same API.
+    const { lineageId, version } = await resolveNextVersion(tx, user.id, conv.job);
     const created = await tx.job.create({
       data: {
         userId: user.id,
-        name: spec.name,
+        name: conv.job?.name?.trim() || spec.name,
         description: spec.description ?? "",
         status: "PENDING",
+        lineageId,
+        version,
         spec: spec as unknown as object,
         endpoints: countEndpoints(spec),
         estimatedTime: 120,
       },
     });
+    // A root version is its own lineage.
+    if (!lineageId) {
+      await tx.job.update({ where: { id: created.id }, data: { lineageId: created.id } });
+    }
     await tx.user.update({
       where: { id: user.id },
       data: { generationsUsed: { increment: 1 } },
@@ -92,7 +101,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         duration: info.latencyMs,
       },
     });
-    // Link the conversation to the newly created job & persist the spec.
+    // Re-link the conversation to the latest version & persist the spec.
     await tx.conversation.update({
       where: { id: conv.id },
       data: {

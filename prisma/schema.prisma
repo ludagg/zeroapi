@@ -93,6 +93,12 @@ model Job {
   name          String
   description   String
   status        JobStatus @default(PENDING)
+  // Versioning: every build of the same logical API shares `lineageId`
+  // (the root version's id), and `version` increments 1, 2, 3… within it.
+  // Modifying the spec after a build no longer overwrites a deployed job —
+  // it produces a new version in the same lineage.
+  lineageId     String?
+  version       Int       @default(1)
   spec          Json?
   zipUrl        String?
   errorMessage  String?
@@ -115,6 +121,7 @@ model Job {
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([status])
+  @@index([lineageId, version])
 }
 
 model EnvVariable {

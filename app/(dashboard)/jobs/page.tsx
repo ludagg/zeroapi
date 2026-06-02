@@ -1,4 +1,4 @@
-import type { JobStatus, Prisma } from "@prisma/client";
+import type { JobStatus } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -30,34 +30,48 @@ export default async function JobsPage({
   const statuses = STATUS_GROUPS[statusKey] ?? [];
   const page = Math.max(1, Number.parseInt(searchParams.page ?? "1", 10) || 1);
 
-  const where: Prisma.JobWhereInput = {
-    userId: user.id,
-    ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
-    ...(statuses.length ? { status: { in: statuses } } : {}),
-  };
+  // Fetch the user's jobs matching the search, then collapse to ONE
+  // representative per lineage (the versions of one API). Per-user job counts
+  // are small, so in-memory grouping keeps the version lineages intact without
+  // a complex DISTINCT-ON query. Version-desc so the first seen per lineage is
+  // the newest.
+  const allJobs = await prisma.job.findMany({
+    where: {
+      userId: user.id,
+      ...(q ? { name: { contains: q, mode: "insensitive" as const } } : {}),
+    },
+    orderBy: { version: "desc" },
+  });
 
-  const [counts, total, jobs] = await Promise.all([
-    prisma.job.groupBy({
-      by: ["status"],
-      where: { userId: user.id, ...(q ? { name: { contains: q, mode: "insensitive" } } : {}) },
-      _count: { _all: true },
-    }),
-    prisma.job.count({ where }),
-    prisma.job.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      skip: (page - 1) * PAGE_SIZE,
-      take: PAGE_SIZE,
-    }),
-  ]);
+  type RepJob = (typeof allJobs)[number];
+  const byLineage = new Map<string, { rep: RepJob; count: number }>();
+  for (const j of allJobs) {
+    const key = j.lineageId ?? j.id;
+    const entry = byLineage.get(key);
+    if (!entry) {
+      byLineage.set(key, { rep: j, count: 1 });
+    } else {
+      entry.count += 1;
+      // Surface the deployed version as the card; otherwise the highest
+      // version (already first due to version-desc ordering) stays.
+      if (j.status === "DEPLOYED" && entry.rep.status !== "DEPLOYED") entry.rep = j;
+    }
+  }
 
-  const countByStatus = (s: JobStatus[]) =>
-    counts
-      .filter((c) => s.includes(c.status))
-      .reduce((acc, c) => acc + c._count._all, 0);
-  const allCount = counts.reduce((acc, c) => acc + c._count._all, 0);
+  const reps = [...byLineage.values()];
+  const repStatuses = reps.map((r) => r.rep.status);
+  const countByStatus = (s: JobStatus[]) => repStatuses.filter((st) => s.includes(st)).length;
+  const allCount = reps.length;
 
-  const mapped: DashboardJob[] = jobs.map((j) => ({
+  const filtered = statuses.length
+    ? reps.filter((r) => statuses.includes(r.rep.status))
+    : reps;
+  filtered.sort((a, b) => b.rep.createdAt.getTime() - a.rep.createdAt.getTime());
+
+  const total = filtered.length;
+  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const mapped: DashboardJob[] = pageItems.map(({ rep: j, count }) => ({
     id: j.id,
     name: j.name,
     description: j.description,
@@ -70,6 +84,7 @@ export default async function JobsPage({
     estimatedTime: j.estimatedTime,
     emoji: pickEmoji(`${j.name} ${j.description}`),
     version: extractVersion(j),
+    versionCount: count,
     authMode: extractAuthMode(j.spec),
     createdAt: j.createdAt,
     startedAt: j.startedAt,

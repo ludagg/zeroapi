@@ -21,10 +21,8 @@ export function pickEmoji(text: string): string {
   return "✦";
 }
 
-export function extractVersion(job: Pick<Job, "createdAt" | "name">): string {
-  const match = job.name.match(/v(\d+\.\d+|\d+)/i);
-  if (match) return match[0].toLowerCase();
-  return "v1.0";
+export function extractVersion(job: Pick<Job, "version">): string {
+  return `v${job.version && job.version > 0 ? job.version : 1}`;
 }
 
 function asPartialSpec(spec: Job["spec"]): Partial<ZeroAPISpec> | null {

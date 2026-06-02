@@ -20,6 +20,9 @@ import { OpenApiEndpoints } from "@/components/api-detail/openapi-endpoints";
 import { JobDeployPanel } from "@/components/api-detail/job-deploy-panel";
 import { DatabasePanel } from "@/components/api-detail/database-panel";
 import { VariablesPanel } from "@/components/api-detail/variables-panel";
+import { VersionPanel, type VersionRow } from "@/components/api-detail/version-panel";
+import { VersionSwitcher } from "@/components/api-detail/version-switcher";
+import { lineageKeyOf, lineageWhere } from "@/lib/job-versions";
 import {
   buildDeployConfigs,
   buildOpenApiSpec,
@@ -76,6 +79,28 @@ export default async function JobDetailPage({
   const zeroApiCloudUrl = isZeroApiCloud ? job.deployment!.url : null;
   const zeroApiCloudLogs = isZeroApiCloud ? job.deployment!.logs : undefined;
 
+  // All versions of this API (same lineage), newest first, for the version
+  // switcher + Versions tab.
+  const lineageVersions = await prisma.job.findMany({
+    where: lineageWhere(user.id, lineageKeyOf(job)),
+    orderBy: { version: "desc" },
+    select: {
+      id: true,
+      version: true,
+      status: true,
+      createdAt: true,
+      deployment: { select: { status: true, url: true } },
+    },
+  });
+  const versionRows: VersionRow[] = lineageVersions.map((v) => ({
+    id: v.id,
+    version: v.version,
+    status: v.status,
+    createdAt: v.createdAt.toISOString(),
+    deployStatus: v.deployment?.status ?? null,
+    liveUrl: v.deployment?.url ?? null,
+  }));
+
   const spec = readSpec(job.spec);
   const pill = STATUS_PILL[job.status];
   const isReady = job.status === "READY" || job.status === "DEPLOYED";
@@ -118,9 +143,11 @@ export default async function JobDetailPage({
                 <span className="font-serif text-[30px] leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none break-words">
                   {job.name}
                 </span>
-                <span className="rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5 font-mono text-[11px] text-muted">
-                  {version}
-                </span>
+                <VersionSwitcher
+                  versions={versionRows}
+                  currentId={job.id}
+                  currentVersion={job.version}
+                />
                 <span
                   className={
                     "ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] " +
@@ -148,10 +175,10 @@ export default async function JobDetailPage({
                   <ExportButton jobId={job.id} disabled={!isReady} />
                   {isReady && (
                     <Link
-                      href={`/jobs/${job.id}/deploy`}
+                      href={`/jobs/${job.id}?tab=deploy`}
                       className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
                     >
-                      Déployer une nouvelle version
+                      Déployer
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   )}
@@ -192,6 +219,7 @@ export default async function JobDetailPage({
             defaultTab={searchParams?.tab}
             tabs={[
               { id: "overview", label: "Aperçu" },
+              { id: "versions", label: "Versions", n: versionRows.length },
               { id: "endpoints", label: "Endpoints", n: endpointsList.length },
               { id: "models", label: "Ressources", n: spec?.resources.length ?? 0 },
               { id: "database", label: "Base de données" },
@@ -301,6 +329,7 @@ export default async function JobDetailPage({
                   </div>
                 </section>
               ),
+              versions: <VersionPanel versions={versionRows} currentId={job.id} />,
               endpoints: <EndpointsList resources={spec?.resources ?? []} />,
               models: <ModelsList resources={spec?.resources ?? []} />,
               database: job.database ? (

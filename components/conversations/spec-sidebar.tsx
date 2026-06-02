@@ -137,6 +137,20 @@ export function SpecPanel({
     }
   }
 
+  // From a built/deployed API, snapshot the current spec as the next version
+  // (a new DRAFT build) without touching the live one. Reuses save-job, which
+  // creates a fresh version when the linked job is no longer a draft.
+  async function saveNewVersion() {
+    if (!canSave) return;
+    if (
+      !confirm(
+        "Créer une nouvelle version à partir de la spec actuelle ? Elle est ajoutée comme brouillon — la version en ligne reste inchangée jusqu'à ce que tu la déploies.",
+      )
+    )
+      return;
+    await saveJob();
+  }
+
   const isDrawer = variant === "drawer";
 
   return (
@@ -255,12 +269,35 @@ export function SpecPanel({
             {score}%
           </span>
           {jobId ? (
-            <a
-              href={`/jobs/${jobId}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
-            >
-              Voir le job
-            </a>
+            <>
+              <button
+                type="button"
+                onClick={saveNewVersion}
+                disabled={!canSave}
+                title={
+                  canSave
+                    ? "Créer une nouvelle version à partir de la spec actuelle"
+                    : "Décris au moins une ressource"
+                }
+                className={
+                  "inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition " +
+                  (canSave
+                    ? "bg-accent text-accent-ink hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+                    : "cursor-not-allowed bg-bg-3 text-muted-2")
+                }
+              >
+                <Save className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">
+                  {submitting ? "Création…" : "Nouvelle version"}
+                </span>
+              </button>
+              <a
+                href={`/jobs/${jobId}`}
+                className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
+              >
+                Voir le job
+              </a>
+            </>
           ) : (
             <button
               type="button"

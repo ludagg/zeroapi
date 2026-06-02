@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { readSpec } from "@/lib/job-helpers";
 import { triggerGenerateJob } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
+import { lineageKeyOf, lineageWhere, resolveNextVersion } from "@/lib/job-versions";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
   const user = await getCurrentUser();
@@ -32,12 +34,17 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   }
 
   const job = await prisma.$transaction(async (tx) => {
+    // New version in the same lineage, built from `source`'s spec. Used both by
+    // "Régénérer" and "Revenir à cette version" (revert from an older build).
+    const { lineageId, version } = await resolveNextVersion(tx, user.id, source);
     const created = await tx.job.create({
       data: {
         userId: user.id,
         name: source.name,
         description: source.description,
         status: "PENDING",
+        lineageId,
+        version,
         spec: spec as unknown as object,
         endpoints: countEndpoints(spec),
         estimatedTime: 120,
@@ -52,7 +59,21 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         jobId: created.id,
         agent: "regenerate",
         status: "done",
-        message: `Régénéré depuis ${source.id}`,
+        message: `Version ${version} créée depuis ${source.id} (v${source.version})`,
+      },
+    });
+    // Re-link any conversation pointing at this lineage to the new version, and
+    // set its working spec to the (possibly reverted) source spec so further
+    // edits branch from here.
+    const lineageJobs = await tx.job.findMany({
+      where: lineageWhere(user.id, lineageKeyOf(source)),
+      select: { id: true },
+    });
+    await tx.conversation.updateMany({
+      where: { jobId: { in: lineageJobs.map((j) => j.id) } },
+      data: {
+        jobId: created.id,
+        spec: spec as unknown as Prisma.InputJsonValue,
       },
     });
     return created;
