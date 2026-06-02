@@ -20,6 +20,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 import { Markdown } from "@/components/generate/markdown";
+import { ThinkingIndicator } from "@/components/chat/thinking-indicator";
 import { toast } from "sonner";
 
 type ChatMessage = {
@@ -383,15 +384,15 @@ function Bubble({
 }) {
   if (message.role === "user") {
     return (
-      <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
-        <div className="mt-0.5 grid h-8 w-8 place-items-center rounded-[8px] bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[12px] font-semibold text-accent-ink">
+      <div className="grid animate-fade-in grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
+        <div className="mt-0.5 grid h-8 w-8 place-items-center rounded-[10px] bg-gradient-to-br from-[#2A6FDB] to-accent font-mono text-[12px] font-semibold text-accent-ink shadow-sm ring-1 ring-black/5">
           {userInitials}
         </div>
         <div>
           <div className="mb-2 text-[12.5px] text-muted">
             <b className="font-medium text-ink">Toi</b> · à l&apos;instant
           </div>
-          <div className="rounded-[12px] border border-line bg-bg-2 px-4 py-3.5 text-[15px] leading-snug text-ink">
+          <div className="rounded-[16px] rounded-tl-[5px] border border-line bg-bg-2 px-4 py-3 text-[15px] leading-snug text-ink shadow-sm">
             {message.content}
           </div>
         </div>
@@ -401,12 +402,12 @@ function Bubble({
 
   const empty = message.content.trim().length === 0;
   return (
-    <div className="grid grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
+    <div className="grid animate-fade-in grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
       <BrandMark size={32} className="mt-0.5" />
       <div className="min-w-0">
         <div className="mb-2 flex items-center gap-2 text-[12.5px] text-muted">
           <b className="font-medium text-ink">ZeroAPI</b>
-          {message.streaming && (
+          {message.streaming && !empty && (
             <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2 py-0.5 text-accent-ink">
               <span
                 className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
@@ -422,7 +423,7 @@ function Bubble({
           )}
         </div>
         {empty && message.streaming ? (
-          <DotsIndicator />
+          <ThinkingIndicator />
         ) : (
           <div className="min-w-0 space-y-3 text-[15px] leading-relaxed text-ink-2">
             <Markdown content={message.content} />
@@ -430,22 +431,6 @@ function Bubble({
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function DotsIndicator() {
-  return (
-    <div className="flex gap-1 py-2">
-      <i className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2" />
-      <i
-        className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
-        style={{ animationDelay: ".15s" }}
-      />
-      <i
-        className="block h-1.5 w-1.5 animate-pulse rounded-full bg-muted-2"
-        style={{ animationDelay: ".3s" }}
-      />
     </div>
   );
 }
