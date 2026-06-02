@@ -22,6 +22,7 @@ export default async function ConversationDetailPage({
           id: true,
           name: true,
           status: true,
+          visibility: true,
           spec: true,
           deployment: { select: { status: true } },
         },
@@ -49,7 +50,11 @@ export default async function ConversationDetailPage({
       initialVersion={conv.specVersion}
       initialHistory={historyEntries}
       initialShareSlug={conv.shareSlug ?? null}
-      job={conv.job ? { id: conv.job.id, name: conv.job.name, status: conv.job.status } : null}
+      job={
+        conv.job
+          ? { id: conv.job.id, name: conv.job.name, status: conv.job.status, visibility: conv.job.visibility }
+          : null
+      }
       savedSpec={savedSpec}
       hasActiveDeployment={hasActiveDeployment}
       user={{

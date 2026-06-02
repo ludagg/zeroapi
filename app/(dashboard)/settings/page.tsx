@@ -7,6 +7,7 @@ import { ProfileCard, SettingsCard } from "@/components/settings/profile-card";
 import { PasswordCard } from "@/components/settings/password-card";
 import { NotificationsCard } from "@/components/settings/notifications-card";
 import { ApiKeysCard } from "@/components/settings/api-keys-card";
+import { PublishedTemplatesCard } from "@/components/settings/published-templates-card";
 import { DangerCard } from "@/components/settings/danger-card";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ const PLAN_DESCRIPTION: Record<string, string> = {
 
 export default async function SettingsPage() {
   const user = await requireUser();
-  const [account, apiKeys] = await Promise.all([
+  const [account, apiKeys, publishedTemplates] = await Promise.all([
     prisma.user.findUnique({
       where: { id: user.id },
       select: {
@@ -43,6 +44,11 @@ export default async function SettingsPage() {
         lastUsedAt: true,
         createdAt: true,
       },
+    }),
+    prisma.template.findMany({
+      where: { authorId: user.id, isOfficial: false, visibility: "PUBLIC" },
+      orderBy: { usageCount: "desc" },
+      select: { id: true, title: true, category: true, emoji: true, usageCount: true },
     }),
   ]);
 
@@ -118,6 +124,7 @@ export default async function SettingsPage() {
               }}
             />
             <ApiKeysCard initial={initialKeys} />
+            <PublishedTemplatesCard templates={publishedTemplates} />
             <DangerCard email={account.email} />
           </div>
         </div>

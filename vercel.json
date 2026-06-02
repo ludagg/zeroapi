@@ -1,3 +1,3 @@
 {
-  "buildCommand": "prisma generate && prisma db push --accept-data-loss && pnpm build"
+  "buildCommand": "prisma generate && prisma db push --accept-data-loss && pnpm db:seed-templates && pnpm build"
 }
