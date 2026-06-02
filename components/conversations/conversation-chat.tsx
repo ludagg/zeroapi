@@ -73,6 +73,8 @@ export function ConversationChat({
   initialHistory,
   initialShareSlug,
   job,
+  savedSpec: initialSavedSpec,
+  hasActiveDeployment,
   user,
 }: {
   conversationId: string;
@@ -83,6 +85,10 @@ export function ConversationChat({
   initialHistory: HistoryEntry[];
   initialShareSlug: string | null;
   job: { id: string; name: string; status: JobStatus } | null;
+  /** The job's spec at its last save — used to detect unsaved spec changes. */
+  savedSpec: ZeroAPISpec | null;
+  /** Whether the job currently has a live (online/rolling out) deployment. */
+  hasActiveDeployment: boolean;
   user: { name: string | null; email: string; initials: string };
 }) {
   const router = useRouter();
@@ -91,6 +97,16 @@ export function ConversationChat({
   );
   // Spec lives in state so Kia's edits refresh the right-panel tabs in real time.
   const [spec, setSpec] = useState<ZeroAPISpec | null>(initialSpec);
+  // The spec snapshot of the saved job; bumped after each "Mettre à jour le job".
+  const [savedSpec, setSavedSpec] = useState<ZeroAPISpec | null>(initialSavedSpec);
+  // Set once the user updates a job that still has a live deployment.
+  const [deploymentStale, setDeploymentStale] = useState(false);
+
+  // Called by the right panel after a successful "Mettre à jour le job".
+  function onJobUpdated(updated: ZeroAPISpec, staleDeployment: boolean) {
+    setSavedSpec(updated);
+    if (staleDeployment) setDeploymentStale(true);
+  }
   // Undo/redo + version history (snapshot-based, server-backed).
   const [history, setHistory] = useState<HistoryEntry[]>(initialHistory);
   const [version, setVersion] = useState(initialVersion);
@@ -580,6 +596,10 @@ export function ConversationChat({
         messages={messages.map((m) => ({ role: m.role, content: m.content }))}
         spec={spec}
         jobId={job?.id ?? null}
+        savedSpec={savedSpec}
+        hasActiveDeployment={hasActiveDeployment}
+        deploymentStale={deploymentStale}
+        onJobUpdated={onJobUpdated}
         variant="desktop"
         pending={pending}
         onApplyOperation={applyGraphOperation}
@@ -605,6 +625,10 @@ export function ConversationChat({
           messages={messages.map((m) => ({ role: m.role, content: m.content }))}
           spec={spec}
           jobId={job?.id ?? null}
+          savedSpec={savedSpec}
+          hasActiveDeployment={hasActiveDeployment}
+          deploymentStale={deploymentStale}
+          onJobUpdated={onJobUpdated}
           variant="drawer"
           pending={pending}
           onLaunch={() => setSpecOpen(false)}

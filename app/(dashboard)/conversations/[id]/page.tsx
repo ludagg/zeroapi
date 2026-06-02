@@ -16,13 +16,29 @@ export default async function ConversationDetailPage({
 
   const conv = await prisma.conversation.findFirst({
     where: { id: params.id, userId: user.id },
-    include: { job: { select: { id: true, name: true, status: true } } },
+    include: {
+      job: {
+        select: {
+          id: true,
+          name: true,
+          status: true,
+          spec: true,
+          deployment: { select: { status: true } },
+        },
+      },
+    },
   });
   if (!conv) notFound();
 
   const messages = parseMessages(conv.messages);
   const spec = readSpec(conv.spec ?? null);
   const historyEntries = historyTimeline(parseHistory(conv.specHistory));
+
+  // The spec as it was at the last save — used to detect unsaved spec changes.
+  const savedSpec = conv.job ? readSpec(conv.job.spec ?? null) : null;
+  // A live deployment exists if the job is online or rolling out.
+  const deployStatus = conv.job?.deployment?.status;
+  const hasActiveDeployment = deployStatus === "ONLINE" || deployStatus === "DEPLOYING";
 
   return (
     <ConversationChat
@@ -33,7 +49,9 @@ export default async function ConversationDetailPage({
       initialVersion={conv.specVersion}
       initialHistory={historyEntries}
       initialShareSlug={conv.shareSlug ?? null}
-      job={conv.job ?? null}
+      job={conv.job ? { id: conv.job.id, name: conv.job.name, status: conv.job.status } : null}
+      savedSpec={savedSpec}
+      hasActiveDeployment={hasActiveDeployment}
       user={{
         name: user.name,
         email: user.email,

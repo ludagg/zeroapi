@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
+  AlertTriangle,
   Check,
   FileJson,
   FileText,
@@ -16,6 +17,8 @@ import {
   Loader2,
   Lock,
   Redo2,
+  RefreshCw,
+  Rocket,
   Save,
   Wrench,
   Search,
@@ -62,6 +65,28 @@ const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
 ];
 
 /**
+ * Order-insensitive structural equality for two specs. Keys are sorted before
+ * stringifying so a re-serialised spec (e.g. from the DB) compares equal to the
+ * live one when nothing actually changed.
+ */
+function specsEqual(a: ZeroAPISpec, b: ZeroAPISpec): boolean {
+  return stableStringify(a) === stableStringify(b);
+}
+
+function stableStringify(value: unknown): string {
+  if (value === null || typeof value !== "object") return JSON.stringify(value);
+  if (Array.isArray(value)) return "[" + value.map(stableStringify).join(",") + "]";
+  const keys = Object.keys(value as Record<string, unknown>).sort();
+  return (
+    "{" +
+    keys
+      .map((k) => JSON.stringify(k) + ":" + stableStringify((value as Record<string, unknown>)[k]))
+      .join(",") +
+    "}"
+  );
+}
+
+/**
  * Right panel of the conversation view — now organised in tabs:
  *   • Résumé    — confidence %, security, extras, generate button (existing).
  *   • Spec      — the formatted spec JSON.
@@ -74,6 +99,10 @@ export function SpecPanel({
   messages,
   spec,
   jobId,
+  savedSpec = null,
+  hasActiveDeployment = false,
+  deploymentStale = false,
+  onJobUpdated,
   variant,
   onLaunch,
   pending,
@@ -90,6 +119,14 @@ export function SpecPanel({
   messages: ChatMessage[];
   spec: ZeroAPISpec | null;
   jobId: string | null;
+  /** The spec as it was at the job's last save (null when no job yet). */
+  savedSpec?: ZeroAPISpec | null;
+  /** Whether the linked job currently has a live deployment. */
+  hasActiveDeployment?: boolean;
+  /** True after updating a job whose deployment is now out of date. */
+  deploymentStale?: boolean;
+  /** Called after a successful "Mettre à jour le job". */
+  onJobUpdated?: (updated: ZeroAPISpec, staleDeployment: boolean) => void;
   variant: "desktop" | "drawer";
   onLaunch?: () => void;
   pending?: boolean;
@@ -105,6 +142,7 @@ export function SpecPanel({
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [updating, setUpdating] = useState(false);
   // The graph is the hero of this panel — open on it by default.
   const [tab, setTab] = useState<TabKey>("graph");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -114,6 +152,14 @@ export function SpecPanel({
   const tone = confidenceTone(score);
   const resourceCount = spec?.resources.length ?? 0;
   const canSave = resourceCount > 0 && !submitting && !pending;
+
+  // The live spec drifts from the saved job whenever Kia edits it post-save.
+  // When that happens, "Sauvegarder" becomes "Mettre à jour" (a new version).
+  const specChanged = useMemo(
+    () => Boolean(jobId && savedSpec && spec && !specsEqual(spec, savedSpec)),
+    [jobId, savedSpec, spec],
+  );
+  const canUpdate = specChanged && !updating && !pending;
 
   // Promote the live conversation spec to a DRAFT job (no generation yet).
   async function saveJob() {
@@ -134,6 +180,27 @@ export function SpecPanel({
       toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  // Push the current spec onto the existing job as a new version (no re-deploy).
+  async function updateJob() {
+    if (!canUpdate || !spec) return;
+    setUpdating(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/save-job`, {
+        method: "PATCH",
+      });
+      const data = (await res.json()) as { hasActiveDeployment?: boolean; error?: string };
+      if (!res.ok) {
+        throw new Error(data.error ?? "Mise à jour impossible.");
+      }
+      toast.success("Job mis à jour.");
+      onJobUpdated?.(spec, Boolean(data.hasActiveDeployment));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+    } finally {
+      setUpdating(false);
     }
   }
 
@@ -254,14 +321,7 @@ export function SpecPanel({
             />
             {score}%
           </span>
-          {jobId ? (
-            <a
-              href={`/jobs/${jobId}`}
-              className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
-            >
-              Voir le job
-            </a>
-          ) : (
+          {!jobId ? (
             <button
               type="button"
               onClick={saveJob}
@@ -277,9 +337,64 @@ export function SpecPanel({
               <Save className="h-3.5 w-3.5" />
               <span className="hidden sm:inline">{submitting ? "Sauvegarde…" : "Sauvegarder le job"}</span>
             </button>
+          ) : specChanged ? (
+            <button
+              type="button"
+              onClick={updateJob}
+              disabled={!canUpdate}
+              title="Mettre à jour le job avec la version courante"
+              className={
+                "relative inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition " +
+                (canUpdate
+                  ? "bg-accent text-accent-ink hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+                  : "cursor-not-allowed bg-bg-3 text-muted-2")
+              }
+            >
+              {updating ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              <span className="hidden sm:inline">{updating ? "Mise à jour…" : "Mettre à jour le job"}</span>
+              {/* Unsaved-changes indicator: pulsing dot on the button corner. */}
+              {!updating && (
+                <span
+                  aria-hidden
+                  className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-warn ring-2 ring-bg-2"
+                  style={{ boxShadow: "0 0 0 3px var(--warn-soft)" }}
+                />
+              )}
+            </button>
+          ) : (
+            <a
+              href={`/jobs/${jobId}`}
+              className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
+            >
+              Voir le job
+            </a>
           )}
         </div>
       </div>
+
+      {/* Post-update notice: the live deployment no longer matches this spec. */}
+      {deploymentStale && jobId && (
+        <div className="flex items-start gap-2 border-b border-warn/30 bg-warn-soft/40 px-3 py-2.5">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-warn-ink" />
+          <div className="min-w-0 flex-1">
+            <p className="text-[12px] leading-snug text-ink-2">
+              Ton déploiement n&apos;est plus à jour avec cette version. Redéploie pour appliquer
+              les changements.
+            </p>
+            <a
+              href={`/jobs/${jobId}`}
+              className="mt-1.5 inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-2.5 text-[11.5px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
+            >
+              <Rocket className="h-3 w-3" />
+              Redéployer
+            </a>
+          </div>
+        </div>
+      )}
 
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {tab === "graph" ? (
