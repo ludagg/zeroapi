@@ -57,3 +57,49 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
 
   return NextResponse.json({ jobId: job.id });
 }
+
+/**
+ * Update the spec of an already-saved job with the current conversation spec —
+ * a new "version" of the job. This does NOT re-deploy: it only refreshes the
+ * stored spec so the job page reflects the latest design.
+ *
+ * Returns `hasActiveDeployment` so the client can warn the user that the live
+ * deployment is now out of date with this version (and offer to redeploy).
+ */
+export async function PATCH(_req: Request, { params }: { params: { id: string } }) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
+
+  const conv = await prisma.conversation.findFirst({
+    where: { id: params.id, userId: user.id },
+    include: { job: { include: { deployment: { select: { status: true } } } } },
+  });
+  if (!conv) return NextResponse.json({ error: "Conversation introuvable." }, { status: 404 });
+  if (!conv.job) {
+    return NextResponse.json({ error: "Aucun job à mettre à jour." }, { status: 400 });
+  }
+
+  const spec = readSpec(conv.spec ?? null);
+  if (!spec || spec.resources.length === 0) {
+    return NextResponse.json(
+      { error: "Décris au moins une ressource avant de mettre à jour le job." },
+      { status: 400 },
+    );
+  }
+
+  await prisma.job.update({
+    where: { id: conv.job.id },
+    data: {
+      description: spec.description ?? "",
+      spec: spec as unknown as object,
+      endpoints: countEndpoints(spec),
+    },
+  });
+
+  // A deployment is "active" once it's live (ONLINE) or in the middle of rolling
+  // out (DEPLOYING) — in both cases the running code no longer matches the spec.
+  const status = conv.job.deployment?.status;
+  const hasActiveDeployment = status === "ONLINE" || status === "DEPLOYING";
+
+  return NextResponse.json({ jobId: conv.job.id, hasActiveDeployment });
+}
