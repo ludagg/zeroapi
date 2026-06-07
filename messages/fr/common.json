@@ -31,5 +31,17 @@
     "label": "Thème",
     "light": "Clair",
     "dark": "Sombre"
+  },
+  "error": {
+    "title": "Une erreur est survenue",
+    "description": "Quelque chose s'est mal passé de notre côté. Tu peux réessayer ; si le problème persiste, reviens un peu plus tard.",
+    "retry": "Réessayer",
+    "home": "Retour à l'accueil",
+    "digest": "Référence"
+  },
+  "notFound": {
+    "title": "Page introuvable",
+    "description": "Cette page n'existe pas ou a été déplacée.",
+    "home": "Retour à l'accueil"
   }
 }

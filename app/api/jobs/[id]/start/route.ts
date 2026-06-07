@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { readSpec } from "@/lib/job-helpers";
-import { triggerGenerateJob } from "@/lib/jobs";
+import { triggerGenerateJob, markJobDispatchFailed } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
 
@@ -40,18 +40,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   try {
     await triggerGenerateJob({ jobId: job.id, spec });
   } catch (err) {
-    await prisma.job
-      .update({
-        where: { id: job.id },
-        data: {
-          status: "FAILED",
-          errorMessage:
-            "Impossible de déclencher la génération (Trigger.dev): " +
-            (err instanceof Error ? err.message : String(err)),
-          completedAt: new Date(),
-        },
-      })
-      .catch(() => undefined);
+    await markJobDispatchFailed(job.id, err);
     return NextResponse.json(
       { error: "La génération n'a pas pu être déclenchée. Réessaie dans un instant." },
       { status: 502 },

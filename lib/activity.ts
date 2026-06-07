@@ -2,6 +2,7 @@ import type { ActivityKind, ActivitySeverity } from "@prisma/client";
 import { prisma } from "./prisma";
 import { getTelegramConfig, type TelegramTriggers } from "./app-settings";
 import { escapeTelegram, sendTelegramMessage } from "./telegram";
+import { captureException } from "./observability";
 
 /**
  * Unified activity + security logger. Writes to the ActivityLog table and,
@@ -132,6 +133,7 @@ export async function logActivity(input: LogInput): Promise<void> {
     });
   } catch (err) {
     console.warn("[activity] failed to persist event:", err);
+    captureException(err, { scope: "activity.persist", type: input.type });
   }
 
   const category =

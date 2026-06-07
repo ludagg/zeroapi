@@ -1,3 +1,9 @@
 {
-  "buildCommand": "prisma generate && prisma db push --accept-data-loss && pnpm db:seed-templates && pnpm build"
+  "buildCommand": "prisma generate && prisma db push --accept-data-loss && pnpm db:seed-templates && pnpm build",
+  "crons": [
+    {
+      "path": "/api/cron/watchdog",
+      "schedule": "*/15 * * * *"
+    }
+  ]
 }

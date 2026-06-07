@@ -11,7 +11,7 @@ import {
   type ConversationMessage,
 } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
-import { triggerGenerateJob } from "@/lib/jobs";
+import { triggerGenerateJob, markJobDispatchFailed } from "@/lib/jobs";
 import { rateLimit } from "@/lib/rate-limit";
 import { logActivity, requestMeta } from "@/lib/activity";
 
@@ -151,10 +151,6 @@ export async function POST(req: Request) {
         estimatedTime: 120,
       },
     });
-    await tx.user.update({
-      where: { id: user.id },
-      data: { generationsUsed: { increment: 1 } },
-    });
     if (specGenInfo) {
       await tx.agentLog.create({
         data: {
@@ -173,19 +169,9 @@ export async function POST(req: Request) {
     await triggerGenerateJob({ jobId: job.id, spec });
   } catch (err) {
     // Trigger.dev dispatch failed — surface a 502 to the client and mark
-    // the job FAILED so it doesn't sit in PENDING forever.
-    await prisma.job
-      .update({
-        where: { id: job.id },
-        data: {
-          status: "FAILED",
-          errorMessage:
-            "Impossible de déclencher la génération (Trigger.dev): " +
-            (err instanceof Error ? err.message : String(err)),
-          completedAt: new Date(),
-        },
-      })
-      .catch(() => undefined);
+    // the job FAILED so it doesn't sit in PENDING forever. The generation
+    // quota is NOT consumed (we only charge once the dispatch is confirmed).
+    await markJobDispatchFailed(job.id, err);
     return NextResponse.json(
       {
         error: "La génération n'a pas pu être déclenchée. Réessaie dans un instant.",
@@ -194,6 +180,12 @@ export async function POST(req: Request) {
       { status: 502 },
     );
   }
+
+  // Generation actually dispatched — consume the quota now.
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { generationsUsed: { increment: 1 } },
+  });
 
   return NextResponse.json({ jobId: job.id });
 }

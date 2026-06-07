@@ -26,6 +26,7 @@ import {
   type DeploymentLogEntry,
 } from "@/lib/deployment-logs";
 import { logActivity } from "@/lib/activity";
+import { captureException } from "@/lib/observability";
 
 export const dynamic = "force-dynamic";
 
@@ -283,6 +284,7 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       message,
       fieldErrors,
     });
+    captureException(err, { jobId: job.id, phase: "deploy" });
     logs = appendLog(logs, `Échec du déploiement : ${message}`, "error");
     await prisma.deployment.update({
       where: { id: deployment.id },

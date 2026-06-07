@@ -31,5 +31,17 @@
     "label": "Theme",
     "light": "Light",
     "dark": "Dark"
+  },
+  "error": {
+    "title": "Something went wrong",
+    "description": "An error occurred on our end. You can try again; if it keeps happening, please come back a little later.",
+    "retry": "Try again",
+    "home": "Back to home",
+    "digest": "Reference"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "This page doesn't exist or has been moved.",
+    "home": "Back to home"
   }
 }

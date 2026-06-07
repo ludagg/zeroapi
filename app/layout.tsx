@@ -3,6 +3,7 @@ import { Instrument_Serif, JetBrains_Mono, Space_Grotesk } from "next/font/googl
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SentryClientInit } from "@/components/sentry-client-init";
 import { Toaster } from "sonner";
 import "./globals.css";
 
@@ -56,6 +57,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     >
       <body>
         <NextIntlClientProvider locale={locale} messages={messages}>
+          <SentryClientInit />
           <ThemeProvider>{children}</ThemeProvider>
           <Toaster position="top-right" richColors closeButton />
         </NextIntlClientProvider>

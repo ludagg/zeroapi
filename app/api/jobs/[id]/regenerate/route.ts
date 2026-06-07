@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { readSpec } from "@/lib/job-helpers";
-import { triggerGenerateJob } from "@/lib/jobs";
+import { triggerGenerateJob, markJobDispatchFailed } from "@/lib/jobs";
 import { countEndpoints } from "@/lib/spec";
 
 export async function POST(_req: Request, { params }: { params: { id: string } }) {
@@ -43,10 +43,6 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
         estimatedTime: 120,
       },
     });
-    await tx.user.update({
-      where: { id: user.id },
-      data: { generationsUsed: { increment: 1 } },
-    });
     await tx.agentLog.create({
       data: {
         jobId: created.id,
@@ -61,23 +57,18 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
   try {
     await triggerGenerateJob({ jobId: job.id, spec });
   } catch (err) {
-    await prisma.job
-      .update({
-        where: { id: job.id },
-        data: {
-          status: "FAILED",
-          errorMessage:
-            "Impossible de déclencher la régénération (Trigger.dev): " +
-            (err instanceof Error ? err.message : String(err)),
-          completedAt: new Date(),
-        },
-      })
-      .catch(() => undefined);
+    await markJobDispatchFailed(job.id, err, "régénération");
     return NextResponse.json(
       { error: "La régénération n'a pas pu être déclenchée. Réessaie dans un instant." },
       { status: 502 },
     );
   }
+
+  // Regeneration actually dispatched — consume the quota now (not before).
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { generationsUsed: { increment: 1 } },
+  });
 
   return NextResponse.json({ jobId: job.id });
 }
