@@ -7,6 +7,7 @@ import { JobsSearch } from "@/components/dashboard/jobs-search";
 import { JobsPagination } from "@/components/dashboard/jobs-pagination";
 import { JobFilters } from "@/components/dashboard/job-filters";
 import { extractAuthMode, extractVersion, pickEmoji } from "@/lib/job-helpers";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function JobsPage({
 }: {
   searchParams: { q?: string; status?: string; page?: string };
 }) {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
   const q = (searchParams.q ?? "").trim();
   const statusKey = searchParams.status ?? "all";
@@ -80,19 +82,21 @@ export default async function JobsPage({
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Jobs" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.jobs") },
         ]}
       />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
           <header className="mb-6">
             <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-              Tous tes <em className="italic">jobs</em>.
+              {t("jobs.pageTitle")}
             </h1>
             <p className="mt-2 text-muted">
-              {allCount} job{allCount > 1 ? "s" : ""} au total
-              {q && ` · ${total} résultat${total > 1 ? "s" : ""} pour « ${q} »`}
+              {allCount > 1 ? t("jobs.totalPlural", { count: allCount }) : t("jobs.total", { count: allCount })}
+              {q && (total > 1
+                ? t("jobs.searchResultsPlural", { count: total, q })
+                : t("jobs.searchResults", { count: total, q }))}
             </p>
           </header>
 
@@ -100,10 +104,10 @@ export default async function JobsPage({
             <JobsSearch />
             <JobFilters
               filters={[
-                { id: "all", label: "Tous", n: allCount },
-                { id: "running", label: "En cours", n: countByStatus(["PENDING", "RUNNING"]) },
-                { id: "ready", label: "Prêts", n: countByStatus(["READY", "DEPLOYED"]) },
-                { id: "failed", label: "Échoués", n: countByStatus(["FAILED"]) },
+                { id: "all", label: t("jobs.filters.all"), n: allCount },
+                { id: "running", label: t("jobs.filters.running"), n: countByStatus(["PENDING", "RUNNING"]) },
+                { id: "ready", label: t("jobs.filters.ready"), n: countByStatus(["READY", "DEPLOYED"]) },
+                { id: "failed", label: t("jobs.filters.failed"), n: countByStatus(["FAILED"]) },
               ]}
             />
           </div>

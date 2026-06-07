@@ -1,17 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
-const LINES = [
-  { t: "Kia › Qui gère les stocks : un seul\n", c: "muted" },
-  { t: "admin, ou un rôle par entrepôt ?\n", c: "muted" },
-  { t: "Toi › Un rôle par entrepôt, et un\n", c: "ink" },
-  { t: "super-admin qui voit tout.\n", c: "ink" },
-  { t: "Kia › Noté. RBAC à 2 niveaux ✓", c: "muted" },
-];
-
-function useStepTypewriter() {
+function useStepTypewriter(lines: string[]) {
   const [buf, setBuf] = useState("");
   const stateRef = useRef({ li: 0, ci: 0, buf: "" });
 
@@ -19,7 +12,7 @@ function useStepTypewriter() {
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
       const s = stateRef.current;
-      if (s.li >= LINES.length) {
+      if (s.li >= lines.length) {
         timer = setTimeout(() => {
           s.buf = "";
           s.li = 0;
@@ -29,9 +22,9 @@ function useStepTypewriter() {
         }, 3500);
         return;
       }
-      const line = LINES[s.li];
-      if (s.ci < line.t.length) {
-        s.buf += line.t[s.ci];
+      const line = lines[s.li];
+      if (s.ci < line.length) {
+        s.buf += line[s.ci];
         s.ci += 1;
         setBuf(s.buf);
         timer = setTimeout(tick, 18 + Math.random() * 30);
@@ -43,43 +36,38 @@ function useStepTypewriter() {
     };
     timer = setTimeout(tick, 500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [lines]);
 
   return buf;
 }
 
 export function HowItWorks() {
-  const typed = useStepTypewriter();
+  const t = useTranslations("landing.howItWorks");
+
+  const lines = useMemo(
+    () => [`${t("convo.kiaQ")}\n`, `${t("convo.userA")}\n`, t("convo.kiaOk")],
+    [t],
+  );
+  const typed = useStepTypewriter(lines);
 
   return (
     <section id="produit">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="kicker">Comment ça marche</span>
+          <span className="kicker">{t("kicker")}</span>
           <h2 className="display">
-            Une conversation. <em>Un backend</em> complet.
+            {t("headlineLead")} <em>{t("headlineAccent")}</em> {t("headlineRest")}
           </h2>
-          <p>
-            Pas de formulaire, pas de schéma à dessiner. Tu discutes avec Kia, la spec se
-            construit sous tes yeux, et tu déploies quand tu es prêt.
-          </p>
+          <p>{t("sub")}</p>
         </Reveal>
 
         <div className="steps">
           <Reveal as="div" className="step" delay={0}>
             <div className="step-num">
-              <b>01</b> · Discute
+              <b>01</b> · {t("step1.num")}
             </div>
-            <h3>
-              Décris ton produit,
-              <br />
-              pas ta base de données.
-            </h3>
-            <p>
-              Français, anglais ou pidgin. Kia pose les bonnes questions — rôles,
-              relations, règles métier — et écrit la spec ressource par ressource, en
-              direct dans le chat.
-            </p>
+            <h3>{t("step1.title")}</h3>
+            <p>{t("step1.body")}</p>
             <div className="step-visual step-visual-1">
               <div className="typed">
                 {typed}
@@ -89,23 +77,15 @@ export function HowItWorks() {
           </Reveal>
 
           <Reveal as="div" className="step" delay={120}>
-            <span className="async-note">⏱ asynchrone</span>
+            <span className="async-note">{t("asyncNote")}</span>
             <div className="step-num">
-              <b>02</b> · Génère
+              <b>02</b> · {t("step2.num")}
             </div>
-            <h3>
-              Lance, puis
-              <br />
-              ferme l&apos;onglet.
-            </h3>
-            <p>
-              Multi-IA (Claude, Mistral, Gemini) génère spec, code Hono.js, tests et docs
-              OpenAPI en arrière-plan. Tu reçois une notif — email, push ou Slack — quand
-              c&apos;est prêt.
-            </p>
+            <h3>{t("step2.title")}</h3>
+            <p>{t("step2.body")}</p>
             <div className="step-visual step-visual-2">
               <div className="ring" />
-              <div className="center">~ 2 min</div>
+              <div className="center">{t("ringTime")}</div>
               <div className="badges">
                 <span className="badge">spec</span>
                 <span className="badge">routes</span>
@@ -117,18 +97,10 @@ export function HowItWorks() {
 
           <Reveal as="div" className="step" delay={240}>
             <div className="step-num">
-              <b>03</b> · Teste &amp; déploie
+              <b>03</b> · {t("step3.num")}
             </div>
-            <h3>
-              Playground intégré,
-              <br />
-              puis en ligne.
-            </h3>
-            <p>
-              Teste chaque endpoint dans le navigateur. Déploie sur ZeroAPI Cloud en un
-              clic — ou exporte le repo Git vers Railway, Render, Vercel, Fly.io. Ton
-              code, ta liberté.
-            </p>
+            <h3>{t("step3.title")}</h3>
+            <p>{t("step3.body")}</p>
             <div className="step-visual step-visual-3">
               <div className="target">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

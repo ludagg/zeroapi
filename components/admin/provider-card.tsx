@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
+import { useTranslations } from "next-intl";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { AlertCircle, Check, Eye, EyeOff, Loader2, Plug, Save, Zap } from "lucide-react";
@@ -15,8 +16,8 @@ import {
 import type { ProviderAdminView } from "@/lib/ai-providers";
 
 const schema = z.object({
-  apiKey: z.string().min(8, "Clé trop courte"),
-  model: z.string().min(1, "Modèle requis"),
+  apiKey: z.string().min(8),
+  model: z.string().min(1),
 });
 type Values = z.infer<typeof schema>;
 
@@ -45,6 +46,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
   const [toggling, startToggle] = useTransition();
   const [testState, setTestState] = useState<TestState>({ status: "idle" });
   const [showKey, setShowKey] = useState(false);
+  const t = useTranslations("admin");
 
   const {
     register,
@@ -65,11 +67,11 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
           apiKey: values.apiKey,
           model: values.model,
         });
-        toast.success(`${view.label} sauvegardé.`);
+        toast.success(t("providers.toastSaved", { label: view.label }));
         reset({ apiKey: "", model: values.model });
         setTestState({ status: "idle" });
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Sauvegarde impossible.");
+        toast.error(err instanceof Error ? err.message : t("providers.toastSaveError"));
       }
     });
   }
@@ -77,7 +79,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
   async function onTest() {
     const values = getValues();
     if (!values.apiKey || values.apiKey.length < 8) {
-      toast.error("Saisis une clé API avant de tester.");
+      toast.error(t("providers.toastTestKeyMissing"));
       return;
     }
     setTesting(true);
@@ -97,7 +99,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
       setTestState({
         status: "ko",
         latencyMs: 0,
-        error: err instanceof Error ? err.message : "Test impossible.",
+        error: err instanceof Error ? err.message : t("providers.toastTestError"),
       });
     } finally {
       setTesting(false);
@@ -108,9 +110,9 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
     startToggle(async () => {
       try {
         await setProviderEnabled({ provider: view.provider, enabled: !view.enabled });
-        toast.success(view.enabled ? "Provider désactivé." : "Provider activé.");
+        toast.success(view.enabled ? t("providers.toastDisabled") : t("providers.toastEnabled"));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action impossible.");
+        toast.error(err instanceof Error ? err.message : t("providers.toastActionError"));
       }
     });
   }
@@ -132,12 +134,11 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
             <p className="mt-0.5 font-mono text-[11px] text-muted">
               {view.hasKey ? (
                 <>
-                  Clé : <span className="text-ink-2">{view.keyMask}</span>
-                  {" · "}
-                  source : <span className="text-ink-2">{view.source}</span>
+                  {t("providers.keyMask")}<span className="text-ink-2">{view.keyMask}</span>
+                  {t("providers.keySource")}<span className="text-ink-2">{view.source}</span>
                 </>
               ) : (
-                "Aucune clé enregistrée"
+                t("providers.noKey")
               )}
             </p>
           </div>
@@ -148,20 +149,20 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-3 px-4 py-4">
         <div>
           <label className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
-            Clé API
+            {t("providers.fieldApiKey")}
           </label>
           <div className="relative">
             <input
               type={showKey ? "text" : "password"}
               autoComplete="off"
               spellCheck={false}
-              placeholder={view.hasKey ? "Laisse vide pour conserver" : "sk-…"}
+              placeholder={view.hasKey ? t("providers.fieldApiKeyPlaceholderKeep") : t("providers.fieldApiKeyPlaceholderNew")}
               className="input-base h-10 pr-11 font-mono text-[13px]"
               {...register("apiKey")}
             />
             <button
               type="button"
-              aria-label={showKey ? "Masquer" : "Afficher"}
+              aria-label={showKey ? t("providers.ariaHideKey") : t("providers.ariaShowKey")}
               onClick={() => setShowKey((s) => !s)}
               className="absolute right-1.5 top-1/2 grid h-7 w-7 -translate-y-1/2 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
@@ -169,7 +170,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
             </button>
           </div>
           {errors.apiKey && (
-            <p className="mt-1 text-[11.5px] text-danger">{errors.apiKey.message}</p>
+            <p className="mt-1 text-[11.5px] text-danger">{t("providers.validationKeyTooShort")}</p>
           )}
           <p className="mt-1 font-mono text-[10.5px] text-muted">
             <a
@@ -178,14 +179,14 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
               rel="noreferrer"
               className="underline-offset-2 hover:underline"
             >
-              Récupérer une clé →
+              {t("providers.fieldApiKeyRetrieve")}
             </a>
           </p>
         </div>
 
         <div>
           <label className="mb-1.5 block font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
-            Modèle (défaut : <span className="text-ink-2">{view.defaultModel}</span>)
+            {t("providers.fieldModel")}<span className="text-ink-2">{view.defaultModel}</span>)
           </label>
           <input
             type="text"
@@ -194,7 +195,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
             {...register("model")}
           />
           {errors.model && (
-            <p className="mt-1 text-[11.5px] text-danger">{errors.model.message}</p>
+            <p className="mt-1 text-[11.5px] text-danger">{t("providers.validationModelRequired")}</p>
           )}
         </div>
 
@@ -211,7 +212,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
               <>
                 <Check className="mt-0.5 h-3.5 w-3.5" strokeWidth={3} />
                 <div className="min-w-0">
-                  <div className="font-medium">Connexion réussie · {testState.latencyMs} ms</div>
+                  <div className="font-medium">{t("providers.testOk", { latencyMs: testState.latencyMs })}</div>
                   <div className="mt-0.5 truncate font-mono text-[11.5px] opacity-80">
                     {testState.preview}
                   </div>
@@ -221,7 +222,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
               <>
                 <AlertCircle className="mt-0.5 h-3.5 w-3.5" />
                 <div className="min-w-0">
-                  <div className="font-medium">Échec ({testState.latencyMs} ms)</div>
+                  <div className="font-medium">{t("providers.testFail", { latencyMs: testState.latencyMs })}</div>
                   <div className="mt-0.5 truncate font-mono text-[11.5px] opacity-80">
                     {testState.error}
                   </div>
@@ -240,7 +241,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
               className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12.5px] font-medium text-ink-2 transition hover:border-line-2 disabled:opacity-50"
             >
               {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Zap className="h-3.5 w-3.5" />}
-              {testing ? "Test…" : "Tester la connexion"}
+              {testing ? t("providers.testingBtn") : t("providers.testBtn")}
             </button>
             <button
               type="submit"
@@ -248,7 +249,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
               className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-ink px-3 text-[12.5px] font-medium text-bg transition hover:-translate-y-px disabled:opacity-50"
             >
               {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-              Sauvegarder
+              {t("providers.saveBtn")}
             </button>
           </div>
           <button
@@ -257,10 +258,10 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
             disabled={toggling || (!view.hasKey && !view.enabled)}
             title={
               !view.hasKey && !view.enabled
-                ? "Sauvegarde une clé avant d'activer"
+                ? t("providers.enableHint")
                 : view.enabled
-                  ? "Désactiver"
-                  : "Activer"
+                  ? t("providers.disableBtn")
+                  : t("providers.enableBtn")
             }
             className={cn(
               "inline-flex h-9 items-center gap-1.5 rounded-[9px] border px-3 text-[12.5px] font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
@@ -270,7 +271,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
             )}
           >
             <Plug className="h-3.5 w-3.5" />
-            {view.enabled ? "Désactiver" : "Activer"}
+            {view.enabled ? t("providers.disableBtn") : t("providers.enableBtn")}
           </button>
         </div>
       </form>
@@ -279,6 +280,7 @@ export function ProviderCard({ view }: { view: ProviderAdminView }) {
 }
 
 function StatusPill({ enabled, hasKey }: { enabled: boolean; hasKey: boolean }) {
+  const t = useTranslations("admin");
   if (enabled) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-accent-soft px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em] text-accent-ink">
@@ -286,20 +288,20 @@ function StatusPill({ enabled, hasKey }: { enabled: boolean; hasKey: boolean }) 
           className="h-1.5 w-1.5 rounded-full bg-accent"
           style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
         />
-        Connecté
+        {t("providers.statusConnected")}
       </span>
     );
   }
   if (!hasKey) {
     return (
       <span className="rounded-full border border-dashed border-line-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em] text-muted">
-        Non configuré
+        {t("providers.statusNotConfigured")}
       </span>
     );
   }
   return (
     <span className="rounded-full bg-bg-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-[0.04em] text-muted">
-      Inactif
+      {t("providers.statusInactive")}
     </span>
   );
 }

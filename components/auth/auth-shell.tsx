@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { BrandMark } from "@/components/brand-mark";
 
@@ -10,6 +11,7 @@ export function AuthShell({
   children: React.ReactNode;
   panel: React.ReactNode;
 }) {
+  const t = useTranslations("auth");
   return (
     <div className="grid min-h-screen grid-cols-1 lg:grid-cols-2">
       <div className="relative flex min-h-screen flex-col bg-bg px-5 py-6 sm:px-8 sm:py-7">
@@ -23,11 +25,11 @@ export function AuthShell({
           <div className="flex items-center gap-1.5">
             <Link
               href="/"
-              aria-label="Retour au site"
+              aria-label={t("shell.backToSite")}
               className="inline-flex items-center gap-1.5 rounded-[8px] px-2.5 py-2 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
               <ArrowLeft className="h-3 w-3" />
-              <span className="hidden sm:inline">Retour au site</span>
+              <span className="hidden sm:inline">{t("shell.backToSite")}</span>
             </Link>
             <ThemeToggle />
           </div>
@@ -38,14 +40,14 @@ export function AuthShell({
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 font-mono text-[11px] text-muted sm:text-[12px]">
-          <span>© 2026 ZeroAPI</span>
+          <span>{t("shell.copyright")}</span>
           <span>
             <Link href="/privacy" className="transition hover:text-ink">
-              Confidentialité
+              {t("shell.privacy")}
             </Link>
             {" · "}
             <Link href="/terms" className="transition hover:text-ink">
-              Conditions
+              {t("shell.terms")}
             </Link>
           </span>
         </div>
@@ -76,7 +78,7 @@ export function AuthShell({
                 className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
                 style={{ boxShadow: "0 0 0 4px rgba(16,240,131,.18)" }}
               />
-              Tous les systèmes opérationnels
+              {t("shell.systemStatus")}
             </span>
           </div>
 

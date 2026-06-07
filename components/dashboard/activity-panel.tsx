@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Check, ServerCrash } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { formatRelativeTime } from "@/lib/utils";
 import type { JobStatus } from "@prisma/client";
 
@@ -14,19 +15,20 @@ type ActivityItem = {
 };
 
 export function ActivityPanel({ items }: { items: ActivityItem[] }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
       <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
-        <h3 className="flex items-center gap-2 text-[14px] font-semibold">Activité récente</h3>
+        <h3 className="flex items-center gap-2 text-[14px] font-semibold">{t("activity.title")}</h3>
         <Link href="/jobs" className="text-[12px] text-muted transition hover:text-ink">
-          Tout voir →
+          {t("activity.viewAll")}
         </Link>
       </div>
 
       <div className="py-2">
         {items.length === 0 && (
           <div className="px-4 py-8 text-center text-[13px] text-muted">
-            Pas d&apos;activité pour le moment.
+            {t("activity.empty")}
           </div>
         )}
 
@@ -98,29 +100,32 @@ function ActivityText({
   tests: number | null;
   endpoints: number | null;
 }) {
+  const t = useTranslations("dashboard");
   if (status === "READY")
     return (
       <>
-        <b className="font-semibold">{name}</b> est prêt à déployer
-        {tests !== null ? ` · ${tests}% de couverture de tests` : ""}.
+        {tests !== null
+          ? t.rich("activity.readyTests", { name, tests, b: (c) => <b className="font-semibold">{c}</b> })
+          : t.rich("activity.ready", { name, b: (c) => <b className="font-semibold">{c}</b> })}
       </>
     );
   if (status === "DEPLOYED")
     return (
       <>
-        <b className="font-semibold">{name}</b> est en ligne
-        {endpoints ? ` · ${endpoints} endpoints exposés` : ""}.
+        {endpoints
+          ? t.rich("activity.deployedEndpoints", { name, endpoints, b: (c) => <b className="font-semibold">{c}</b> })
+          : t.rich("activity.deployed", { name, b: (c) => <b className="font-semibold">{c}</b> })}
       </>
     );
   if (status === "FAILED")
     return (
       <>
-        Échec de génération sur <b className="font-semibold">{name}</b>. Vérifie les logs.
+        {t.rich("activity.failed", { name, b: (c) => <b className="font-semibold">{c}</b> })}
       </>
     );
   return (
     <>
-      Activité sur <b className="font-semibold">{name}</b>.
+      {t.rich("activity.other", { name, b: (c) => <b className="font-semibold">{c}</b> })}
     </>
   );
 }

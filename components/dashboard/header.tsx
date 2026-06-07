@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Bell, Menu, Plus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useDashboardShell } from "@/components/dashboard/shell";
 
@@ -14,6 +15,7 @@ export function DashboardHeader({
   crumbs: Crumb[];
   unread?: number;
 }) {
+  const t = useTranslations("dashboard");
   const shell = useDashboardShell();
 
   return (
@@ -21,7 +23,7 @@ export function DashboardHeader({
       {shell && (
         <button
           type="button"
-          aria-label="Ouvrir le menu"
+          aria-label={t("header.openMenu")}
           onClick={shell.openSidebar}
           className="grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-[9px] border border-line bg-surface text-ink-2 transition hover:border-line-2 lg:hidden"
         >
@@ -31,7 +33,7 @@ export function DashboardHeader({
 
       <nav
         className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto text-[13px] scrollbar-thin"
-        aria-label="Fil d'Ariane"
+        aria-label={t("header.breadcrumbLabel")}
       >
         {crumbs.map((c, i) => {
           const isLast = i === crumbs.length - 1;
@@ -54,7 +56,7 @@ export function DashboardHeader({
 
       <div className="flex flex-shrink-0 items-center gap-2">
         <button
-          aria-label="Notifications"
+          aria-label={t("header.notifications")}
           className="relative grid h-[34px] w-[34px] place-items-center rounded-[9px] border border-line bg-surface text-ink-2 transition hover:-translate-y-px hover:border-line-2"
         >
           <Bell className="h-[15px] w-[15px]" />
@@ -71,8 +73,8 @@ export function DashboardHeader({
           className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-accent px-3 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] sm:px-3.5"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />
-          <span className="hidden sm:inline">Nouvelle API</span>
-          <span className="sm:hidden">Nouvelle</span>
+          <span className="hidden sm:inline">{t("header.newApi")}</span>
+          <span className="sm:hidden">{t("header.newApiShort")}</span>
         </Link>
       </div>
     </header>

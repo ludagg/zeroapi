@@ -4,9 +4,11 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ChevronDown, Sparkles, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { TEMPLATES, type Template } from "@/lib/templates";
 
 export function NewConversationBox() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState("");
@@ -32,11 +34,11 @@ export function NewConversationBox() {
       });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) {
-        throw new Error(data.error ?? "Création impossible.");
+        throw new Error(data.error ?? t("conversations.newBox.errorCreate"));
       }
       router.push(`/conversations/${data.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.newBox.errorRetry"));
       setSubmitting(false);
     }
   }
@@ -68,10 +70,10 @@ export function NewConversationBox() {
         </div>
         <div className="min-w-0 flex-1">
           <div className="font-serif text-[22px] leading-tight">
-            Démarre une <em className="italic">nouvelle conversation</em>.
+            {t.rich("conversations.newBox.title", { em: (chunks) => <em className="italic">{chunks}</em> })}
           </div>
           <div className="mt-0.5 text-[13px] text-white/65">
-            Décris ton API en quelques phrases, ou choisis un template.
+            {t("conversations.newBox.subtitle")}
           </div>
         </div>
       </div>
@@ -90,7 +92,7 @@ export function NewConversationBox() {
               if (canSubmit) void submit();
             }
           }}
-          placeholder="Ex : API de gestion de pharmacie avec stock, ordonnances et paiement Wave…"
+          placeholder={t("conversations.newBox.placeholder")}
           rows={1}
           disabled={submitting}
           className="block min-h-12 w-full resize-none rounded-t-[12px] border-0 bg-transparent px-4 pb-1.5 pt-3.5 text-[15px] leading-snug text-bg outline-none placeholder:text-white/40"
@@ -103,7 +105,7 @@ export function NewConversationBox() {
               className="inline-flex h-9 items-center gap-2 rounded-[8px] border border-white/[0.14] bg-white/[0.08] px-3 text-[13px] font-medium text-bg transition hover:bg-white/[0.14]"
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Templates
+              {t("conversations.newBox.templates")}
               <ChevronDown
                 className={
                   "h-3 w-3 transition " + (templatesOpen ? "rotate-180" : "rotate-0")
@@ -118,17 +120,17 @@ export function NewConversationBox() {
                   aria-hidden
                 />
                 <div className="absolute bottom-full left-0 z-30 mb-2 w-[340px] max-h-[60vh] overflow-y-auto rounded-[10px] border border-line bg-surface text-ink shadow-xl scrollbar-thin">
-                  {TEMPLATES.map((t) => (
+                  {TEMPLATES.map((tmpl) => (
                     <button
-                      key={t.id}
+                      key={tmpl.id}
                       type="button"
-                      onClick={() => useTemplate(t)}
+                      onClick={() => useTemplate(tmpl)}
                       className="flex w-full items-start gap-3 border-b border-line px-3.5 py-3 text-left transition hover:bg-bg-2 last:border-b-0"
                     >
-                      <span className="mt-0.5 text-[18px] leading-none">{t.emoji}</span>
+                      <span className="mt-0.5 text-[18px] leading-none">{tmpl.emoji}</span>
                       <span className="flex min-w-0 flex-col gap-1">
-                        <span className="text-[13.5px] font-medium">{t.name}</span>
-                        <span className="line-clamp-2 text-[12px] text-muted">{t.prompt}</span>
+                        <span className="text-[13.5px] font-medium">{tmpl.name}</span>
+                        <span className="line-clamp-2 text-[12px] text-muted">{tmpl.prompt}</span>
                       </span>
                     </button>
                   ))}
@@ -143,7 +145,7 @@ export function NewConversationBox() {
             disabled={!canSubmit}
             className="inline-flex h-9 items-center gap-1.5 rounded-[8px] bg-accent px-4 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
           >
-            {submitting ? "Création…" : "Démarrer"}
+            {submitting ? t("conversations.newBox.creating") : t("conversations.newBox.start")}
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </div>

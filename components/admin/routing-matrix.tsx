@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { Loader2, Save } from "lucide-react";
 import { toast } from "sonner";
 import type { Plan } from "@prisma/client";
@@ -10,11 +11,6 @@ import type { RoutingTask } from "@/lib/llm-routing-config";
 
 type Cell = { current: ProviderId | null; fallback: ProviderId };
 type Matrix = Record<Plan, Record<RoutingTask, Cell>>;
-
-const TASK_LABEL: Record<RoutingTask, string> = {
-  conversation: "Conversation",
-  spec_generation: "Génération de spec",
-};
 
 export function RoutingMatrix({
   matrix,
@@ -37,6 +33,7 @@ export function RoutingMatrix({
     return init;
   });
   const [pending, start] = useTransition();
+  const t = useTranslations("admin");
 
   function update(plan: Plan, task: RoutingTask, provider: ProviderId) {
     setState((s) => ({ ...s, [`${plan}:${task}`]: provider }));
@@ -44,7 +41,7 @@ export function RoutingMatrix({
 
   function onSave() {
     if (providers.length === 0) {
-      toast.error("Active au moins un provider dans AI Providers avant de sauvegarder.");
+      toast.error(t("routing.toastNoProvider"));
       return;
     }
     start(async () => {
@@ -56,9 +53,9 @@ export function RoutingMatrix({
           }
         }
         await saveRouting({ entries });
-        toast.success("Matrice de routage sauvegardée.");
+        toast.success(t("routing.toastSaved"));
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Sauvegarde impossible.");
+        toast.error(err instanceof Error ? err.message : t("routing.toastSaveError"));
       }
     });
   }
@@ -67,17 +64,17 @@ export function RoutingMatrix({
     return (
       <div className="rounded-[14px] border border-dashed border-warn/40 bg-warn-soft p-5">
         <p className="text-[14px] font-medium text-warn-ink">
-          Aucun provider activé pour l&apos;instant.
+          {t("routing.noProviders")}
         </p>
         <p className="mt-1 text-[13px] text-warn-ink/80">
-          Configure et active au moins un provider depuis{" "}
+          {t("routing.noProvidersDesc")}{" "}
           <a
             href="/admin/settings/ai-providers"
             className="font-medium underline underline-offset-2"
           >
-            AI Providers
+            {t("routing.noProvidersLink")}
           </a>{" "}
-          pour pouvoir construire la matrice de routage.
+          {t("routing.noProvidersDescEnd")}
         </p>
       </div>
     );
@@ -89,10 +86,10 @@ export function RoutingMatrix({
         <table className="w-full text-[13.5px]">
           <thead className="bg-bg-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Plan</th>
+              <th className="px-4 py-3 text-left font-medium">{t("routing.colPlan")}</th>
               {tasks.map((task) => (
                 <th key={task} className="px-4 py-3 text-left font-medium">
-                  {TASK_LABEL[task] ?? task}
+                  {t(`routing.tasks.${task}`)}
                 </th>
               ))}
             </tr>
@@ -127,8 +124,8 @@ export function RoutingMatrix({
                       </select>
                       <div className="mt-1 font-mono text-[10.5px] text-muted">
                         {isOverridden
-                          ? "config DB"
-                          : `défaut : ${cell.fallback}`}
+                          ? t("routing.sourceDb")
+                          : t("routing.sourceDefault", { fallback: cell.fallback })}
                       </div>
                     </td>
                   );
@@ -141,8 +138,7 @@ export function RoutingMatrix({
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="font-mono text-[11px] text-muted">
-          Cache de routage : <b className="font-medium text-ink">5 min</b> · invalidé
-          automatiquement à la sauvegarde.
+          {t("routing.cacheNote")}<b className="font-medium text-ink">{t("routing.cacheDuration")}</b>{t("routing.cacheInvalidation")}
         </p>
         <button
           type="button"
@@ -151,7 +147,7 @@ export function RoutingMatrix({
           className="inline-flex h-10 items-center gap-2 rounded-[10px] bg-accent px-4 text-[14px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:opacity-60"
         >
           {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Sauvegarder la matrice
+          {t("routing.saveMatrix")}
         </button>
       </div>
     </>

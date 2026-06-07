@@ -18,6 +18,7 @@ import {
   Users,
   Briefcase,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { BrandMark } from "@/components/brand-mark";
 
@@ -48,6 +49,7 @@ export function Sidebar({
   collapsed = false,
   onToggleCollapse,
 }: SidebarProps) {
+  const t = useTranslations("dashboard");
   const pct = Math.min(
     100,
     Math.round((user.generationsUsed / Math.max(1, user.generationsLimit)) * 100),
@@ -72,8 +74,8 @@ export function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              aria-label="Déplier la navigation"
-              title="Déplier la navigation"
+              aria-label={t("nav.expandNav")}
+              title={t("nav.expandNav")}
               className="grid h-7 w-7 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
               <PanelLeftOpen className="h-4 w-4" />
@@ -97,8 +99,8 @@ export function Sidebar({
             <button
               type="button"
               onClick={onToggleCollapse}
-              aria-label="Réduire la navigation"
-              title="Réduire la navigation"
+              aria-label={t("nav.collapseNav")}
+              title={t("nav.collapseNav")}
               className="grid h-6 w-6 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
               <PanelLeftClose className="h-3.5 w-3.5" />
@@ -111,8 +113,8 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => window.dispatchEvent(new CustomEvent("cmdk:open"))}
-          aria-label="Rechercher"
-          title="Rechercher, sauter à…"
+          aria-label={t("nav.searchAriaLabel")}
+          title={t("nav.searchTitle")}
           className="mx-auto mb-3.5 grid h-9 w-9 place-items-center rounded-[8px] border border-line bg-bg-2 text-muted transition hover:border-line-2 hover:text-ink"
         >
           <Search className="h-3.5 w-3.5" />
@@ -124,7 +126,7 @@ export function Sidebar({
           className="mb-3.5 flex h-[34px] items-center gap-2 rounded-[8px] border border-line bg-bg-2 px-2.5 text-[13px] text-muted transition hover:border-line-2"
         >
           <Search className="h-3.5 w-3.5" />
-          <span>Rechercher, sauter à…</span>
+          <span>{t("nav.searchPlaceholder")}</span>
           <span className="ml-auto rounded-[4px] border border-line bg-surface px-1.5 py-0.5 font-mono text-[10px]">
             ⌘ K
           </span>
@@ -133,40 +135,40 @@ export function Sidebar({
 
       <nav className="mb-5 flex flex-col gap-0.5">
         <NavLink href="/dashboard" icon={<Home />} onNavigate={onNavigate} rail={rail}>
-          Vue d&apos;ensemble
+          {t("nav.overview")}
         </NavLink>
         <NavLink href="/jobs" icon={<Briefcase />} onNavigate={onNavigate} rail={rail}>
-          Jobs
+          {t("nav.jobs")}
         </NavLink>
         <NavLink href="/conversations" icon={<MessagesSquare />} onNavigate={onNavigate} rail={rail}>
-          Conversations
+          {t("nav.conversations")}
         </NavLink>
         <NavLink href="/marketplace" icon={<Store />} onNavigate={onNavigate} rail={rail}>
-          Marketplace
+          {t("nav.marketplace")}
         </NavLink>
         <NavLink href="/apis" icon={<Terminal />} onNavigate={onNavigate} rail={rail}>
-          Playground
+          {t("nav.playground")}
         </NavLink>
         <NavLink href="/deployments" icon={<GitBranch />} onNavigate={onNavigate} rail={rail}>
-          Déploiements
+          {t("nav.deployments")}
         </NavLink>
 
-        <SectionLabel rail={rail}>Équipe</SectionLabel>
+        <SectionLabel rail={rail}>{t("nav.team")}</SectionLabel>
         <NavLink href="/members" icon={<Users />} onNavigate={onNavigate} rail={rail}>
-          Membres
+          {t("nav.members")}
         </NavLink>
         <NavLink href="/discussions" icon={<MessageCircle />} onNavigate={onNavigate} rail={rail}>
-          Discussions
+          {t("nav.discussions")}
         </NavLink>
         <NavLink href="/settings" icon={<Settings />} onNavigate={onNavigate} rail={rail}>
-          Paramètres
+          {t("nav.settings")}
         </NavLink>
 
         {user.role === "ADMIN" && (
           <>
-            <SectionLabel rail={rail}>Plateforme</SectionLabel>
+            <SectionLabel rail={rail}>{t("nav.platform")}</SectionLabel>
             <NavLink href="/admin" icon={<Shield />} onNavigate={onNavigate} rail={rail}>
-              Admin
+              {t("nav.admin")}
             </NavLink>
           </>
         )}
@@ -187,7 +189,7 @@ export function Sidebar({
         <div className="mt-auto flex flex-col gap-3 border-t border-line pt-3">
           <div className="rounded-[10px] border border-line bg-bg-2 p-3">
             <div className="flex justify-between font-mono text-[10px] uppercase tracking-[0.08em] text-muted">
-              <span>Générations</span>
+              <span>{t("nav.generations")}</span>
               <span>
                 <b className="font-medium text-ink">{user.generationsUsed}</b>/{user.generationsLimit}
               </span>
@@ -203,7 +205,7 @@ export function Sidebar({
               onClick={onNavigate}
               className="mt-2.5 inline-block border-b border-accent pb-px text-[12px] font-medium text-ink"
             >
-              Passer Business →
+              {t("nav.upgradeCta")}
             </Link>
           </div>
 

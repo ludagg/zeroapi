@@ -1,25 +1,24 @@
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 export function Features() {
+  const t = useTranslations("landing.features");
   return (
     <section id="usages" style={{ paddingTop: 40 }}>
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="kicker">Ce que ça génère</span>
+          <span className="kicker">{t("kicker")}</span>
           <h2 className="display">
-            Pas des CRUD jouets.
+            {t("headlineLead")}
             <br />
-            <em>Des vrais backends.</em>
+            <em>{t("headlineAccent")}</em>
           </h2>
-          <p>
-            Relations entre tables, transactions atomiques, uploads, rôles — ZeroAPI
-            gère ce que les démos d&apos;IA évitent.
-          </p>
+          <p>{t("sub")}</p>
         </Reveal>
 
         <div className="features">
           <Reveal as="div" className="feat wide" delay={0}>
-            <span className="feat-tag">CORE</span>
+            <span className="feat-tag">{t("core.tag")}</span>
             <div className="feat-icon">
               <svg
                 viewBox="0 0 24 24"
@@ -33,12 +32,8 @@ export function Features() {
                 <path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6" />
               </svg>
             </div>
-            <h3>Backends complexes</h3>
-            <p>
-              Relations 1-N et N-N, transactions atomiques, soft delete, audit trails.
-              Filtrage, tri et pagination cursor sur chaque endpoint — avec une suite
-              Vitest générée par-dessus.
-            </p>
+            <h3>{t("core.title")}</h3>
+            <p>{t("core.body")}</p>
             <div className="mini-code">
               <span className="ln">
                 <span className="c">// auto-généré</span>
@@ -70,7 +65,7 @@ export function Features() {
               className="feat-tag"
               style={{ background: "var(--ink)", color: "var(--bg)" }}
             >
-              SÉCURITÉ
+              {t("security.tag")}
             </span>
             <div className="feat-icon">
               <svg
@@ -84,11 +79,8 @@ export function Features() {
                 <path d="M12 2l9 4v6c0 5-3.5 9.5-9 10-5.5-.5-9-5-9-10V6l9-4z" />
               </svg>
             </div>
-            <h3>Sécurité par défaut</h3>
-            <p>
-              JWT, OAuth (Google, GitHub), rate limiting, validation Zod, échappement
-              anti-XSS et anti-SQLi. Pas une checklist : c&apos;est dans le code généré.
-            </p>
+            <h3>{t("security.title")}</h3>
+            <p>{t("security.body")}</p>
             <div className="mini-code">
               <span className="ln">
                 <span className="k">app</span>.<span className="v">use</span>(
@@ -122,11 +114,8 @@ export function Features() {
                 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <h3>Conversationnel</h3>
-            <p>
-              Kia, l&apos;architecte d&apos;API, dialogue avec toi et construit la spec en
-              direct. Tu ajustes en parlant — pas de JSON à écrire à la main.
-            </p>
+            <h3>{t("conversational.title")}</h3>
+            <p>{t("conversational.body")}</p>
           </Reveal>
 
           <Reveal as="div" className="feat" delay={80}>
@@ -143,11 +132,8 @@ export function Features() {
                 <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
               </svg>
             </div>
-            <h3>Multi-IA</h3>
-            <p>
-              Routage intelligent entre Claude, Mistral et Gemini selon ton plan, avec
-              bascule automatique en cas de panne. Jamais bloqué sur un seul fournisseur.
-            </p>
+            <h3>{t("multiAI.title")}</h3>
+            <p>{t("multiAI.body")}</p>
           </Reveal>
 
           <Reveal as="div" className="feat" delay={160}>
@@ -163,11 +149,8 @@ export function Features() {
                 <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
               </svg>
             </div>
-            <h3>Dev Mode</h3>
-            <p>
-              Exporte depuis la spec en direct : OpenAPI 3.1, SDK TypeScript, collection
-              Postman, schéma Prisma, diagramme ER Mermaid et bundle ZIP complet.
-            </p>
+            <h3>{t("devMode.title")}</h3>
+            <p>{t("devMode.body")}</p>
           </Reveal>
         </div>
       </div>

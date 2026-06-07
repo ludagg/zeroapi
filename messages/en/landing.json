@@ -1,0 +1,375 @@
+{
+  "nav": {
+    "product": "Product",
+    "marketplace": "Marketplace",
+    "playground": "Playground",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "openMenu": "Open menu",
+    "mainNav": "Main navigation",
+    "mobileNav": "Mobile navigation",
+    "menuLabel": "Main menu"
+  },
+  "hero": {
+    "kicker": "Conversational generation · multi-AI",
+    "headlineLead": "Talk to",
+    "headlineName": "Kia",
+    "headlineRest": "Your backend",
+    "headlineAccent": "writes itself",
+    "lede": "ZeroAPI is a conversation with Kia, your API architect. You describe your product in French or English — she asks the right questions, builds the spec live, then generates a complete Hono.js API: code, tests, docs, SDK.",
+    "conversationLabel": "Conversation with Kia",
+    "threadHeader": "generate · conversation with Kia",
+    "composerDone": "Describe what's next, or tweak the spec…",
+    "launch": "Launch",
+    "thinking": "Kia is thinking…",
+    "specLabel": "Live spec",
+    "specTitle": "Live spec",
+    "specReady": "READY",
+    "specPending": "in progress",
+    "specWaiting": "waiting…",
+    "specEndpoints": "endpoints",
+    "specModels": "models",
+    "specAuth": "auth",
+    "metaNoCard": "No card required",
+    "metaExport": "100% exportable code",
+    "metaHosted": "Hosted in West Africa",
+    "seeDemo": "Watch a demo",
+    "chat": {
+      "user1": "API for an intercity bus booking app in Côte d'Ivoire. Wave + Orange Money.",
+      "kia1": "Got it. I'll go with **Trip**, **Seat**, **Booking**, **Payment** and **User**. Who books: a customer account, or counter agents too?",
+      "user2": "Customer + counter. And an admin role for the company.",
+      "kia2": "Perfect — RBAC **customer / counter / admin**, JWT, and Wave + Orange Money webhooks on payments. The spec is ready. Shall we launch?",
+      "resources": ["User", "Trip", "Seat", "Booking", "Payment"],
+      "endpoints1": 21,
+      "endpoints2": 24
+    }
+  },
+  "howItWorks": {
+    "kicker": "How it works",
+    "headlineLead": "One conversation.",
+    "headlineAccent": "One backend",
+    "headlineRest": "complete.",
+    "sub": "No forms, no schema to draw. You talk to Kia, the spec builds before your eyes, and you deploy when you're ready.",
+    "asyncNote": "⏱ asynchronous",
+    "ringTime": "~ 2 min",
+    "step1": {
+      "num": "Talk",
+      "title": "Describe your product, not your database.",
+      "body": "French, English or pidgin. Kia asks the right questions — roles, relations, business rules — and writes the spec resource by resource, live in the chat."
+    },
+    "step2": {
+      "num": "Generate",
+      "title": "Launch, then close the tab.",
+      "body": "Multi-AI (Claude, Mistral, Gemini) generates the spec, Hono.js code, tests and OpenAPI docs in the background. You get a notification — email, push or Slack — when it's ready."
+    },
+    "step3": {
+      "num": "Test & deploy",
+      "title": "Built-in playground, then live.",
+      "body": "Test every endpoint in the browser. Deploy to ZeroAPI Cloud in one click — or export the Git repo to Railway, Render, Vercel, Fly.io. Your code, your freedom."
+    },
+    "convo": {
+      "kiaQ": "Kia › Who manages stock: a single admin, or one role per warehouse?",
+      "userA": "You › One role per warehouse, plus a super-admin who sees everything.",
+      "kiaOk": "Kia › Noted. Two-tier RBAC ✓"
+    }
+  },
+  "screencast": {
+    "kicker": "Demo",
+    "headlineLead": "Watch it.",
+    "headlineAccent": "Sixty seconds.",
+    "sub": "From conversation to live API. No cuts, no misleading editing — it's the tool exactly as it runs today.",
+    "promptBar": "conversation · Kia",
+    "chapterDiscuss": "Talk",
+    "chapterGenerate": "Generate",
+    "chapterDeploy": "Deploy",
+    "submit": "Launch generation",
+    "genTitle": "api-bookings · v1",
+    "genSub": "14 endpoints · ~2 min",
+    "genSteps": {
+      "validate": "Validating the spec",
+      "prisma": "Generating the Prisma schema",
+      "routes": "Hono.js routes",
+      "tests": "Vitest tests",
+      "docs": "SDK + OpenAPI 3.1 docs"
+    },
+    "deploy": {
+      "ready": "READY",
+      "deploying": "DEPLOYING…",
+      "live": "LIVE"
+    },
+    "promptLines": [
+      "You › Intercity bus booking app,",
+      "Wave + Orange Money payments.",
+      "Kia › I'll go with Trip, Seat, Booking,",
+      "Payment. A counter role besides the customer?",
+      "You › Yes, + company admin.",
+      "Kia › Three-tier RBAC. Spec ready ✓"
+    ]
+  },
+  "features": {
+    "kicker": "What it generates",
+    "headlineLead": "Not toy CRUDs.",
+    "headlineAccent": "Real backends.",
+    "sub": "Table relations, atomic transactions, uploads, roles — ZeroAPI handles what AI demos avoid.",
+    "core": {
+      "tag": "CORE",
+      "title": "Complex backends",
+      "body": "1-N and N-N relations, atomic transactions, soft delete, audit trails. Filtering, sorting and cursor pagination on every endpoint — with a Vitest suite generated on top."
+    },
+    "security": {
+      "tag": "SECURITY",
+      "title": "Secure by default",
+      "body": "JWT, OAuth (Google, GitHub), rate limiting, Zod validation, anti-XSS and anti-SQLi escaping. Not a checklist: it's in the generated code."
+    },
+    "conversational": {
+      "title": "Conversational",
+      "body": "Kia, the API architect, talks with you and builds the spec live. You adjust by talking — no JSON to write by hand."
+    },
+    "multiAI": {
+      "title": "Multi-AI",
+      "body": "Smart routing across Claude, Mistral and Gemini based on your plan, with automatic failover. Never stuck on a single provider."
+    },
+    "devMode": {
+      "title": "Dev Mode",
+      "body": "Export from the live spec: OpenAPI 3.1, TypeScript SDK, Postman collection, Prisma schema, Mermaid ER diagram and full ZIP bundle."
+    }
+  },
+  "marketplace": {
+    "kicker": "Marketplace",
+    "headlineLead": "Start from a",
+    "headlineAccent": "template",
+    "headlineRest": "not a blank page.",
+    "sub": "Official templates and community creations. Load one into the chat, adapt it to your needs with Kia, generate. And publish your own — privately for your team, or publicly for everyone.",
+    "badgeOfficial": "★ Official",
+    "badgeCommunity": "Community",
+    "uses": "{count} uses",
+    "by": "by {author}",
+    "byZeroapi": "by ZeroAPI",
+    "use": "Use →",
+    "publishPrivate": "🔒 Private",
+    "publishPublic": "🌍 Public",
+    "publishText": "Turn any job into a publishable template. You choose who can reuse it.",
+    "explore": "Explore the marketplace",
+    "templates": {
+      "ecommerce": { "title": "Mobile Money e-commerce", "category": "Commerce" },
+      "transport": { "title": "Transport booking", "category": "Mobility" },
+      "clinic": { "title": "Clinic appointment booking", "category": "Health" },
+      "chat": { "title": "Real-time chat & messaging", "category": "Social" },
+      "stock": { "title": "Multi-warehouse inventory", "category": "Logistics" },
+      "learning": { "title": "E-learning platform", "category": "Education" }
+    }
+  },
+  "playground": {
+    "kicker": "Playground",
+    "headlineLead": "Test",
+    "headlineRest": "before you deploy.",
+    "sub": "A built-in HTTP client, right inside ZeroAPI. Pick an endpoint, tweak the parameters, send a real request — and read the response, headers and response time without leaving the browser.",
+    "bullet1": "Every endpoint detected from your spec, ready to go.",
+    "bullet2": "Editable params, JSON body and headers — auth handled for you.",
+    "bullet3": "Status, latency and payload formatted, just like Postman.",
+    "send": "Send"
+  },
+  "demo": {
+    "kicker": "Live",
+    "headlineAccent": "Launch.",
+    "headlineRest": "Live your life. Come back.",
+    "sub": "Asynchronous generation means: your computer can shut down, your network can drop. The job keeps going. When it's ready, ZeroAPI pings you.",
+    "bullet1": "Real-time tracking of queued, running and finished jobs.",
+    "bullet2": "Email, web push and Slack/Discord webhook notifications.",
+    "bullet3": "Versioned history — re-generate on an amended prompt without starting over.",
+    "url": "console.zeroapi.app / jobs",
+    "endpoints": "{count} endpoints",
+    "queued": "QUEUED",
+    "running": "RUNNING",
+    "ready": "READY",
+    "queuedTime": "queued…",
+    "startingTime": "starting…",
+    "position": "position 2 · ~30 s",
+    "remaining": "~{seconds} s left",
+    "doneAgo": "done · 12 s ago",
+    "notifReady": "is ready —",
+    "notifDeploy": "deploy"
+  },
+  "integrations": {
+    "heading": "Deploy anywhere · store anything"
+  },
+  "comparison": {
+    "kicker": "Comparison",
+    "headlineLead": "ZeroAPI vs",
+    "headlineAccent": "classic BaaS.",
+    "sub": "Supabase and Firebase lock you into their ecosystem. ZeroAPI hands you the code — it's your repo, your servers, your freedom.",
+    "characteristic": "Feature",
+    "recommended": "★ recommended",
+    "yes": "yes",
+    "no": "no",
+    "footNote": "Comparison drawn up in May 2026 based on public offerings. No shade — each tool has its use. If you really want raw SQL, take Supabase. If you want real-time mobile, Firebase. If you want a custom backend delivered turnkey, take ZeroAPI.",
+    "rows": {
+      "approach": "Approach",
+      "approachZ": "AI conversation → spec → code",
+      "approachS": "SQL schema + auto-API",
+      "approachF": "Proprietary SDK",
+      "conversational": "Conversational generation (AI)",
+      "sourceCode": "Source code delivered",
+      "marketplace": "Template marketplace",
+      "playground": "Built-in playground / HTTP client",
+      "playgroundS": "SQL editor",
+      "playgroundF": "console",
+      "noLock": "No vendor lock-in",
+      "lockPartial": "partial",
+      "hosting": "Free hosting (Railway, Fly, Vercel…)",
+      "hostingS": "complex self-host",
+      "logic": "Complex business logic",
+      "logicS": "Edge Functions",
+      "logicF": "Cloud Functions",
+      "tests": "Generated unit tests",
+      "docs": "OpenAPI 3.1 docs",
+      "docsS": "postgREST",
+      "mobileMoney": "Mobile Money payments",
+      "frPidgin": "Prompt in French / pidgin",
+      "entryPrice": "Entry price",
+      "entryZ": "0 FCFA",
+      "entryS": "$0 · paid as traffic grows",
+      "entryF": "$0 · pay-as-you-go"
+    }
+  },
+  "pricing": {
+    "kicker": "Pricing",
+    "headlineLead": "Start free.",
+    "headlineAccent": "Scale",
+    "headlineRest": "up.",
+    "sub": "Every plan opens a monthly generation quota. Code export and Dev Mode are included everywhere — even on the free plan. No vendor lock-in, ever.",
+    "popular": "★ Popular",
+    "perMonth": "€ / month",
+    "mobileMoney": "🟢 Coming soon — Mobile Money payments: Orange Money, Wave, MTN MoMo, Moov Money",
+    "free": {
+      "name": "Free",
+      "tag": "To explore and learn.",
+      "meta": "Forever.",
+      "f1": "3 generations / month",
+      "f2": "Mistral & Gemini AI",
+      "f3": "Git export + Dev Mode",
+      "f4": "Read-only marketplace",
+      "f5": "ZeroAPI Cloud hosting",
+      "cta": "Get started"
+    },
+    "starter": {
+      "name": "Starter",
+      "tag": "For serious side projects.",
+      "meta": "~ €19 · monthly.",
+      "f1": "30 generations / month",
+      "f2": "ZeroAPI Cloud · 1 project",
+      "f3": "Playground & public sharing",
+      "f4": "Template publishing",
+      "f5": "Email support",
+      "cta": "Choose Starter"
+    },
+    "pro": {
+      "name": "Pro",
+      "tag": "For serious builders.",
+      "meta": "~ €49 · monthly.",
+      "f1": "150 generations / month",
+      "f2": "Premium Claude AI",
+      "f3": "ZeroAPI Cloud · 3 projects",
+      "f4": "Custom domains · webhooks · push",
+      "f5": "Support within 24 h",
+      "cta": "Go Pro"
+    },
+    "business": {
+      "name": "Business",
+      "tag": "For teams and agencies.",
+      "meta": "~ €199 · up to 10 seats.",
+      "f1": "1,000 generations / month",
+      "f2": "Unlimited projects & members",
+      "f3": "SSO · audit log · 99.9% SLA",
+      "f4": "Dedicated hosting on request",
+      "f5": "1-on-1 onboarding · Slack support",
+      "cta": "Contact sales"
+    }
+  },
+  "faq": {
+    "kicker": "FAQ",
+    "headlineLead": "Fair",
+    "headlineAccent": "questions.",
+    "sub": "Got another one? Write to us: bonjour@zeroapi.app.",
+    "items": [
+      {
+        "q": "What exactly is ZeroAPI?",
+        "a": "ZeroAPI generates complete backends from a conversation. You talk to Kia, our API architect: she asks questions, builds a structured spec live, then we generate the matching Hono.js code — routes, models, validations, Vitest tests, OpenAPI docs and a TypeScript SDK. The result is a complete project, ready to deploy or edit in your IDE."
+      },
+      {
+        "q": "Why a conversation rather than a single prompt?",
+        "a": "A serious backend has details that matter: roles, relations, business rules, edge cases. Instead of guessing from a single sentence, Kia asks the right questions and refines the spec resource by resource — you watch it build as you answer. You can write in French, English or pidgin, and change the spec just by continuing to talk."
+      },
+      {
+        "q": "What is asynchronous generation?",
+        "a": "When you launch generation, we queue the job and free you up immediately. You can close your browser, drop your connection, go eat — the job keeps running server-side. When it's ready, you get a notification (email, web push, or Slack/Discord webhook) with a direct link to your API. Especially handy on slow or unstable connections."
+      },
+      {
+        "q": "What are the playground and marketplace for?",
+        "a": "The playground is a built-in HTTP client: you test every endpoint of your API (params, body, headers, auth) right in the browser and see the response, status and latency. The marketplace lets you start from a template — official or community-made — instead of a blank page, and publish your own privately (your team) or publicly."
+      },
+      {
+        "q": "Which AI does the generation?",
+        "a": "Several. ZeroAPI routes requests across Claude, Mistral and Gemini based on your plan, with automatic failover if a provider goes down. Free plans use Mistral and Gemini; premium Claude is reserved for Pro plans and above. You're never stuck on a single model."
+      },
+      {
+        "q": "Can I export and modify the generated code?",
+        "a": "Yes, 100%. The code is yours — even on the free plan. You get a Git repo with a standard Hono.js project, no proprietary ZeroAPI dependency, plus the Dev Mode exports (OpenAPI, SDK, Postman, Prisma, ZIP). You can clone it, edit it, deploy it wherever you want. No vendor lock-in."
+      },
+      {
+        "q": "What security guarantees?",
+        "a": "Every generated API includes: JWT and OAuth authentication, RBAC, rate limiting, Zod validation on all inputs, escaping against XSS and SQL injection, Helmet headers, configured CORS, and automatic tests. The spec goes through strict validation before generation. On paid plans, audit log and SSO are available."
+      },
+      {
+        "q": "Support and community?",
+        "a": "Open community Discord for everyone, docs in French and English. Email support for Pro users (24 h) and a dedicated Slack channel for Business. The team is based in Dakar and Abidjan — we speak French, English, Wolof and Lingala."
+      },
+      {
+        "q": "Is Mobile Money payment available?",
+        "a": "Not yet — Orange Money, Wave, MTN MoMo and Moov Money integration is planned by the end of the quarter. In the meantime: bank card, Stripe, SEPA transfer and local CFA transfer (on request)."
+      }
+    ]
+  },
+  "cta": {
+    "headlineLead": "Your next backend",
+    "headlineRest": "starts with",
+    "headlineAccent": "one sentence.",
+    "sub": "Open a conversation with Kia and launch your first generation in under 60 seconds. No card required.",
+    "talkToHuman": "Talk to a human"
+  },
+  "footer": {
+    "tagline": "Asynchronous backend generator. Built in Africa, made for the world.",
+    "productTitle": "Product",
+    "features": "Features",
+    "pricing": "Pricing",
+    "demo": "Demo",
+    "faq": "FAQ",
+    "resourcesTitle": "Resources",
+    "docs": "Docs",
+    "guides": "Guides",
+    "apiRef": "API reference",
+    "templates": "Templates",
+    "changelog": "Changelog",
+    "status": "Status",
+    "companyTitle": "Company",
+    "contact": "Contact",
+    "careers": "Careers",
+    "legalNotice": "Legal notice",
+    "press": "Press",
+    "legalTitle": "Legal",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "cookies": "Cookies",
+    "security": "Security",
+    "gdpr": "GDPR",
+    "copyright": "© 2026 ZeroAPI · SAS, share capital 1,000,000 FCFA",
+    "madeIn": "Made in Dakar & Abidjan"
+  },
+  "cookies": {
+    "title": "🍪 Cookies.",
+    "text": "We use essential cookies to run the site (session, theme) and anonymous analytics cookies to understand how ZeroAPI is used. You can decline without breaking anything. Details in our",
+    "policyLink": "cookie policy",
+    "accept": "Accept",
+    "refuse": "Decline"
+  }
+}

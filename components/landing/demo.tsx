@@ -1,13 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 export function Demo() {
+  const t = useTranslations("landing.demo");
   const [p2, setP2] = useState(18);
   const [job1, setJob1] = useState<{ status: "queued" | "running"; time: string }>({
     status: "queued",
-    time: "en file…",
+    time: t("queuedTime"),
   });
 
   useEffect(() => {
@@ -22,18 +24,18 @@ export function Demo() {
 
   useEffect(() => {
     let q = 0;
-    const t = setInterval(() => {
+    const timer = setInterval(() => {
       q += 1;
       if (q % 18 === 5) {
-        setJob1({ status: "running", time: "démarrage…" });
+        setJob1({ status: "running", time: t("startingTime") });
       } else if (q % 18 === 0) {
-        setJob1({ status: "queued", time: "position 2 · ~30 s" });
+        setJob1({ status: "queued", time: t("position") });
       }
     }, 500);
-    return () => clearInterval(t);
-  }, []);
+    return () => clearInterval(timer);
+  }, [t]);
 
-  const job2Time = `~${Math.max(8, Math.round(60 - p2 * 0.55))} s restantes`;
+  const job2Time = t("remaining", { seconds: Math.max(8, Math.round(60 - p2 * 0.55)) });
 
   return (
     <section id="demo" style={{ paddingTop: 40 }}>
@@ -41,17 +43,14 @@ export function Demo() {
         <div className="demo-wrap">
           <Reveal as="div" className="demo-copy">
             <span className="kicker">
-              <span className="dot" /> En direct
+              <span className="dot" /> {t("kicker")}
             </span>
             <h2 className="display">
-              <em>Lance.</em>
+              <em>{t("headlineAccent")}</em>
               <br />
-              Vis ta vie. Reviens.
+              {t("headlineRest")}
             </h2>
-            <p>
-              Génération asynchrone signifie : ton ordi peut s&apos;éteindre, ton réseau
-              peut tomber. Le job continue. Quand c&apos;est prêt, ZeroAPI te ping.
-            </p>
+            <p>{t("sub")}</p>
             <ul>
               <li>
                 <svg
@@ -64,7 +63,7 @@ export function Demo() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Suivi en temps réel des jobs en file, en cours et terminés.</span>
+                <span>{t("bullet1")}</span>
               </li>
               <li>
                 <svg
@@ -77,7 +76,7 @@ export function Demo() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Notifications email, push web et webhook Slack/Discord.</span>
+                <span>{t("bullet2")}</span>
               </li>
               <li>
                 <svg
@@ -90,10 +89,7 @@ export function Demo() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>
-                  Historique versionné — re-génère sur prompt amendé sans repartir de
-                  zéro.
-                </span>
+                <span>{t("bullet3")}</span>
               </li>
             </ul>
           </Reveal>
@@ -105,7 +101,7 @@ export function Demo() {
                 <i />
                 <i />
               </div>
-              <span className="url">console.zeroapi.app / jobs</span>
+              <span className="url">{t("url")}</span>
             </div>
             <div className="demo-body">
               <div className="job">
@@ -115,7 +111,7 @@ export function Demo() {
                     api-reservations <code>v1</code>
                   </div>
                   <div className="meta">
-                    <span>14 endpoints</span>
+                    <span>{t("endpoints", { count: 14 })}</span>
                     <span>·</span>
                     <span>{job1.time}</span>
                   </div>
@@ -125,7 +121,7 @@ export function Demo() {
                 </div>
                 <span className={`job-status ${job1.status}`}>
                   <span className="dot" />{" "}
-                  {job1.status === "running" ? "EN COURS" : "EN FILE"}
+                  {job1.status === "running" ? t("running") : t("queued")}
                 </span>
               </div>
 
@@ -136,7 +132,7 @@ export function Demo() {
                     chat-rooms-api <code>v2</code>
                   </div>
                   <div className="meta">
-                    <span>22 endpoints</span>
+                    <span>{t("endpoints", { count: 22 })}</span>
                     <span>·</span>
                     <span>{job2Time}</span>
                   </div>
@@ -145,7 +141,7 @@ export function Demo() {
                   </div>
                 </div>
                 <span className="job-status running">
-                  <span className="dot" /> EN COURS
+                  <span className="dot" /> {t("running")}
                 </span>
               </div>
 
@@ -156,16 +152,16 @@ export function Demo() {
                     e-commerce-mobile-money <code>v1</code>
                   </div>
                   <div className="meta">
-                    <span>31 endpoints</span>
+                    <span>{t("endpoints", { count: 31 })}</span>
                     <span>·</span>
-                    <span>terminé · il y a 12 s</span>
+                    <span>{t("doneAgo")}</span>
                   </div>
                   <div className="job-progress">
                     <div className="fill" style={{ width: "100%" }} />
                   </div>
                 </div>
                 <span className="job-status ready">
-                  <span className="dot" /> PRÊT
+                  <span className="dot" /> {t("ready")}
                 </span>
               </div>
 
@@ -182,8 +178,8 @@ export function Demo() {
                   <path d="M22 4L12 14.01l-3-3" />
                 </svg>
                 <div>
-                  <b>e-commerce-mobile-money</b> est prêt —{" "}
-                  <span className="pill">déployer</span>
+                  <b>e-commerce-mobile-money</b> {t("notifReady")}{" "}
+                  <span className="pill">{t("notifDeploy")}</span>
                 </div>
               </div>
             </div>

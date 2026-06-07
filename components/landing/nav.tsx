@@ -2,22 +2,28 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Menu } from "lucide-react";
 import { Brand } from "@/components/landing/brand";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 
-const NAV_ITEMS = [
-  { href: "#produit", label: "Produit" },
-  { href: "#marketplace", label: "Marketplace" },
-  { href: "#playground", label: "Playground" },
-  { href: "#tarifs", label: "Tarifs" },
-  { href: "#faq", label: "FAQ" },
-];
-
 export function LandingNav() {
+  const t = useTranslations("landing.nav");
+  const tc = useTranslations("common.actions");
+  const tLang = useTranslations("common.language");
+  const tTheme = useTranslations("common.theme");
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const navItems = [
+    { href: "#produit", label: t("product") },
+    { href: "#marketplace", label: t("marketplace") },
+    { href: "#playground", label: t("playground") },
+    { href: "#tarifs", label: t("pricing") },
+    { href: "#faq", label: t("faq") },
+  ];
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 4);
@@ -30,20 +36,21 @@ export function LandingNav() {
     <header className={`nav${scrolled ? " scrolled" : ""}`}>
       <div className="wrap nav-inner">
         <Brand href="/" />
-        <nav className="nav-links" aria-label="Navigation principale">
-          {NAV_ITEMS.map((item) => (
+        <nav className="nav-links" aria-label={t("mainNav")}>
+          {navItems.map((item) => (
             <a key={item.href} href={item.href}>
               {item.label}
             </a>
           ))}
         </nav>
         <div className="nav-right">
+          <LanguageSwitcher className="hide-mobile" />
           <ThemeToggle className="nav-theme-toggle" />
           <Link href="/login" className="btn btn-ghost hide-mobile">
-            Se connecter
+            {tc("login")}
           </Link>
           <Link href="/register" className="btn btn-accent hide-mobile">
-            Commencer
+            {tc("start")}
             <svg
               className="arrow"
               width="14"
@@ -60,7 +67,7 @@ export function LandingNav() {
           </Link>
           <button
             type="button"
-            aria-label="Ouvrir le menu"
+            aria-label={t("openMenu")}
             aria-expanded={menuOpen}
             className="nav-burger"
             onClick={() => setMenuOpen(true)}
@@ -74,7 +81,7 @@ export function LandingNav() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         side="right"
-        label="Menu principal"
+        label={t("menuLabel")}
         width={320}
         className="bg-bg"
       >
@@ -82,8 +89,8 @@ export function LandingNav() {
           <div className="mb-8">
             <Brand href="/" />
           </div>
-          <nav className="flex flex-col gap-1" aria-label="Navigation mobile">
-            {NAV_ITEMS.map((item) => (
+          <nav className="flex flex-col gap-1" aria-label={t("mobileNav")}>
+            {navItems.map((item) => (
               <a
                 key={item.href}
                 href={item.href}
@@ -103,7 +110,7 @@ export function LandingNav() {
               onClick={() => setMenuOpen(false)}
               className="inline-flex h-12 items-center justify-center rounded-[10px] border border-line bg-surface text-[15px] font-medium text-ink transition hover:border-line-2"
             >
-              Se connecter
+              {tc("login")}
             </Link>
             <Link
               href="/register"
@@ -111,7 +118,7 @@ export function LandingNav() {
               className="inline-flex h-12 items-center justify-center gap-2 rounded-[10px] bg-accent text-[15px] font-medium text-accent-ink transition"
               style={{ boxShadow: "0 6px 18px var(--accent-glow)" }}
             >
-              Commencer
+              {tc("start")}
               <svg
                 width="14"
                 height="14"
@@ -127,9 +134,13 @@ export function LandingNav() {
             </Link>
           </div>
 
-          <div className="mt-auto pt-6 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
+          <div className="mt-auto flex flex-col gap-4 pt-6 font-mono text-[11px] uppercase tracking-[0.08em] text-muted">
             <div className="flex items-center justify-between">
-              <span>Thème</span>
+              <span>{tLang("label")}</span>
+              <LanguageSwitcher />
+            </div>
+            <div className="flex items-center justify-between">
+              <span>{tTheme("label")}</span>
               <ThemeToggle />
             </div>
           </div>

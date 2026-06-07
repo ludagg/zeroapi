@@ -6,6 +6,7 @@ import { Check, Copy, ExternalLink, X } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import type { DeployTarget } from "@/lib/api-detail";
+import { useTranslations } from "next-intl";
 
 const ICON_BG: Record<DeployTarget["id"], string> = {
   railway: "bg-[#0B0D0E] text-white",
@@ -63,16 +64,17 @@ export function DeployButtons({ targets }: { targets: DeployTarget[] }) {
 }
 
 function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () => void }) {
+  const t = useTranslations("dashboard");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
     try {
       await navigator.clipboard.writeText(target.config);
       setCopied(true);
-      toast.success(`${target.filename} copié dans le presse-papiers.`);
+      toast.success(t("apiDetail.deploy.copied"));
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      toast.error("Copie impossible — vérifie les permissions du navigateur.");
+      toast.error(t("apiDetail.deploy.errorRetry"));
     }
   }
 
@@ -82,17 +84,22 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
         <div>
           <Dialog.Title asChild>
             <h2 className="font-serif text-[22px] leading-tight">
-              Déployer sur <em className="italic">{target.label}</em>
+              {t.rich("apiDetail.deploy.deployOn", {
+                label: target.label,
+                em: (chunks) => <em className="italic">{chunks}</em>,
+              })}
             </h2>
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-[12.5px] text-muted">
-            Copie le contenu ci-dessous dans <code className="font-mono">{target.filename}</code>
-            {" à la racine de ton projet."}
+            {t.rich("apiDetail.deploy.copyConfig", {
+              filename: target.filename,
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </Dialog.Description>
         </div>
         <Dialog.Close asChild>
           <button
-            aria-label="Fermer"
+            aria-label={t("apiDetail.deploy.closeAriaLabel")}
             className="grid h-8 w-8 place-items-center rounded-[8px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
             <X className="h-4 w-4" />
@@ -112,11 +119,11 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
         >
           {copied ? (
             <>
-              <Check className="h-3 w-3 text-accent-ink" /> Copié
+              <Check className="h-3 w-3 text-accent-ink" /> {t("apiDetail.deploy.copied")}
             </>
           ) : (
             <>
-              <Copy className="h-3 w-3" /> Copier
+              <Copy className="h-3 w-3" /> {t("apiDetail.deploy.copyButton")}
             </>
           )}
         </button>
@@ -134,14 +141,14 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
           className="inline-flex items-center gap-1.5 font-mono text-[11.5px] text-muted transition hover:text-ink"
         >
           <ExternalLink className="h-3 w-3" />
-          Doc {target.label}
+          {t("apiDetail.deploy.docLink", { label: target.label })}
         </a>
         <button
           type="button"
           onClick={onClose}
           className="inline-flex h-8 items-center rounded-[8px] border border-line bg-surface px-3 text-[12.5px] font-medium text-ink transition hover:border-line-2"
         >
-          Fermer
+          {t("apiDetail.deploy.close")}
         </button>
       </footer>
     </>

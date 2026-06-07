@@ -1,99 +1,102 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Brand } from "@/components/landing/brand";
 
 export function LandingFooter() {
+  const t = useTranslations("landing.footer");
+
   return (
     <footer className="footer">
       <div className="wrap">
         <div className="foot-grid">
           <div className="foot-brand">
             <Brand />
-            <p>Générateur de backends asynchrone. Pensé en Afrique, fait pour le monde.</p>
+            <p>{t("tagline")}</p>
           </div>
           <div className="foot-col">
-            <h4>Produit</h4>
+            <h4>{t("productTitle")}</h4>
             <ul>
               <li>
-                <a href="/#produit">Fonctionnalités</a>
+                <a href="/#produit">{t("features")}</a>
               </li>
               <li>
-                <a href="/#tarifs">Tarifs</a>
+                <a href="/#tarifs">{t("pricing")}</a>
               </li>
               <li>
-                <a href="/#demo">Démo</a>
+                <a href="/#demo">{t("demo")}</a>
               </li>
               <li>
-                <a href="/#faq">FAQ</a>
+                <a href="/#faq">{t("faq")}</a>
               </li>
             </ul>
           </div>
           <div className="foot-col">
-            <h4>Ressources</h4>
+            <h4>{t("resourcesTitle")}</h4>
             <ul>
               <li>
-                <Link href="/docs">Docs</Link>
+                <Link href="/docs">{t("docs")}</Link>
               </li>
               <li>
-                <Link href="/docs/guides">Guides</Link>
+                <Link href="/docs/guides">{t("guides")}</Link>
               </li>
               <li>
-                <Link href="/docs/api">API référence</Link>
+                <Link href="/docs/api">{t("apiRef")}</Link>
               </li>
               <li>
-                <Link href="/templates">Templates</Link>
+                <Link href="/templates">{t("templates")}</Link>
               </li>
               <li>
-                <Link href="/changelog">Changelog</Link>
+                <Link href="/changelog">{t("changelog")}</Link>
               </li>
               <li>
                 <a href="https://status.zeroapi.app" target="_blank" rel="noreferrer">
-                  Statut
+                  {t("status")}
                 </a>
               </li>
             </ul>
           </div>
           <div className="foot-col">
-            <h4>Entreprise</h4>
+            <h4>{t("companyTitle")}</h4>
             <ul>
               <li>
-                <a href="mailto:bonjour@zeroapi.app">Contact</a>
+                <a href="mailto:bonjour@zeroapi.app">{t("contact")}</a>
               </li>
               <li>
-                <a href="mailto:carrieres@zeroapi.app">Carrières</a>
+                <a href="mailto:carrieres@zeroapi.app">{t("careers")}</a>
               </li>
               <li>
-                <Link href="/legal-notice">Mentions légales</Link>
+                <Link href="/legal-notice">{t("legalNotice")}</Link>
               </li>
               <li>
-                <a href="mailto:presse@zeroapi.app">Presse</a>
+                <a href="mailto:presse@zeroapi.app">{t("press")}</a>
               </li>
             </ul>
           </div>
           <div className="foot-col">
-            <h4>Légal</h4>
+            <h4>{t("legalTitle")}</h4>
             <ul>
               <li>
-                <Link href="/terms">Conditions</Link>
+                <Link href="/terms">{t("terms")}</Link>
               </li>
               <li>
-                <Link href="/privacy">Confidentialité</Link>
+                <Link href="/privacy">{t("privacy")}</Link>
               </li>
               <li>
-                <Link href="/cookies">Cookies</Link>
+                <Link href="/cookies">{t("cookies")}</Link>
               </li>
               <li>
-                <Link href="/security">Sécurité</Link>
+                <Link href="/security">{t("security")}</Link>
               </li>
               <li>
-                <Link href="/gdpr">RGPD</Link>
+                <Link href="/gdpr">{t("gdpr")}</Link>
               </li>
             </ul>
           </div>
         </div>
         <div className="foot-bottom">
-          <span>© 2026 ZeroAPI · SAS au capital de 1 000 000 FCFA</span>
+          <span>{t("copyright")}</span>
           <span className="made">
-            <span className="flag" /> Fait à Dakar &amp; Abidjan
+            <span className="flag" /> {t("madeIn")}
           </span>
         </div>
       </div>

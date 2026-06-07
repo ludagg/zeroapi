@@ -31,16 +31,17 @@ import { formatRelativeTime } from "@/lib/utils";
 import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
 import { coolifyConfigured } from "@/lib/coolify";
 import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
-  DRAFT: { label: "BROUILLON", className: "border border-dashed border-line-2 text-muted-2" },
-  PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
-  RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
-  READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
-  DEPLOYED: { label: "EN LIGNE", className: "bg-accent text-accent-ink" },
-  FAILED: { label: "ÉCHEC", className: "bg-danger-soft text-danger" },
+const STATUS_PILL_CLASS: Record<JobStatus, string> = {
+  DRAFT: "border border-dashed border-line-2 text-muted-2",
+  PENDING: "border border-dashed border-line-2 text-muted",
+  RUNNING: "bg-warn-soft text-warn-ink",
+  READY: "bg-accent text-accent-ink",
+  DEPLOYED: "bg-accent text-accent-ink",
+  FAILED: "bg-danger-soft text-danger",
 };
 
 const PLATFORM_TO_TARGET: Record<DeployPlatform, "railway" | "render" | "vercel" | "flyio" | null> = {
@@ -58,6 +59,7 @@ export default async function JobDetailPage({
   params: { id: string };
   searchParams?: { tab?: string };
 }) {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },
@@ -77,7 +79,7 @@ export default async function JobDetailPage({
   const zeroApiCloudLogs = isZeroApiCloud ? job.deployment!.logs : undefined;
 
   const spec = readSpec(job.spec);
-  const pill = STATUS_PILL[job.status];
+  const pillClass = STATUS_PILL_CLASS[job.status];
   const isReady = job.status === "READY" || job.status === "DEPLOYED";
   const isCodeAvailable = isReady && spec !== null;
   const version = extractVersion(job);
@@ -105,8 +107,8 @@ export default async function JobDetailPage({
       <JobStatusPoller status={job.status} />
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Jobs", href: "/jobs" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.jobs"), href: "/jobs" },
           { label: job.name },
         ]}
       />
@@ -124,17 +126,17 @@ export default async function JobDetailPage({
                 <span
                   className={
                     "ml-2 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] " +
-                    pill.className
+                    pillClass
                   }
                 >
-                  {pill.label}
+                  {t(`apis.status.${job.status.toLowerCase()}` as "apis.status.draft")}
                 </span>
               </div>
               <p className="mt-2 max-w-2xl text-[14.5px] text-muted">
                 {job.description}
                 {" · "}
                 <span className="text-muted-2">
-                  généré {formatRelativeTime(job.createdAt)}
+                  {t("apis.generated", { time: formatRelativeTime(job.createdAt) })}
                 </span>
               </p>
             </div>
@@ -151,7 +153,7 @@ export default async function JobDetailPage({
                       href={`/jobs/${job.id}/deploy`}
                       className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
                     >
-                      Déployer une nouvelle version
+                      {t("apis.deployNewVersion")}
                       <ArrowRight className="h-3.5 w-3.5" />
                     </Link>
                   )}
@@ -161,24 +163,23 @@ export default async function JobDetailPage({
           </div>
 
           <div className="mb-6 flex flex-wrap gap-x-7 gap-y-3 border-b border-line pb-5">
-            <Meta label="Endpoints" value={job.endpoints ?? endpointsList.length ?? "—"} />
+            <Meta label={t("apis.meta.endpoints")} value={job.endpoints ?? endpointsList.length ?? "—"} />
             <Meta
-              label="Couverture"
+              label={t("apis.meta.coverage")}
               value={
                 job.testsTotal && job.testsPassed
                   ? `${Math.round((job.testsPassed / job.testsTotal) * 100)} %`
                   : "—"
               }
             />
-            <Meta label="Sécurité" value={job.securityScore ?? "—"} />
-            <Meta label="Ressources" value={spec?.resources.length ?? "—"} />
-            <Meta label="Auth" value={authStrategy ?? "—"} />
+            <Meta label={t("apis.meta.security")} value={job.securityScore ?? "—"} />
+            <Meta label={t("apis.meta.resources")} value={spec?.resources.length ?? "—"} />
+            <Meta label={t("apis.meta.auth")} value={authStrategy ?? "—"} />
           </div>
 
           {job.status === "DRAFT" && (
             <div className="mb-6 rounded-[12px] border border-dashed border-line-2 bg-bg-2 px-4 py-3 text-[13px] text-muted">
-              Brouillon — la spec est prête. Lance la génération pour produire le backend
-              (code, tests, docs, déploiement).
+              {t("apis.draftNotice")}
             </div>
           )}
 
@@ -191,49 +192,49 @@ export default async function JobDetailPage({
           <JobTabs
             defaultTab={searchParams?.tab}
             tabs={[
-              { id: "overview", label: "Aperçu" },
-              { id: "endpoints", label: "Endpoints", n: endpointsList.length },
-              { id: "models", label: "Ressources", n: spec?.resources.length ?? 0 },
-              { id: "database", label: "Base de données" },
-              { id: "code", label: "Code source" },
-              { id: "tests", label: "Tests", n: job.testsTotal ?? undefined },
-              { id: "docs", label: "Docs OpenAPI", n: openApiEndpoints.length || undefined },
-              { id: "logs", label: "Logs", n: job.agentLogs.length || undefined },
-              { id: "agents", label: "Agents", n: job.agentLogs.length || undefined },
-              { id: "variables", label: "Variables" },
-              { id: "deploy", label: "Déploiement" },
+              { id: "overview", label: t("apis.tabs.overview") },
+              { id: "endpoints", label: t("apis.tabs.endpoints"), n: endpointsList.length },
+              { id: "models", label: t("apis.tabs.models"), n: spec?.resources.length ?? 0 },
+              { id: "database", label: t("apis.tabs.database") },
+              { id: "code", label: t("apis.tabs.code") },
+              { id: "tests", label: t("apis.tabs.tests"), n: job.testsTotal ?? undefined },
+              { id: "docs", label: t("apis.tabs.docs"), n: openApiEndpoints.length || undefined },
+              { id: "logs", label: t("apis.tabs.logs"), n: job.agentLogs.length || undefined },
+              { id: "agents", label: t("apis.tabs.agents"), n: job.agentLogs.length || undefined },
+              { id: "variables", label: t("apis.tabs.variables") },
+              { id: "deploy", label: t("apis.tabs.deploy") },
             ]}
             panels={{
               overview: (
                 <section className="grid grid-cols-1 gap-4 lg:grid-cols-[1.4fr_1fr]">
                   <div className="space-y-4">
-                    <Card title="Modèles de données" count={spec?.resources.length}>
+                    <Card title={t("apis.overview.dataModels")} count={spec?.resources.length}>
                       {spec ? (
                         <ModelsList resources={spec.resources} />
                       ) : (
-                        <EmptyHint label="Spec indisponible." />
+                        <EmptyHint label={t("apis.overview.emptySpec")} />
                       )}
                     </Card>
-                    <Card title="Endpoints clés">
+                    <Card title={t("apis.overview.keyEndpoints")}>
                       {endpointsList.length ? (
                         <EndpointsList resources={spec!.resources} />
                       ) : (
-                        <EmptyHint label="Aucun endpoint dérivé." />
+                        <EmptyHint label={t("apis.overview.noEndpoints")} />
                       )}
                     </Card>
                   </div>
                   <div className="space-y-4">
-                    <Card title="Sécurité">
+                    <Card title={t("apis.overview.security")}>
                       {securityGrade && (
                         <div className="mb-3 flex items-center justify-between rounded-[10px] border border-line bg-bg p-3">
                           <div>
                             <div className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                              Score sécurité
+                              {t("apis.overview.securityScore")}
                             </div>
                             <div className="mt-0.5 text-[12.5px] text-muted">
                               {security
                                 ? `${security.score}/100 · ${security.hasAuth ? "auth" : "no-auth"}`
-                                : "calcul automatique"}
+                                : t("apis.overview.securityAutoCalc")}
                             </div>
                           </div>
                           <span
@@ -249,23 +250,29 @@ export default async function JobDetailPage({
                       <div className="space-y-3">
                         <SecRow
                           icon={<ShieldCheck className="h-3.5 w-3.5" />}
-                          title="Authentification"
+                          title={t("apis.overview.authSection")}
                           subtitle={
                             authStrategy
-                              ? `${authStrategy}${roles.length ? ` · rôles : ${roles.join(", ")}` : ""}`
-                              : "Aucune auth configurée"
+                              ? `${authStrategy}${roles.length ? ` · ${roles.join(", ")}` : ""}`
+                              : t("apis.overview.noAuth")
                           }
                           enabled={Boolean(authStrategy)}
+                          activeLabel={t("apis.overview.active")}
+                          offLabel={t("apis.overview.off")}
                         />
                         <SecRow
                           icon={<Shield className="h-3.5 w-3.5" />}
-                          title="RBAC"
+                          title={t("apis.overview.rbacSection")}
                           subtitle={
                             roles.length
-                              ? `${roles.length} rôle${roles.length > 1 ? "s" : ""} · ${roles.join(", ")}`
-                              : "Pas de rôles définis"
+                              ? roles.length > 1
+                                ? t("apis.overview.rbacRolesPlural", { count: roles.length, list: roles.join(", ") })
+                                : t("apis.overview.rbacRoles", { count: roles.length, list: roles.join(", ") })
+                              : t("apis.overview.noRoles")
                           }
                           enabled={roles.length > 0}
+                          activeLabel={t("apis.overview.active")}
+                          offLabel={t("apis.overview.off")}
                         />
                         <SecRow
                           icon={<Gauge className="h-3.5 w-3.5" />}
@@ -275,17 +282,19 @@ export default async function JobDetailPage({
                               ? `${rateLimit.max} req / ${Math.round(
                                   rateLimit.windowMs / 1000,
                                 )}s · IP + user`
-                              : "Désactivé"
+                              : t("apis.overview.rateDisabled")
                           }
                           enabled={Boolean(rateLimit)}
+                          activeLabel={t("apis.overview.active")}
+                          offLabel={t("apis.overview.off")}
                         />
                       </div>
                     </Card>
-                    <Card title="Tests">
+                    <Card title={t("apis.overview.tests")}>
                       <div className="grid grid-cols-3 gap-2">
                         <MiniStat
                           value={job.testsTotal !== null ? String(job.testsTotal) : "--"}
-                          label="Tests"
+                          label={t("apis.tabs.tests")}
                         />
                         <MiniStat
                           value={
@@ -293,9 +302,9 @@ export default async function JobDetailPage({
                               ? `${Math.round((job.testsPassed / job.testsTotal) * 100)}%`
                               : "--"
                           }
-                          label="Couverture"
+                          label={t("apis.overview.coverage")}
                         />
-                        <MiniStat value={job.securityScore ?? "--"} label="Sécurité" />
+                        <MiniStat value={job.securityScore ?? "--"} label={t("apis.overview.security")} />
                       </div>
                     </Card>
                   </div>
@@ -320,7 +329,7 @@ export default async function JobDetailPage({
                   plan={user.plan}
                 />
               ) : (
-                <EmptyHint label="La base de données est créée automatiquement une fois l'API générée et prête." />
+                <EmptyHint label={t("apis.overview.dbAutoCreated")} />
               ),
               code: isCodeAvailable ? (
                 <div className="space-y-3">
@@ -330,7 +339,7 @@ export default async function JobDetailPage({
                   </div>
                 </div>
               ) : (
-                <EmptyHint label="Code disponible après génération." />
+                <EmptyHint label={t("apis.overview.codeAfterGen")} />
               ),
               tests: (
                 <TestsPanel
@@ -360,7 +369,7 @@ export default async function JobDetailPage({
                     }}
                   />
                 ) : (
-                  <EmptyHint label="Configuration disponible après génération." />
+                  <EmptyHint label={t("apis.overview.configAfterGen")} />
                 ),
             }}
           />
@@ -412,11 +421,15 @@ function SecRow({
   title,
   subtitle,
   enabled,
+  activeLabel,
+  offLabel,
 }: {
   icon: React.ReactNode;
   title: string;
   subtitle: string;
   enabled: boolean;
+  activeLabel: string;
+  offLabel: string;
 }) {
   return (
     <div className="flex items-center gap-3 border-b border-line py-2.5 last:border-b-0 last:pb-0 first:pt-0">
@@ -438,7 +451,7 @@ function SecRow({
           (enabled ? "bg-accent text-accent-ink" : "bg-bg-2 text-muted")
         }
       >
-        {enabled ? "ACTIF" : "OFF"}
+        {enabled ? activeLabel : offLabel}
       </span>
     </div>
   );

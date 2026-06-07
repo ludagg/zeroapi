@@ -1,45 +1,36 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
-type Scene = {
-  label: string;
-  duration: number;
-};
-
-const PROMPT_LINES = [
-  "Toi › App de réservation de bus interurbain,",
-  "paiement Wave + Orange Money.",
-  "Kia › Je pars sur Trajet, Siège, Réservation,",
-  "Paiement. Un rôle guichet en plus du client ?",
-  "Toi › Oui, + admin compagnie.",
-  "Kia › RBAC à 3 niveaux. Spec prête ✓",
-];
+const SCENE_DURATIONS = [5200, 5200, 4600];
 
 function PromptScene({ playing }: { playing: boolean }) {
+  const t = useTranslations("landing.screencast");
+  const lines = t.raw("promptLines") as string[];
   const [step, setStep] = useState(0);
 
   useEffect(() => {
     if (!playing) return;
     setStep(0);
     const ids: ReturnType<typeof setTimeout>[] = [];
-    PROMPT_LINES.forEach((_, i) => {
+    lines.forEach((_, i) => {
       ids.push(setTimeout(() => setStep(i + 1), 420 + i * 540));
     });
     return () => ids.forEach(clearTimeout);
-  }, [playing]);
+  }, [playing, lines]);
 
   return (
     <div className="vs-scene vs-scene-prompt">
       <div className="vs-prompt-shell">
         <div className="vs-prompt-bar">
-          <span className="vs-pill">conversation · Kia</span>
+          <span className="vs-pill">{t("promptBar")}</span>
           <span className="vs-pill faint">▾ Hono.js</span>
           <span className="vs-pill faint">▾ Postgres</span>
         </div>
         <div className="vs-prompt-body">
-          {PROMPT_LINES.map((line, i) => (
+          {lines.map((line, i) => (
             <div
               key={i}
               className={`vs-prompt-line${i === 0 ? " head" : ""}${
@@ -53,7 +44,7 @@ function PromptScene({ playing }: { playing: boolean }) {
         </div>
         <div className="vs-prompt-foot">
           <span className="vs-shortcut">⌘ ↵</span>
-          <span className="vs-prompt-submit">Lancer la génération</span>
+          <span className="vs-prompt-submit">{t("submit")}</span>
         </div>
       </div>
     </div>
@@ -61,15 +52,16 @@ function PromptScene({ playing }: { playing: boolean }) {
 }
 
 function GeneratingScene({ playing }: { playing: boolean }) {
+  const t = useTranslations("landing.screencast");
   const [pct, setPct] = useState(8);
   const [stepIdx, setStepIdx] = useState(0);
 
   const STEPS = [
-    "Validation de la spec",
-    "Génération du schéma Prisma",
-    "Routes Hono.js",
-    "Tests Vitest",
-    "SDK + docs OpenAPI 3.1",
+    t("genSteps.validate"),
+    t("genSteps.prisma"),
+    t("genSteps.routes"),
+    t("genSteps.tests"),
+    t("genSteps.docs"),
   ];
 
   useEffect(() => {
@@ -93,7 +85,7 @@ function GeneratingScene({ playing }: { playing: boolean }) {
       clearInterval(t);
       clearInterval(t2);
     };
-  }, [playing]);
+  }, [playing, STEPS.length]);
 
   return (
     <div className="vs-scene vs-scene-generating">
@@ -104,8 +96,8 @@ function GeneratingScene({ playing }: { playing: boolean }) {
           <div className="vs-gen-ring-center">{Math.round(pct)}%</div>
         </div>
         <div className="vs-gen-meta">
-          <div className="vs-gen-title">api-reservations · v1</div>
-          <div className="vs-gen-sub">14 endpoints · ~2 min</div>
+          <div className="vs-gen-title">{t("genTitle")}</div>
+          <div className="vs-gen-sub">{t("genSub")}</div>
           <div className="vs-gen-bar">
             <div className="vs-gen-bar-fill" style={{ width: `${pct}%` }} />
           </div>
@@ -129,6 +121,7 @@ function GeneratingScene({ playing }: { playing: boolean }) {
 }
 
 function DeployScene({ playing }: { playing: boolean }) {
+  const t = useTranslations("landing.screencast");
   const [phase, setPhase] = useState<"ready" | "deploying" | "live">("ready");
 
   useEffect(() => {
@@ -150,16 +143,14 @@ function DeployScene({ playing }: { playing: boolean }) {
           <div className="vs-deploy-main">
             <div className="vs-deploy-name">api-reservations</div>
             <div className="vs-deploy-url">
-              {phase === "live"
-                ? "https://api-reservations.zeroapi.app"
-                : "—"}
+              {phase === "live" ? "https://api-reservations.zeroapi.app" : "—"}
             </div>
           </div>
           <span className={`vs-deploy-status ${phase}`}>
             <span className="vs-deploy-status-dot" />
-            {phase === "ready" && "PRÊT"}
-            {phase === "deploying" && "DÉPLOIE…"}
-            {phase === "live" && "EN LIGNE"}
+            {phase === "ready" && t("deploy.ready")}
+            {phase === "deploying" && t("deploy.deploying")}
+            {phase === "live" && t("deploy.live")}
           </span>
         </div>
         <div className="vs-deploy-targets">
@@ -186,30 +177,27 @@ function DeployScene({ playing }: { playing: boolean }) {
   );
 }
 
-const SCENES: Scene[] = [
-  { label: "01 · Discute", duration: 5200 },
-  { label: "02 · Génère", duration: 5200 },
-  { label: "03 · Déploie", duration: 4600 },
-];
-
 export function VideoScreencast() {
+  const t = useTranslations("landing.screencast");
   const [active, setActive] = useState(0);
   const [playing, setPlaying] = useState(true);
   const [progress, setProgress] = useState(0);
   const startRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
 
+  const chapters = [t("chapterDiscuss"), t("chapterGenerate"), t("chapterDeploy")];
+
   useEffect(() => {
     if (!playing) return;
     let cancelled = false;
     startRef.current = performance.now();
-    const duration = SCENES[active].duration;
+    const duration = SCENE_DURATIONS[active];
     const tick = (now: number) => {
       const elapsed = now - startRef.current;
       const p = Math.min(elapsed / duration, 1);
       if (!cancelled) setProgress(p);
       if (p >= 1) {
-        setActive((a) => (a + 1) % SCENES.length);
+        setActive((a) => (a + 1) % SCENE_DURATIONS.length);
       } else {
         rafRef.current = requestAnimationFrame(tick);
       }
@@ -222,9 +210,9 @@ export function VideoScreencast() {
   }, [active, playing]);
 
   const totalProgress =
-    (SCENES.slice(0, active).reduce((a, s) => a + s.duration, 0) +
-      progress * SCENES[active].duration) /
-    SCENES.reduce((a, s) => a + s.duration, 0);
+    (SCENE_DURATIONS.slice(0, active).reduce((a, s) => a + s, 0) +
+      progress * SCENE_DURATIONS[active]) /
+    SCENE_DURATIONS.reduce((a, s) => a + s, 0);
 
   const fmt = (frac: number) => {
     const total = 134;
@@ -240,15 +228,12 @@ export function VideoScreencast() {
       <div className="wrap">
         <Reveal className="section-head">
           <span className="kicker">
-            <span className="dot" /> Démo
+            <span className="dot" /> {t("kicker")}
           </span>
           <h2 className="display">
-            Regarde-le. <em>Soixante secondes.</em>
+            {t("headlineLead")} <em>{t("headlineAccent")}</em>
           </h2>
-          <p>
-            De la conversation à l&apos;API en ligne. Zéro coupure, zéro montage trompeur —
-            c&apos;est l&apos;outil tel qu&apos;il tourne aujourd&apos;hui.
-          </p>
+          <p>{t("sub")}</p>
         </Reveal>
 
         <Reveal as="div" className="vs-card" delay={80}>
@@ -285,7 +270,7 @@ export function VideoScreencast() {
               <button
                 type="button"
                 className="vs-play"
-                aria-label={playing ? "Pause" : "Lecture"}
+                aria-label={playing ? "Pause" : "Play"}
                 onClick={() => setPlaying((p) => !p)}
               >
                 {playing ? (
@@ -305,11 +290,11 @@ export function VideoScreencast() {
                   className="vs-progress-fill"
                   style={{ width: `${totalProgress * 100}%` }}
                 />
-                {SCENES.map((_, i) => {
+                {SCENE_DURATIONS.map((_, i) => {
                   const stops =
-                    SCENES.slice(0, i + 1).reduce((a, s) => a + s.duration, 0) /
-                    SCENES.reduce((a, s) => a + s.duration, 0);
-                  if (i === SCENES.length - 1) return null;
+                    SCENE_DURATIONS.slice(0, i + 1).reduce((a, s) => a + s, 0) /
+                    SCENE_DURATIONS.reduce((a, s) => a + s, 0);
+                  if (i === SCENE_DURATIONS.length - 1) return null;
                   return (
                     <span
                       key={i}
@@ -321,12 +306,7 @@ export function VideoScreencast() {
                 })}
               </div>
               <div className="vs-time vs-time-total">2:14</div>
-              <button
-                type="button"
-                className="vs-mute"
-                aria-label="Sourdine"
-                title="Sourdine"
-              >
+              <button type="button" className="vs-mute" aria-label="Mute" title="Mute">
                 <svg
                   viewBox="0 0 24 24"
                   fill="none"
@@ -345,9 +325,9 @@ export function VideoScreencast() {
           </div>
 
           <div className="vs-chapters">
-            {SCENES.map((s, i) => (
+            {chapters.map((label, i) => (
               <button
-                key={s.label}
+                key={label}
                 type="button"
                 className={`vs-chapter${i === active ? " active" : ""}`}
                 onClick={() => {
@@ -356,8 +336,8 @@ export function VideoScreencast() {
                   startRef.current = performance.now();
                 }}
               >
-                <span className="vs-chapter-num">{s.label.split(" · ")[0]}</span>
-                <span className="vs-chapter-name">{s.label.split(" · ")[1]}</span>
+                <span className="vs-chapter-num">{`0${i + 1}`}</span>
+                <span className="vs-chapter-name">{label}</span>
               </button>
             ))}
           </div>

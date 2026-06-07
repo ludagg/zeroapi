@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { prisma } from "@/lib/prisma";
 import { formatNumber } from "@/lib/utils";
 
@@ -10,21 +11,45 @@ export default async function AdminOverviewPage() {
     prisma.job.count({ where: { status: "FAILED" } }),
   ]);
 
+  return <AdminOverviewContent
+    users={users}
+    jobs={jobs}
+    deployments={deployments}
+    runningJobs={runningJobs}
+    failedJobs={failedJobs}
+  />;
+}
+
+function AdminOverviewContent({
+  users,
+  jobs,
+  deployments,
+  runningJobs,
+  failedJobs,
+}: {
+  users: number;
+  jobs: number;
+  deployments: number;
+  runningJobs: number;
+  failedJobs: number;
+}) {
+  const t = useTranslations("admin");
+
   const cards = [
-    { label: "Utilisateurs", value: users, hint: "comptes créés" },
-    { label: "Jobs totaux", value: jobs, hint: "tous statuts confondus" },
-    { label: "Jobs en cours", value: runningJobs, hint: "génération active" },
-    { label: "Déploiements", value: deployments, hint: "lifetime" },
-    { label: "Échecs", value: failedJobs, hint: "à investiguer" },
+    { label: t("overview.cards.users.label"), value: users, hint: t("overview.cards.users.hint") },
+    { label: t("overview.cards.totalJobs.label"), value: jobs, hint: t("overview.cards.totalJobs.hint") },
+    { label: t("overview.cards.runningJobs.label"), value: runningJobs, hint: t("overview.cards.runningJobs.hint") },
+    { label: t("overview.cards.deployments.label"), value: deployments, hint: t("overview.cards.deployments.hint") },
+    { label: t("overview.cards.failures.label"), value: failedJobs, hint: t("overview.cards.failures.hint") },
   ];
 
   return (
     <>
       <header className="mb-7">
         <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
-          Vue d&apos;<em className="italic">ensemble</em>.
+          {t("overview.title")}<em className="italic">{t("overview.titleEm")}</em>.
         </h1>
-        <p className="mt-2 text-muted">État global de la plateforme.</p>
+        <p className="mt-2 text-muted">{t("overview.subtitle")}</p>
       </header>
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

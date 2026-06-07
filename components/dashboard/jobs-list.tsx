@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Activity, CheckCheck, MoreHorizontal, Network, Shield, AlertTriangle } from "lucide-react";
 import type { JobStatus } from "@prisma/client";
+import { useTranslations } from "next-intl";
 import { formatRelativeTime } from "@/lib/utils";
 
 export type DashboardJob = {
@@ -33,15 +34,6 @@ const STATUS_CLASS: Record<JobStatus, string> = {
   FAILED: "bg-danger-soft text-danger",
 };
 
-const STATUS_LABEL: Record<JobStatus, string> = {
-  DRAFT: "BROUILLON",
-  PENDING: "EN FILE",
-  RUNNING: "EN COURS",
-  READY: "PRÊT",
-  DEPLOYED: "EN LIGNE",
-  FAILED: "ÉCHEC",
-};
-
 function Dot({ status }: { status: JobStatus }) {
   if (status === "RUNNING") {
     return (
@@ -52,15 +44,16 @@ function Dot({ status }: { status: JobStatus }) {
 }
 
 export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
+  const t = useTranslations("dashboard");
   if (jobs.length === 0) {
     return (
       <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
         <p className="font-serif text-[28px] leading-tight">
-          Aucun job <em className="italic">pour l&apos;instant</em>.
+          {t("jobs.empty.headline")}
         </p>
-        <p className="mt-2 text-muted">Crée ta première API en 30 secondes.</p>
+        <p className="mt-2 text-muted">{t("jobs.empty.subtitle")}</p>
         <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
-          Démarrer
+          {t("jobs.empty.cta")}
         </Link>
       </div>
     );
@@ -104,7 +97,7 @@ export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
             {job.testsTotal != null && job.testsPassed != null && (
               <span className="inline-flex items-center gap-1">
                 <CheckCheck className="h-3 w-3" />
-                {Math.round((job.testsPassed / Math.max(1, job.testsTotal)) * 100)}% couv.
+                {Math.round((job.testsPassed / Math.max(1, job.testsTotal)) * 100)}% {t("jobs.coverage")}
               </span>
             )}
             {job.authMode && (
@@ -123,14 +116,14 @@ export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
 
           <div className="hidden font-mono text-[12px] text-muted sm:block">
             {job.status === "RUNNING"
-              ? `en cours · ~ ${job.estimatedTime ? Math.ceil(job.estimatedTime / 60) : 2} min`
+              ? t("jobs.timeLabel.running", { min: job.estimatedTime ? Math.ceil(job.estimatedTime / 60) : 2 })
               : job.status === "DEPLOYED"
-                ? `déployé · ${formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "")}`
+                ? t("jobs.timeLabel.deployed", { time: formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "") })
                 : job.status === "READY"
-                  ? `prêt · ${formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "")}`
+                  ? t("jobs.timeLabel.ready", { time: formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "") })
                   : job.status === "FAILED"
-                    ? `échec · ${formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "")}`
-                    : "en file"}
+                    ? t("jobs.timeLabel.failed", { time: formatRelativeTime(job.completedAt ?? job.createdAt).replace("il y a ", "") })
+                    : t("jobs.timeLabel.pending")}
           </div>
 
           <span
@@ -140,11 +133,11 @@ export function JobsList({ jobs }: { jobs: DashboardJob[] }) {
             }
           >
             <Dot status={job.status} />
-            {STATUS_LABEL[job.status]}
+            {t(`jobs.status.${job.status.toLowerCase()}` as "jobs.status.draft")}
           </span>
 
           <button
-            aria-label="Options"
+            aria-label={t("jobs.options")}
             className="hidden h-7 w-7 place-items-center rounded-[7px] text-muted opacity-0 transition group-hover:opacity-100 hover:bg-bg-2 hover:text-ink sm:grid"
             onClick={(e) => e.preventDefault()}
           >

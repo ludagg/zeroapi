@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Pencil, X } from "lucide-react";
 import type { JobStatus } from "@prisma/client";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { formatRelativeTime } from "@/lib/utils";
 
 export type ConversationCardData = {
@@ -15,15 +16,6 @@ export type ConversationCardData = {
   messagesCount: number;
   updatedAt: string;
   job: { id: string; name: string; status: JobStatus } | null;
-};
-
-const JOB_STATUS_LABEL: Record<JobStatus, string> = {
-  DRAFT: "Brouillon",
-  PENDING: "En file",
-  RUNNING: "En cours",
-  READY: "Prêt",
-  DEPLOYED: "En ligne",
-  FAILED: "Échec",
 };
 
 const JOB_STATUS_CLASS: Record<JobStatus, string> = {
@@ -36,6 +28,7 @@ const JOB_STATUS_CLASS: Record<JobStatus, string> = {
 };
 
 export function ConversationCard({ data }: { data: ConversationCardData }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(data.title);
@@ -57,13 +50,13 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
       });
       if (!res.ok) {
         const err = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(err.error ?? "Renommage impossible.");
+        throw new Error(err.error ?? t("conversations.card.errorRename"));
       }
-      toast.success("Conversation renommée.");
+      toast.success(t("conversations.card.successRename"));
       setEditing(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.card.errorRetry"));
       setValue(data.title);
     } finally {
       setSaving(false);
@@ -96,7 +89,7 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
                 type="button"
                 onClick={commit}
                 disabled={saving}
-                aria-label="Valider"
+                aria-label={t("conversations.card.validateAriaLabel")}
                 className="grid h-7 w-7 place-items-center rounded-[7px] bg-accent text-accent-ink transition hover:opacity-90 disabled:opacity-50"
               >
                 <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
@@ -105,7 +98,7 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
                 type="button"
                 onClick={cancel}
                 disabled={saving}
-                aria-label="Annuler"
+                aria-label={t("conversations.card.cancelAriaLabel")}
                 className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
               >
                 <X className="h-3.5 w-3.5" />
@@ -117,7 +110,7 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
               <button
                 type="button"
                 onClick={() => setEditing(true)}
-                aria-label="Renommer"
+                aria-label={t("conversations.card.renameAriaLabel")}
                 className="grid h-7 w-7 place-items-center rounded-[7px] text-muted opacity-0 transition group-hover:opacity-100 hover:bg-bg-2 hover:text-ink"
               >
                 <Pencil className="h-3 w-3" />
@@ -132,18 +125,21 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
               JOB_STATUS_CLASS[data.job.status]
             }
           >
-            {JOB_STATUS_LABEL[data.job.status]}
+            {t(`conversations.jobStatus.${data.job.status.toLowerCase()}` as "conversations.jobStatus.draft")}
           </span>
         )}
       </div>
 
       <p className="mt-2 line-clamp-2 px-4 text-[13.5px] text-muted">
-        {data.lastMessage || "Pas encore de message."}
+        {data.lastMessage || t("conversations.card.noMessage")}
       </p>
 
       <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line bg-bg-2 px-4 py-2.5 font-mono text-[11px] text-muted">
         <span>
-          {data.messagesCount} message{data.messagesCount > 1 ? "s" : ""} ·{" "}
+          {data.messagesCount > 1
+            ? t("conversations.card.messagesPlural", { count: data.messagesCount })
+            : t("conversations.card.messages", { count: data.messagesCount })}
+          {" · "}
           {formatRelativeTime(data.updatedAt)}
           {data.job && (
             <>
@@ -160,14 +156,14 @@ export function ConversationCard({ data }: { data: ConversationCardData }) {
               className="inline-flex items-center gap-1 text-[11px] text-muted transition hover:text-ink"
             >
               <Pencil className="h-3 w-3" />
-              Renommer
+              {t("conversations.card.rename")}
             </button>
           )}
           <Link
             href={`/conversations/${data.id}`}
             className="inline-flex h-7 items-center gap-1 rounded-[6px] bg-ink px-2.5 text-[11.5px] font-medium text-bg transition hover:-translate-y-px"
           >
-            Continuer
+            {t("conversations.card.continue")}
             <ArrowRight className="h-3 w-3" />
           </Link>
         </div>

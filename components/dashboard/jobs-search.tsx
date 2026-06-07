@@ -3,8 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function JobsSearch() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const params = useSearchParams();
   const initial = params?.get("q") ?? "";
@@ -35,14 +37,14 @@ export function JobsSearch() {
         type="search"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="Chercher par nom…"
+        placeholder={t("jobs.searchPlaceholder")}
         className="h-9 w-full rounded-[9px] border border-line bg-surface pl-9 pr-9 text-[13.5px] text-ink outline-none transition focus:border-ink"
       />
       {value && (
         <button
           type="button"
           onClick={() => setValue("")}
-          aria-label="Effacer"
+          aria-label={t("jobs.clearSearch")}
           className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
         >
           <X className="h-3 w-3" />

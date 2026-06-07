@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Lock } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ForgotPanel } from "@/components/auth/auth-panels";
 import { ResetForm } from "@/components/auth/reset-form";
@@ -14,6 +15,7 @@ export default function ResetPasswordPage({
 }: {
   searchParams: { token?: string };
 }) {
+  const t = useTranslations("auth");
   const token = searchParams.token ?? "";
 
   return (
@@ -28,25 +30,25 @@ export default function ResetPasswordPage({
 
       <div className="eyebrow mb-4">
         <span className="dot" />
-        Réinitialisation
+        {t("reset.eyebrow")}
       </div>
       <h1 className="mb-3.5 font-serif text-[clamp(36px,4.6vw,52px)] leading-none tracking-[-0.01em]">
-        Nouveau <em className="italic">mot de passe</em>.
+        {t("reset.headingBefore")} <em className="italic">{t("reset.headingEm")}</em>.
       </h1>
       <p className="mb-7 text-[15px] text-muted">
-        Choisis un mot de passe d&apos;au moins 10 caractères. Ne le partage avec personne.
+        {t("reset.description")}
       </p>
 
       {token ? (
         <ResetForm token={token} />
       ) : (
         <div className="rounded-[12px] border border-danger/30 bg-danger-soft px-4 py-3.5 text-[13px] text-danger">
-          Lien invalide ou expiré. Demande un nouveau lien depuis la{" "}
+          {t("reset.invalidTokenBefore")}{" "}
           <Link
             href="/forgot-password"
             className="underline decoration-danger/50 underline-offset-2 hover:decoration-danger"
           >
-            page de récupération
+            {t("reset.invalidTokenLink")}
           </Link>
           .
         </div>
@@ -57,7 +59,7 @@ export default function ResetPasswordPage({
           href="/login"
           className="border-b border-accent font-medium text-ink hover:bg-accent-soft"
         >
-          Retour à la connexion
+          {t("shared.backToLogin")}
         </Link>
       </p>
     </AuthShell>

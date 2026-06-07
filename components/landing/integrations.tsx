@@ -1,3 +1,4 @@
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 const LOGOS = [
@@ -86,11 +87,12 @@ const LOGOS = [
 ];
 
 export function Integrations() {
+  const t = useTranslations("landing.integrations");
   return (
     <section style={{ paddingTop: 0 }}>
       <div className="wrap">
         <Reveal className="integrations-head">
-          <h3>Déploie où tu veux · stocke ce que tu veux</h3>
+          <h3>{t("heading")}</h3>
         </Reveal>
         <Reveal as="div" className="logo-rail">
           {LOGOS.map((l) => (

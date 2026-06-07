@@ -2,10 +2,12 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { MarketplaceBrowser } from "@/components/marketplace/marketplace-browser";
 import { requireUser } from "@/lib/session";
 import { loadMarketplace } from "@/lib/marketplace";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
 export default async function MarketplacePage() {
+  const t = useTranslations("dashboard");
   await requireUser();
   const { official, community, categories } = await loadMarketplace();
 
@@ -13,8 +15,8 @@ export default async function MarketplacePage() {
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Marketplace" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.marketplace") },
         ]}
       />
 
@@ -25,7 +27,7 @@ export default async function MarketplacePage() {
               <em className="italic">Marketplace</em>.
             </h1>
             <p className="mt-2 text-[14.5px] text-muted">
-              Partez d&apos;un template, pas d&apos;une page blanche.
+              {t("marketplace.subtitle")}
             </p>
           </header>
 

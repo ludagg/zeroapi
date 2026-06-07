@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, Copy, Key, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { SettingsCard } from "@/components/settings/profile-card";
 import { formatRelativeTime } from "@/lib/utils";
 
@@ -16,6 +17,7 @@ export type ApiKeyRow = {
 };
 
 export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [name, setName] = useState("");
   const [creating, setCreating] = useState(false);
@@ -37,42 +39,42 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
         error?: string;
       };
       if (!res.ok || !data.id || !data.plaintext) {
-        throw new Error(data.error ?? "Création impossible.");
+        throw new Error(data.error ?? t("settings.apiKeys.errorCreate"));
       }
       setRevealed({ id: data.id, plaintext: data.plaintext });
       setName("");
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("settings.apiKeys.errorRetry"));
     } finally {
       setCreating(false);
     }
   }
 
   async function revokeKey(id: string) {
-    if (!confirm("Révoquer cette clé ? Les requêtes échoueront immédiatement.")) return;
+    if (!confirm(t("settings.apiKeys.revokeConfirm"))) return;
     try {
       const res = await fetch(`/api/account/api-keys/${id}`, { method: "DELETE" });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Révocation impossible.");
+        throw new Error(data.error ?? t("settings.apiKeys.errorRevoke"));
       }
-      toast.success("Clé révoquée.");
+      toast.success(t("settings.apiKeys.successRevoke"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("settings.apiKeys.errorRetry"));
     }
   }
 
   return (
     <SettingsCard
-      title="Clés API personnelles"
-      subtitle="Permettent d'appeler l'API ZeroAPI depuis tes scripts. Ne partage jamais une clé."
+      title={t("settings.apiKeys.title")}
+      subtitle={t("settings.apiKeys.subtitle")}
     >
       {revealed && (
         <div className="mb-4 overflow-hidden rounded-[10px] border border-accent/40 bg-accent-soft">
           <div className="border-b border-accent/30 px-3.5 py-2 text-[12px] font-semibold text-accent-ink">
-            Clé créée — copie-la maintenant, elle ne sera plus jamais affichée.
+            {t("settings.apiKeys.revealed")}
           </div>
           <div className="flex items-center gap-2 px-3.5 py-2.5">
             <code className="flex-1 truncate font-mono text-[12.5px] text-ink">
@@ -84,7 +86,7 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
               onClick={() => setRevealed(null)}
               className="text-[11.5px] font-medium text-muted hover:text-ink"
             >
-              J&apos;ai copié
+              {t("settings.apiKeys.iCopied")}
             </button>
           </div>
         </div>
@@ -97,7 +99,7 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Ex : Production · CI"
+            placeholder={t("settings.apiKeys.placeholder")}
             className="input-base pl-10"
           />
         </div>
@@ -107,13 +109,13 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
           className="btn-primary h-9 px-4 text-[13px] disabled:opacity-50"
         >
           <Plus className="h-3.5 w-3.5" />
-          {creating ? "Création…" : "Créer"}
+          {creating ? t("settings.apiKeys.creating") : t("settings.apiKeys.create")}
         </button>
       </form>
 
       {initial.length === 0 ? (
         <div className="rounded-[10px] border border-dashed border-line-2 bg-bg-2 px-4 py-6 text-center text-[12.5px] text-muted">
-          Aucune clé pour l&apos;instant. Crée-en une pour appeler l&apos;API.
+          {t("settings.apiKeys.empty")}
         </div>
       ) : (
         <div className="overflow-hidden rounded-[10px] border border-line">
@@ -131,20 +133,20 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
                   </code>
                 </div>
                 <div className="mt-0.5 font-mono text-[11px] text-muted">
-                  créée {formatRelativeTime(k.createdAt)}
+                  {t("settings.apiKeys.keyCreatedAt", { time: formatRelativeTime(k.createdAt) })}
                   {k.lastUsedAt
-                    ? ` · dernière utilisation ${formatRelativeTime(k.lastUsedAt)}`
-                    : " · jamais utilisée"}
+                    ? t("settings.apiKeys.keyLastUsed", { time: formatRelativeTime(k.lastUsedAt) })
+                    : t("settings.apiKeys.keyNeverUsed")}
                 </div>
               </div>
               <button
                 type="button"
                 onClick={() => revokeKey(k.id)}
-                aria-label="Révoquer"
+                aria-label={t("settings.apiKeys.revokeAriaLabel")}
                 className="inline-flex h-8 items-center gap-1.5 rounded-[8px] border border-line bg-surface px-2.5 text-[12px] font-medium text-danger transition hover:border-danger/40"
               >
                 <Trash2 className="h-3 w-3" />
-                Révoquer
+                {t("settings.apiKeys.revoke")}
               </button>
             </div>
           ))}
@@ -155,6 +157,7 @@ export function ApiKeysCard({ initial }: { initial: ApiKeyRow[] }) {
 }
 
 function CopyButton({ value }: { value: string }) {
+  const t = useTranslations("dashboard");
   const [copied, setCopied] = useState(false);
   async function copy() {
     try {
@@ -173,11 +176,11 @@ function CopyButton({ value }: { value: string }) {
     >
       {copied ? (
         <>
-          <Check className="h-3 w-3" /> Copié
+          <Check className="h-3 w-3" /> {t("settings.apiKeys.copied")}
         </>
       ) : (
         <>
-          <Copy className="h-3 w-3" /> Copier
+          <Copy className="h-3 w-3" /> {t("settings.apiKeys.copy")}
         </>
       )}
     </button>

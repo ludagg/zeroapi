@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import {
   Check,
   CreditCard,
@@ -46,6 +47,7 @@ export function UserRowActions({
   const [view, setView] = useState<"root" | "plan">("root");
   const [pending, start] = useTransition();
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const t = useTranslations("admin");
 
   useEffect(() => {
     if (!open) return;
@@ -81,7 +83,7 @@ export function UserRowActions({
         toast.success(success);
         close();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Action impossible.");
+        toast.error(err instanceof Error ? err.message : t("rowActions.actionImpossible"));
       }
     });
   }
@@ -93,52 +95,50 @@ export function UserRowActions({
     }
     run(
       () => setUserPlan({ userId, plan }),
-      `Plan défini sur ${PLAN_LIMITS[plan].label}.`,
+      t("rowActions.toastPlanSet", { label: PLAN_LIMITS[plan].label }),
     );
   }
 
   function onReset() {
-    run(() => resetUserGenerations(userId), "Compteur de générations remis à 0.");
+    run(() => resetUserGenerations(userId), t("rowActions.toastResetGenerations"));
   }
 
   function onEditLimit() {
     const raw = window.prompt(
-      `Nouvelle limite de générations pour ${email} :`,
+      t("rowActions.planPrompt", { email }),
       String(currentLimit),
     );
     if (raw === null) return;
     const limit = Number.parseInt(raw.trim(), 10);
     if (!Number.isFinite(limit) || limit < 0 || limit > 100_000) {
-      toast.error("Limite invalide (0 — 100 000).");
+      toast.error(t("rowActions.invalidLimit"));
       return;
     }
     run(
       () => setUserGenerationsLimit({ userId, limit }),
-      `Limite mise à jour : ${limit}.`,
+      t("rowActions.toastLimitUpdated", { limit }),
     );
   }
 
   function onToggleRole() {
     if (currentRole === "ADMIN") {
-      run(() => demoteUser(userId), "Rôle rétrogradé en USER.");
+      run(() => demoteUser(userId), t("rowActions.toastDemoted"));
     } else {
-      run(() => promoteUser(userId), "Promu·e admin.");
+      run(() => promoteUser(userId), t("rowActions.toastPromoted"));
     }
   }
 
   function onDelete() {
-    const ok = window.confirm(
-      `Supprimer définitivement ${email} ?\n\nCette action supprime aussi ses jobs, déploiements et sessions. Elle est irréversible.`,
-    );
+    const ok = window.confirm(t("rowActions.confirmDelete", { email }));
     if (!ok) return;
-    run(() => deleteUser(userId), "Utilisateur supprimé.");
+    run(() => deleteUser(userId), t("rowActions.toastDeleted"));
   }
 
   return (
     <div ref={wrapperRef} className="relative inline-block text-left">
       <button
         type="button"
-        aria-label="Ouvrir les actions"
+        aria-label={t("rowActions.openActions")}
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
@@ -168,13 +168,13 @@ export function UserRowActions({
                   </span>
                 }
               >
-                Changer le plan
+                {t("rowActions.changePlan")}
               </MenuButton>
               <MenuButton
                 icon={<RotateCcw className="h-3.5 w-3.5" />}
                 onClick={onReset}
               >
-                Réinitialiser les générations
+                {t("rowActions.resetGenerations")}
               </MenuButton>
               <MenuButton
                 icon={<SlidersHorizontal className="h-3.5 w-3.5" />}
@@ -183,7 +183,7 @@ export function UserRowActions({
                   <span className="font-mono text-[10.5px] text-muted">{currentLimit}</span>
                 }
               >
-                Modifier la limite…
+                {t("rowActions.editLimit")}
               </MenuButton>
               <div className="my-1 border-t border-line" />
               <MenuButton
@@ -198,11 +198,11 @@ export function UserRowActions({
                 disabled={currentRole === "ADMIN" && isSelf}
                 title={
                   currentRole === "ADMIN" && isSelf
-                    ? "Tu ne peux pas te rétrograder toi-même."
+                    ? t("rowActions.cannotDemoteSelf")
                     : undefined
                 }
               >
-                {currentRole === "ADMIN" ? "Rétrograder en USER" : "Promouvoir admin"}
+                {currentRole === "ADMIN" ? t("rowActions.demote") : t("rowActions.promote")}
               </MenuButton>
               <div className="my-1 border-t border-line" />
               <MenuButton
@@ -210,9 +210,9 @@ export function UserRowActions({
                 onClick={onDelete}
                 disabled={isSelf}
                 danger
-                title={isSelf ? "Tu ne peux pas te supprimer toi-même." : undefined}
+                title={isSelf ? t("rowActions.cannotDeleteSelf") : undefined}
               >
-                Supprimer le compte
+                {t("rowActions.deleteAccount")}
               </MenuButton>
             </div>
           )}
@@ -220,7 +220,7 @@ export function UserRowActions({
           {view === "plan" && (
             <div className="py-1 text-[13px]">
               <div className="px-3 pb-1 pt-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                Plan
+                {t("rowActions.planHeader")}
               </div>
               {PLAN_ORDER.map((p) => {
                 const info = PLAN_LIMITS[p];
@@ -258,7 +258,7 @@ export function UserRowActions({
                 onClick={() => setView("root")}
                 className="w-full px-3 py-1.5 text-left text-[12.5px] text-muted transition hover:bg-bg-2 hover:text-ink"
               >
-                ← Retour
+                {t("rowActions.back")}
               </button>
             </div>
           )}

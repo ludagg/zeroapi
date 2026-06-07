@@ -1,5 +1,6 @@
 import { ExternalLink, Server } from "lucide-react";
 import type { DeployPlatform } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 type DeploymentRow = {
   id: string;
@@ -17,16 +18,17 @@ const PLATFORM_LABEL: Record<DeployPlatform, string> = {
 };
 
 export function DeploymentsPanel({ deployments }: { deployments: DeploymentRow[] }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
       <div className="flex items-center justify-between border-b border-line px-4 py-3.5">
-        <h3 className="text-[14px] font-semibold">Déploiements en ligne</h3>
+        <h3 className="text-[14px] font-semibold">{t("deploymentsPanel.title")}</h3>
       </div>
 
       <div className="py-1">
         {deployments.length === 0 && (
           <div className="px-4 py-8 text-center text-[13px] text-muted">
-            Pas encore de déploiement actif.
+            {t("deploymentsPanel.empty")}
           </div>
         )}
         {deployments.map((d, i) => (

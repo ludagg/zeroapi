@@ -7,6 +7,7 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { DeploymentsFilter } from "@/components/deployments/deployments-filter";
 import { ExternalUrlLink } from "@/components/deployments/external-url-link";
 import { formatRelativeTime } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,6 @@ const PLATFORM_LABEL: Record<DeployPlatform, string> = {
   ZEROAPI_CLOUD: "ZeroAPI Cloud",
 };
 
-const STATUS_LABEL: Record<DeploymentStatus, string> = {
-  PENDING: "EN ATTENTE",
-  DEPLOYING: "EN COURS",
-  ONLINE: "EN LIGNE",
-  FAILED: "ÉCHEC",
-};
-
 const STATUS_CLASS: Record<DeploymentStatus, string> = {
   PENDING: "border border-dashed border-line-2 text-muted",
   DEPLOYING: "bg-warn-soft text-warn-ink",
@@ -32,11 +26,11 @@ const STATUS_CLASS: Record<DeploymentStatus, string> = {
   FAILED: "bg-danger-soft text-danger",
 };
 
-const FILTERS: Array<{ id: string; label: string; statuses: DeploymentStatus[] | null }> = [
-  { id: "all", label: "Tous", statuses: null },
-  { id: "online", label: "En ligne", statuses: ["ONLINE"] },
-  { id: "pending", label: "En attente", statuses: ["PENDING", "DEPLOYING"] },
-  { id: "failed", label: "Échec", statuses: ["FAILED"] },
+const FILTER_IDS: Array<{ id: string; statuses: DeploymentStatus[] | null }> = [
+  { id: "all", statuses: null },
+  { id: "online", statuses: ["ONLINE"] },
+  { id: "pending", statuses: ["PENDING", "DEPLOYING"] },
+  { id: "failed", statuses: ["FAILED"] },
 ];
 
 export default async function DeploymentsPage({
@@ -44,6 +38,7 @@ export default async function DeploymentsPage({
 }: {
   searchParams: { status?: string };
 }) {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
 
   const all = await prisma.deployment.findMany({
@@ -59,7 +54,7 @@ export default async function DeploymentsPage({
     failed: all.filter((d) => d.status === "FAILED").length,
   };
 
-  const current = FILTERS.find((f) => f.id === (searchParams.status ?? "all")) ?? FILTERS[0];
+  const current = FILTER_IDS.find((f) => f.id === (searchParams.status ?? "all")) ?? FILTER_IDS[0];
   const visible = current.statuses
     ? all.filter((d) => current.statuses!.includes(d.status))
     : all;
@@ -68,28 +63,30 @@ export default async function DeploymentsPage({
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Déploiements" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.deployments") },
         ]}
       />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-6 sm:px-6 sm:py-7 lg:px-7">
           <header className="mb-6">
             <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-              Tes <em className="italic">déploiements</em>.
+              {t.rich("deployments.pageTitle", { em: (chunks) => <em className="italic">{chunks}</em> })}
             </h1>
             <p className="mt-2 text-[14.5px] text-muted">
-              {all.length} déploiement{all.length > 1 ? "s" : ""} · Railway, Render, Vercel, Fly.io
+              {all.length > 1
+                ? t("deployments.totalPlural", { count: all.length })
+                : t("deployments.total", { count: all.length })}
             </p>
           </header>
 
           <div className="mb-5">
             <DeploymentsFilter
               filters={[
-                { id: "all", label: "Tous", n: counts.all },
-                { id: "online", label: "En ligne", n: counts.online },
-                { id: "pending", label: "En attente", n: counts.pending },
-                { id: "failed", label: "Échec", n: counts.failed },
+                { id: "all", label: t("deployments.filters.all"), n: counts.all },
+                { id: "online", label: t("deployments.filters.online"), n: counts.online },
+                { id: "pending", label: t("deployments.filters.pending"), n: counts.pending },
+                { id: "failed", label: t("deployments.filters.failed"), n: counts.failed },
               ]}
             />
           </div>
@@ -98,7 +95,7 @@ export default async function DeploymentsPage({
             <EmptyState />
           ) : visible.length === 0 ? (
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-10 text-center text-[13.5px] text-muted">
-              Aucun déploiement dans ce filtre.
+              {t("deployments.emptyFilter")}
             </div>
           ) : (
             <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
@@ -119,7 +116,7 @@ export default async function DeploymentsPage({
                       <ExternalUrlLink url={d.url} />
                     ) : (
                       <span className="mt-0.5 inline-block font-mono text-[11.5px] text-muted-2">
-                        — pas encore d&apos;URL
+                        {t("deployments.noUrl")}
                       </span>
                     )}
                   </div>
@@ -139,7 +136,7 @@ export default async function DeploymentsPage({
                     }
                   >
                     <Dot status={d.status} />
-                    {STATUS_LABEL[d.status]}
+                    {t(`deployments.status.${d.status.toLowerCase()}` as "deployments.status.pending")}
                   </span>
                 </Link>
               ))}
@@ -161,17 +158,18 @@ function Dot({ status }: { status: DeploymentStatus }) {
 }
 
 function EmptyState() {
+  const t = useTranslations("dashboard");
   return (
     <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
       <GitBranch className="mx-auto mb-3 h-5 w-5 text-muted-2" />
       <p className="font-serif text-[28px] leading-tight">
-        Aucun déploiement <em className="italic">pour l&apos;instant</em>.
+        {t("deployments.empty.headline")}
       </p>
       <p className="mt-2 text-muted">
-        Génère une API puis déploie-la en un clic sur Railway, Render, Vercel ou Fly.io.
+        {t("deployments.empty.subtitle")}
       </p>
       <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
-        Générer une API
+        {t("deployments.empty.cta")}
       </Link>
     </div>
   );

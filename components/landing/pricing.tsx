@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 function Check() {
@@ -31,144 +32,78 @@ function Cross() {
   );
 }
 
+type PlanDef = {
+  key: "free" | "starter" | "pro" | "business";
+  price: string;
+  featured?: boolean;
+  href: string;
+  crossLast?: boolean;
+};
+
+const PLANS: PlanDef[] = [
+  { key: "free", price: "0", href: "/register", crossLast: true },
+  { key: "starter", price: "19", href: "/register?plan=starter" },
+  { key: "pro", price: "49", featured: true, href: "/register?plan=pro" },
+  { key: "business", price: "199", href: "mailto:ventes@zeroapi.app" },
+];
+
 export function Pricing() {
+  const t = useTranslations("landing.pricing");
+
   return (
     <section id="tarifs">
       <div className="wrap">
         <Reveal className="section-head">
-          <span className="kicker">Tarifs</span>
+          <span className="kicker">{t("kicker")}</span>
           <h2 className="display">
-            Démarre gratuit.
+            {t("headlineLead")}
             <br />
-            <em>Monte</em> en puissance.
+            <em>{t("headlineAccent")}</em> {t("headlineRest")}
           </h2>
-          <p>
-            Chaque plan ouvre un quota de générations par mois. L&apos;export du code et le
-            Dev Mode sont inclus partout — même en gratuit. Pas de vendor-lock, jamais.
-          </p>
+          <p>{t("sub")}</p>
         </Reveal>
 
         <div className="plans">
-          <Reveal as="div" className="plan" delay={0}>
-            <div className="plan-name">Free</div>
-            <div className="plan-tag">Pour explorer et apprendre.</div>
-            <div className="plan-price">
-              0<small>€ / mois</small>
-            </div>
-            <div className="plan-meta">Pour toujours.</div>
-            <div className="plan-divider" />
-            <ul className="plan-feat-list">
-              <li>
-                <Check /> 3 générations / mois
-              </li>
-              <li>
-                <Check /> IA Mistral &amp; Gemini
-              </li>
-              <li>
-                <Check /> Export Git + Dev Mode
-              </li>
-              <li>
-                <Check /> Marketplace en lecture
-              </li>
-              <li className="dim">
-                <Cross /> Hébergement ZeroAPI Cloud
-              </li>
-            </ul>
-            <Link href="/register" className="btn btn-ghost">
-              Commencer
-            </Link>
-          </Reveal>
-
-          <Reveal as="div" className="plan" delay={80}>
-            <div className="plan-name">Starter</div>
-            <div className="plan-tag">Pour les projets perso sérieux.</div>
-            <div className="plan-price">
-              19<small>€ / mois</small>
-            </div>
-            <div className="plan-meta">~ 12 500 FCFA · mensuel.</div>
-            <div className="plan-divider" />
-            <ul className="plan-feat-list">
-              <li>
-                <Check /> 30 générations / mois
-              </li>
-              <li>
-                <Check /> ZeroAPI Cloud · 1 projet
-              </li>
-              <li>
-                <Check /> Playground &amp; partage public
-              </li>
-              <li>
-                <Check /> Publication de templates
-              </li>
-              <li>
-                <Check /> Support email
-              </li>
-            </ul>
-            <Link href="/register?plan=starter" className="btn btn-ghost">
-              Choisir Starter
-            </Link>
-          </Reveal>
-
-          <Reveal as="div" className="plan featured" delay={160}>
-            <span className="plan-badge">★ Populaire</span>
-            <div className="plan-name">Pro</div>
-            <div className="plan-tag">Pour les builders sérieux.</div>
-            <div className="plan-price">
-              49<small>€ / mois</small>
-            </div>
-            <div className="plan-meta">~ 32 000 FCFA · mensuel.</div>
-            <div className="plan-divider" />
-            <ul className="plan-feat-list">
-              <li>
-                <Check /> 150 générations / mois
-              </li>
-              <li>
-                <Check /> IA Claude premium
-              </li>
-              <li>
-                <Check /> ZeroAPI Cloud · 3 projets
-              </li>
-              <li>
-                <Check /> Domaines perso · webhooks · push
-              </li>
-              <li>
-                <Check /> Support sous 24 h
-              </li>
-            </ul>
-            <Link href="/register?plan=pro" className="btn btn-accent">
-              Passer Pro
-            </Link>
-          </Reveal>
-
-          <Reveal as="div" className="plan" delay={240}>
-            <div className="plan-name">Business</div>
-            <div className="plan-tag">Pour les équipes et agences.</div>
-            <div className="plan-price">
-              199<small>€ / mois</small>
-            </div>
-            <div className="plan-meta">~ 130 000 FCFA · jusqu&apos;à 10 sièges.</div>
-            <div className="plan-divider" />
-            <ul className="plan-feat-list">
-              <li>
-                <Check /> 1 000 générations / mois
-              </li>
-              <li>
-                <Check /> Projets &amp; membres illimités
-              </li>
-              <li>
-                <Check /> SSO · audit log · SLA 99,9 %
-              </li>
-              <li>
-                <Check /> Hébergement dédié sur demande
-              </li>
-              <li>
-                <Check /> Onboarding 1-à-1 · support Slack
-              </li>
-            </ul>
-            <a href="mailto:ventes@zeroapi.app" className="btn btn-ghost">
-              Contacter les ventes
-            </a>
-          </Reveal>
+          {PLANS.map((plan, idx) => (
+            <Reveal
+              as="div"
+              className={`plan${plan.featured ? " featured" : ""}`}
+              delay={idx * 80}
+              key={plan.key}
+            >
+              {plan.featured && <span className="plan-badge">{t("popular")}</span>}
+              <div className="plan-name">{t(`${plan.key}.name`)}</div>
+              <div className="plan-tag">{t(`${plan.key}.tag`)}</div>
+              <div className="plan-price">
+                {plan.price}
+                <small>{t("perMonth")}</small>
+              </div>
+              <div className="plan-meta">{t(`${plan.key}.meta`)}</div>
+              <div className="plan-divider" />
+              <ul className="plan-feat-list">
+                {[1, 2, 3, 4, 5].map((n) => {
+                  const isCross = plan.crossLast && n === 5;
+                  return (
+                    <li key={n} className={isCross ? "dim" : undefined}>
+                      {isCross ? <Cross /> : <Check />} {t(`${plan.key}.f${n}`)}
+                    </li>
+                  );
+                })}
+              </ul>
+              {plan.href.startsWith("mailto:") ? (
+                <a href={plan.href} className="btn btn-ghost">
+                  {t(`${plan.key}.cta`)}
+                </a>
+              ) : (
+                <Link
+                  href={plan.href}
+                  className={`btn ${plan.featured ? "btn-accent" : "btn-ghost"}`}
+                >
+                  {t(`${plan.key}.cta`)}
+                </Link>
+              )}
+            </Reveal>
+          ))}
         </div>
 
         <p
@@ -180,7 +115,7 @@ export function Pricing() {
             fontFamily: "var(--font-mono), monospace",
           }}
         >
-          🟢 Bientôt — paiement Mobile Money : Orange Money, Wave, MTN MoMo, Moov Money
+          {t("mobileMoney")}
         </p>
       </div>
     </section>

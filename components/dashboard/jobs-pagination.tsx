@@ -2,6 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function JobsPagination({
   page,
@@ -12,6 +13,7 @@ export function JobsPagination({
   pageSize: number;
   total: number;
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const params = useSearchParams();
 
@@ -32,16 +34,14 @@ export function JobsPagination({
   return (
     <div className="mt-4 flex items-center justify-between font-mono text-[11.5px] text-muted">
       <span>
-        Aff. <b className="font-medium text-ink">{first}</b>–
-        <b className="font-medium text-ink">{last}</b> sur{" "}
-        <b className="font-medium text-ink">{total}</b>
+        {t("jobs.pagination.showing", { first, last, total })}
       </span>
       <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => go(page - 1)}
           disabled={page <= 1}
-          aria-label="Page précédente"
+          aria-label={t("jobs.pagination.previous")}
           className="grid h-8 w-8 place-items-center rounded-[7px] border border-line bg-surface text-ink-2 transition hover:border-line-2 disabled:opacity-40 disabled:hover:border-line"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
@@ -53,7 +53,7 @@ export function JobsPagination({
           type="button"
           onClick={() => go(page + 1)}
           disabled={page >= totalPages}
-          aria-label="Page suivante"
+          aria-label={t("jobs.pagination.next")}
           className="grid h-8 w-8 place-items-center rounded-[7px] border border-line bg-surface text-ink-2 transition hover:border-line-2 disabled:opacity-40 disabled:hover:border-line"
         >
           <ChevronRight className="h-3.5 w-3.5" />

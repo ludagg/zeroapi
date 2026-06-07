@@ -14,6 +14,7 @@ import {
   Trash2,
   X,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 
 export type PlaygroundEndpoint = {
@@ -90,7 +91,8 @@ function formatBytes(n: number): string {
   return `${(n / (1024 * 1024)).toFixed(2)} Mo`;
 }
 
-function CopyButton({ text, label = "Copier" }: { text: string; label?: string }) {
+function CopyButton({ text, label }: { text: string; label: string }) {
+  const t = useTranslations("dashboard");
   const [copied, setCopied] = useState(false);
   return (
     <button
@@ -107,7 +109,7 @@ function CopyButton({ text, label = "Copier" }: { text: string; label?: string }
       {copied ? (
         <>
           <Check className="h-3 w-3 text-accent-ink" />
-          copié
+          {t("playground.copyResponse")}
         </>
       ) : (
         <>
@@ -124,11 +126,17 @@ function KvEditor({
   onChange,
   keyPlaceholder,
   valuePlaceholder,
+  activateLabel,
+  deleteLabel,
+  addRowLabel,
 }: {
   rows: KV[];
   onChange: (rows: KV[]) => void;
   keyPlaceholder: string;
   valuePlaceholder: string;
+  activateLabel: string;
+  deleteLabel: string;
+  addRowLabel: string;
 }) {
   const update = (id: string, patch: Partial<KV>) => {
     onChange(rows.map((r) => (r.id === id ? { ...r, ...patch } : r)));
@@ -146,7 +154,7 @@ function KvEditor({
             checked={row.enabled}
             onChange={(e) => update(row.id, { enabled: e.target.checked })}
             className="h-3.5 w-3.5 accent-[var(--accent)]"
-            aria-label="Activer"
+            aria-label={activateLabel}
           />
           <input
             value={row.key}
@@ -165,7 +173,7 @@ function KvEditor({
             type="button"
             onClick={() => remove(row.id)}
             className="grid h-7 w-7 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-danger"
-            aria-label="Supprimer"
+            aria-label={deleteLabel}
           >
             <Trash2 className="h-3 w-3" />
           </button>
@@ -176,13 +184,14 @@ function KvEditor({
         onClick={() => onChange([...rows, emptyRow()])}
         className="inline-flex items-center gap-1.5 rounded-[7px] border border-dashed border-line-2 px-2.5 py-1.5 font-mono text-[11px] text-muted transition hover:border-ink hover:text-ink"
       >
-        <Plus className="h-3 w-3" /> Ajouter une ligne
+        <Plus className="h-3 w-3" /> {addRowLabel}
       </button>
     </div>
   );
 }
 
 export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
+  const t = useTranslations("dashboard");
   const [selectedApiId, setSelectedApiId] = useState<string | null>(
     apis.find((a) => a.isOnline)?.id ?? apis[0]?.id ?? null,
   );
@@ -298,7 +307,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError({ message: data?.error ?? "Erreur inconnue", url: data?.url });
+        setError({ message: data?.error ?? t("playground.errorUnknown"), url: data?.url });
       } else {
         setResponse(data);
         setResponseTab("body");
@@ -308,7 +317,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
     } finally {
       setSending(false);
     }
-  }, [selectedApi, selectedEndpoint, queryRows, headerRows, builtPath, bodyText]);
+  }, [selectedApi, selectedEndpoint, queryRows, headerRows, builtPath, bodyText, t]);
 
   if (apis.length === 0) {
     return (
@@ -317,15 +326,15 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
           <span className="grid h-12 w-12 place-items-center rounded-[12px] bg-accent-soft text-accent-ink mx-auto mb-4">
             <Play className="h-5 w-5" />
           </span>
-          <h2 className="font-serif text-[26px] italic leading-tight">Rien à tester.</h2>
+          <h2 className="font-serif text-[26px] italic leading-tight">{t("playground.empty.headline")}</h2>
           <p className="mt-2 text-[14px] text-muted">
-            Génère ta première API puis reviens ici pour la lancer en live.
+            {t("playground.empty.subtitle")}
           </p>
           <Link
             href="/generate"
             className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
           >
-            Créer une API
+            {t("playground.empty.cta")}
             <ArrowRight className="h-3.5 w-3.5" />
           </Link>
         </div>
@@ -335,6 +344,12 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
 
   const responsePretty = response ? prettyJson(response.body) : null;
 
+  const requestTabs = [
+    { id: "params" as const, label: t("playground.requestTabs.params") },
+    { id: "headers" as const, label: t("playground.requestTabs.headers") },
+    { id: "body" as const, label: t("playground.requestTabs.body"), show: selectedEndpoint?.method !== "GET" && selectedEndpoint?.method !== "DELETE" },
+  ].filter((tab) => tab.show !== false);
+
   return (
     <div className="grid gap-3 sm:gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
       <aside className="space-y-3 lg:sticky lg:top-3 lg:self-start">
@@ -342,7 +357,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
         <div className="hidden overflow-hidden rounded-[12px] border border-line bg-surface lg:block">
           <div className="border-b border-line px-3 py-2.5">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-              APIs ({apis.length})
+              {t("playground.apisLabel", { count: apis.length })}
             </div>
           </div>
           <div className="max-h-[280px] overflow-y-auto scrollbar-thin">
@@ -375,7 +390,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                         active ? "text-bg/60" : "text-muted",
                       )}
                     >
-                      {api.isOnline ? api.deploymentUrl : "non déployée"}
+                      {api.isOnline ? api.deploymentUrl : t("playground.notDeployed")}
                     </div>
                   </div>
                   {active && <ChevronRight className="h-3.5 w-3.5 opacity-70" />}
@@ -389,7 +404,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
         <div className="lg:hidden">
           <div className="mb-1.5 flex items-baseline justify-between px-1">
             <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-              APIs ({apis.length})
+              {t("playground.apisLabel", { count: apis.length })}
             </div>
           </div>
           <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-2 scrollbar-thin">
@@ -424,13 +439,13 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
           <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
             <div className="border-b border-line px-3 py-2.5">
               <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                Endpoints ({selectedApi.endpoints.length})
+                {t("playground.endpointsLabel", { count: selectedApi.endpoints.length })}
               </div>
             </div>
             <div className="max-h-[200px] overflow-y-auto scrollbar-thin lg:max-h-[460px]">
               {selectedApi.endpoints.length === 0 ? (
                 <div className="px-3 py-6 text-center text-[12.5px] text-muted">
-                  Aucun endpoint dans la spec.
+                  {t("playground.noEndpoint")}
                 </div>
               ) : (
                 selectedApi.endpoints.map((ep) => {
@@ -473,14 +488,14 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
               <Rocket className="h-4 w-4" />
             </span>
             <div className="min-w-0 flex-1 text-[13px] text-warn-ink">
-              <strong>Cette API n&apos;est pas en ligne.</strong> Déploie-la pour pouvoir lancer
-              de vraies requêtes.
+              <strong>{t("playground.notOnline.message")}</strong>{" "}
+              {t("playground.notOnline.detail")}
             </div>
             <Link
               href={`/jobs/${selectedApi.id}/deploy`}
               className="inline-flex h-8 items-center gap-1.5 rounded-[8px] bg-warn-ink px-3 text-[12.5px] font-medium text-warn-soft transition hover:-translate-y-px"
             >
-              Déployer maintenant
+              {t("playground.notOnline.deploy")}
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -503,11 +518,11 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     {builtUrl}
                   </code>
                   <div className="hidden sm:block">
-                    <CopyButton text={builtUrl} label="copier URL" />
+                    <CopyButton text={builtUrl} label={t("playground.copyUrl")} />
                   </div>
                 </div>
                 <div className="mt-2.5 flex items-center gap-2 sm:hidden">
-                  <CopyButton text={builtUrl} label="copier" />
+                  <CopyButton text={builtUrl} label={t("playground.copyUrl")} />
                   <button
                     type="button"
                     onClick={send}
@@ -522,12 +537,12 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     {sending ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Envoi…
+                        {t("playground.sending")}
                       </>
                     ) : (
                       <>
                         <Play className="h-3.5 w-3.5 fill-current" />
-                        Envoyer
+                        {t("playground.send")}
                       </>
                     )}
                   </button>
@@ -547,12 +562,12 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     {sending ? (
                       <>
                         <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Envoi…
+                        {t("playground.sending")}
                       </>
                     ) : (
                       <>
                         <Play className="h-3.5 w-3.5 fill-current" />
-                        Envoyer
+                        {t("playground.send")}
                       </>
                     )}
                   </button>
@@ -560,33 +575,25 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
               </div>
 
               <div className="flex gap-1 overflow-x-auto border-b border-line px-3 scrollbar-thin">
-                {(
-                  [
-                    { id: "params", label: "Paramètres" },
-                    { id: "headers", label: "Headers" },
-                    { id: "body", label: "Body", show: selectedEndpoint.method !== "GET" && selectedEndpoint.method !== "DELETE" },
-                  ] as Array<{ id: typeof requestTab; label: string; show?: boolean }>
-                )
-                  .filter((t) => t.show !== false)
-                  .map((t) => {
-                    const isOn = requestTab === t.id;
-                    return (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => setRequestTab(t.id)}
-                        className={cn(
-                          "relative px-3 py-2.5 text-[12.5px] transition",
-                          isOn ? "font-medium text-ink" : "text-muted hover:text-ink",
-                        )}
-                      >
-                        {t.label}
-                        {isOn && (
-                          <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-ink" />
-                        )}
-                      </button>
-                    );
-                  })}
+                {requestTabs.map((tab) => {
+                  const isOn = requestTab === tab.id;
+                  return (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setRequestTab(tab.id)}
+                      className={cn(
+                        "relative px-3 py-2.5 text-[12.5px] transition",
+                        isOn ? "font-medium text-ink" : "text-muted hover:text-ink",
+                      )}
+                    >
+                      {tab.label}
+                      {isOn && (
+                        <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-ink" />
+                      )}
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="p-3.5">
@@ -595,7 +602,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     {selectedEndpoint.pathParams.length > 0 && (
                       <div>
                         <div className="mb-1.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                          Path
+                          {t("playground.pathSection")}
                         </div>
                         <div className="space-y-1.5">
                           {selectedEndpoint.pathParams.map((p) => (
@@ -612,7 +619,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                                 onChange={(e) =>
                                   setPathValues((v) => ({ ...v, [p]: e.target.value }))
                                 }
-                                placeholder={`valeur de ${p}`}
+                                placeholder={t("playground.paramPlaceholder", { name: p })}
                                 className="h-8 min-w-0 flex-1 bg-transparent font-mono text-[12.5px] text-ink outline-none placeholder:text-muted-2"
                               />
                             </div>
@@ -622,13 +629,16 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     )}
                     <div>
                       <div className="mb-1.5 font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                        Query
+                        {t("playground.querySection")}
                       </div>
                       <KvEditor
                         rows={queryRows}
                         onChange={setQueryRows}
-                        keyPlaceholder="clé"
-                        valuePlaceholder="valeur"
+                        keyPlaceholder={t("playground.keyPlaceholder")}
+                        valuePlaceholder={t("playground.valuePlaceholder")}
+                        activateLabel={t("playground.activateRow")}
+                        deleteLabel={t("playground.deleteRow")}
+                        addRowLabel={t("playground.addRow")}
                       />
                     </div>
                   </div>
@@ -637,8 +647,11 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                   <KvEditor
                     rows={headerRows}
                     onChange={setHeaderRows}
-                    keyPlaceholder="nom du header"
-                    valuePlaceholder="valeur"
+                    keyPlaceholder={t("playground.headerKeyPlaceholder")}
+                    valuePlaceholder={t("playground.valuePlaceholder")}
+                    activateLabel={t("playground.activateRow")}
+                    deleteLabel={t("playground.deleteRow")}
+                    addRowLabel={t("playground.addRow")}
                   />
                 )}
                 {requestTab === "body" && (
@@ -655,7 +668,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                         }}
                         className="font-mono text-[10.5px] text-muted transition hover:text-ink"
                       >
-                        Formater
+                        {t("playground.formatJson")}
                       </button>
                     </div>
                     <textarea
@@ -674,7 +687,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
             <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
               <div className="flex flex-wrap items-center gap-2 border-b border-line px-3 py-2.5">
                 <div className="font-mono text-[10.5px] uppercase tracking-[0.1em] text-muted">
-                  Réponse
+                  {t("playground.response")}
                 </div>
                 {response && (
                   <>
@@ -691,45 +704,45 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                     </span>
                     <span className="font-mono text-[10.5px] text-muted">
                       {formatBytes(response.size)}
-                      {response.truncated && " (tronqué)"}
+                      {response.truncated && ` ${t("playground.responseTruncated")}`}
                     </span>
                     <div className="ml-auto">
-                      <CopyButton text={responsePretty?.pretty ?? response.body} label="copier" />
+                      <CopyButton text={responsePretty?.pretty ?? response.body} label={t("playground.copyResponse")} />
                     </div>
                   </>
                 )}
                 {error && (
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-danger-soft px-2 py-0.5 font-mono text-[10.5px] text-danger">
-                    <X className="h-3 w-3" /> Échec
+                    <X className="h-3 w-3" /> {t("playground.responseFailed")}
                   </span>
                 )}
                 {!response && !error && !sending && (
                   <span className="font-mono text-[11px] text-muted">
-                    En attente d&apos;un envoi
+                    {t("playground.responseWaiting")}
                   </span>
                 )}
                 {sending && (
                   <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-muted">
-                    <Loader2 className="h-3 w-3 animate-spin" /> Envoi en cours…
+                    <Loader2 className="h-3 w-3 animate-spin" /> {t("playground.responseSending")}
                   </span>
                 )}
               </div>
 
               {response && (
                 <div className="flex gap-1 overflow-x-auto border-b border-line px-3 scrollbar-thin">
-                  {(["body", "headers"] as const).map((t) => {
-                    const isOn = responseTab === t;
+                  {(["body", "headers"] as const).map((tab) => {
+                    const isOn = responseTab === tab;
                     return (
                       <button
-                        key={t}
+                        key={tab}
                         type="button"
-                        onClick={() => setResponseTab(t)}
+                        onClick={() => setResponseTab(tab)}
                         className={cn(
                           "relative px-3 py-2.5 text-[12.5px] transition",
                           isOn ? "font-medium text-ink" : "text-muted hover:text-ink",
                         )}
                       >
-                        {t === "body" ? "Body" : `Headers (${Object.keys(response.headers).length})`}
+                        {tab === "body" ? "Body" : `Headers (${Object.keys(response.headers).length})`}
                         {isOn && (
                           <span className="absolute inset-x-2 bottom-0 h-[2px] rounded-full bg-ink" />
                         )}
@@ -753,7 +766,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                 {response && responseTab === "body" && (
                   <pre className="max-h-[460px] overflow-auto rounded-[10px] bg-bg-2 p-3 font-mono text-[12.5px] leading-[1.7] text-ink scrollbar-thin">
                     <code>
-                      {responsePretty?.pretty ?? response.body ?? "(corps vide)"}
+                      {responsePretty?.pretty ?? response.body ?? t("playground.responseEmpty")}
                     </code>
                   </pre>
                 )}
@@ -775,8 +788,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
                 )}
                 {!response && !error && !sending && (
                   <div className="grid place-items-center px-3 py-10 text-center text-[13px] text-muted">
-                    Sélectionne un endpoint, configure les paramètres puis clique sur{" "}
-                    <strong className="ml-1 text-ink">Envoyer</strong>.
+                    {t("playground.selectEndpoint")}
                   </div>
                 )}
               </div>
@@ -785,9 +797,9 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
         ) : (
           <div className="grid place-items-center rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-16 text-center">
             <div>
-              <h3 className="font-serif text-[22px] italic text-ink">Aucun endpoint</h3>
+              <h3 className="font-serif text-[22px] italic text-ink">{t("playground.noEndpointTitle")}</h3>
               <p className="mt-1 text-[13px] text-muted">
-                Cette API n&apos;expose pas encore d&apos;endpoint testable.
+                {t("playground.noEndpointDetail")}
               </p>
             </div>
           </div>

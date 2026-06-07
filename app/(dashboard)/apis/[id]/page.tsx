@@ -12,19 +12,21 @@ import { SecurityCard, TestsCard } from "@/components/api-detail/security-test-c
 import { buildDeployConfigs, buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { extractAuthMode, extractVersion, readSpec } from "@/lib/job-helpers";
 import type { Job, JobStatus } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
-const STATUS_PILL: Record<JobStatus, { label: string; className: string }> = {
-  DRAFT: { label: "BROUILLON", className: "border border-dashed border-line-2 text-muted-2" },
-  PENDING: { label: "EN FILE", className: "border border-dashed border-line-2 text-muted" },
-  RUNNING: { label: "EN COURS", className: "bg-warn-soft text-warn-ink" },
-  READY: { label: "PRÊT", className: "bg-accent text-accent-ink" },
-  DEPLOYED: { label: "EN LIGNE", className: "bg-accent text-accent-ink" },
-  FAILED: { label: "ÉCHEC", className: "bg-danger-soft text-danger" },
+const STATUS_PILL_CLASS: Record<JobStatus, string> = {
+  DRAFT: "border border-dashed border-line-2 text-muted-2",
+  PENDING: "border border-dashed border-line-2 text-muted",
+  RUNNING: "bg-warn-soft text-warn-ink",
+  READY: "bg-accent text-accent-ink",
+  DEPLOYED: "bg-accent text-accent-ink",
+  FAILED: "bg-danger-soft text-danger",
 };
 
 export default async function ApiDetailPage({ params }: { params: { id: string } }) {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },
@@ -32,7 +34,8 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
   if (!job) notFound();
 
   const spec = readSpec(job.spec);
-  const pill = STATUS_PILL[job.status];
+  const pillClass = STATUS_PILL_CLASS[job.status];
+  const pillLabel = t(`apis.status.${job.status.toLowerCase()}` as "apis.status.draft");
   const isReady = job.status === "READY" || job.status === "DEPLOYED";
 
   const openApiEndpoints = spec ? listEndpointsFromOpenApi(buildOpenApiSpec(spec)) : [];
@@ -42,8 +45,8 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "APIs", href: "/jobs" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("apis.crumbApis"), href: "/jobs" },
           { label: job.name },
         ]}
       />
@@ -55,7 +58,7 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
             className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-muted transition hover:text-ink"
           >
             <ArrowLeft className="h-3 w-3" />
-            Voir la progression du job
+            {t("apis.backToOverview")}
           </Link>
 
           <div className="mb-6 flex flex-wrap items-end justify-between gap-5">
@@ -70,10 +73,10 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
                 <span
                   className={
                     "ml-1 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-mono text-[10.5px] tracking-[0.04em] " +
-                    pill.className
+                    pillClass
                   }
                 >
-                  {pill.label}
+                  {pillLabel}
                 </span>
               </div>
               <p className="mt-2 max-w-2xl text-[14.5px] text-muted">{job.description}</p>
@@ -85,14 +88,14 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
 
           {!spec ? (
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface p-10 text-center text-muted">
-              La spec n&apos;est pas encore prête.
+              {t("apis.overview.emptySpec")}
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               <section className="lg:col-span-2 space-y-5">
                 <div>
                   <h2 className="mb-2.5 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em]">
-                    Endpoints générés
+                    {t("apis.tabs.endpoints")}
                     <span className="rounded-full bg-bg-3 px-1.5 py-px font-mono text-[10.5px] text-muted">
                       {openApiEndpoints.length}
                     </span>
@@ -102,10 +105,10 @@ export default async function ApiDetailPage({ params }: { params: { id: string }
 
                 <div>
                   <h2 className="mb-2.5 text-[15px] font-semibold tracking-[-0.01em]">
-                    Déployer en un clic
+                    {t("apis.tabs.deploy")}
                   </h2>
                   <p className="mb-3 text-[12.5px] text-muted">
-                    Choisis ta cible pour voir la configuration générée et la copier.
+                    {t("apis.draftNotice")}
                   </p>
                   <DeployButtons targets={deployTargets} />
                 </div>

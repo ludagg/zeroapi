@@ -7,9 +7,10 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Check, User } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 const schema = z.object({
-  name: z.string().trim().min(1, "Nom requis").max(80),
+  name: z.string().trim().min(1).max(80),
 });
 type Values = z.infer<typeof schema>;
 
@@ -20,6 +21,7 @@ export function ProfileCard({
   initial: { name: string };
   email: string;
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -41,13 +43,13 @@ export function ProfileCard({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Enregistrement impossible.");
+        throw new Error(data.error ?? t("settings.profile.errorSave"));
       }
       setSaved(true);
-      toast.success("Profil mis à jour.");
+      toast.success(t("settings.profile.successUpdate"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("settings.profile.errorRetry"));
     } finally {
       setSubmitting(false);
     }
@@ -55,13 +57,13 @@ export function ProfileCard({
 
   return (
     <SettingsCard
-      title="Profil"
-      subtitle="Ton nom apparaît dans la sidebar et sur les emails de notification."
+      title={t("settings.profile.title")}
+      subtitle={t("settings.profile.subtitle")}
     >
       <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
         <div>
           <label htmlFor="settings-name" className="mb-2 block text-[13px] font-medium text-ink-2">
-            Nom complet
+            {t("settings.profile.nameLabel")}
           </label>
           <div className="relative">
             <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -74,12 +76,14 @@ export function ProfileCard({
             />
           </div>
           {errors.name && (
-            <p className="mt-1.5 text-[12px] text-danger">{errors.name.message}</p>
+            <p className="mt-1.5 text-[12px] text-danger">{t("settings.profile.nameRequired")}</p>
           )}
         </div>
 
         <div>
-          <label className="mb-2 block text-[13px] font-medium text-ink-2">Email</label>
+          <label className="mb-2 block text-[13px] font-medium text-ink-2">
+            {t("settings.profile.emailLabel")}
+          </label>
           <input
             type="email"
             value={email}
@@ -87,7 +91,7 @@ export function ProfileCard({
             className="input-base cursor-not-allowed opacity-70"
           />
           <p className="mt-1.5 text-[12px] text-muted">
-            L&apos;email ne peut pas être modifié pour le moment.
+            {t("settings.profile.emailNotEditable")}
           </p>
         </div>
 
@@ -95,7 +99,7 @@ export function ProfileCard({
           {saved && !isDirty && (
             <span className="inline-flex items-center gap-1.5 text-[12.5px] text-accent-ink">
               <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Enregistré
+              {t("settings.profile.saved")}
             </span>
           )}
           <button
@@ -103,7 +107,7 @@ export function ProfileCard({
             disabled={submitting || !isDirty}
             className="btn-primary h-9 px-4 text-[13px] disabled:opacity-50"
           >
-            {submitting ? "Enregistrement…" : "Enregistrer"}
+            {submitting ? t("settings.profile.saving") : t("settings.profile.save")}
           </button>
         </div>
       </form>

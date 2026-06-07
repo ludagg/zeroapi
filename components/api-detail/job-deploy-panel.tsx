@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Check, Cloud, Copy, ExternalLink, Lock, Rocket, Sparkles, Terminal, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import type { DeployTarget } from "@/lib/api-detail";
 import {
@@ -48,6 +49,7 @@ export function JobDeployPanel({
   liveVersion?: string | null;
   zeroApiCloud: ZeroApiCloudStatus;
 }) {
+  const t = useTranslations("dashboard");
   const [active, setActive] = useState<DeployTarget | null>(null);
 
   return (
@@ -56,19 +58,19 @@ export function JobDeployPanel({
 
       <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
         <div className="flex items-center justify-between border-b border-line px-5 py-3.5">
-          <h3 className="text-[14px] font-semibold">Déploiement externe</h3>
+          <h3 className="text-[14px] font-semibold">{t("apiDetail.deploy.external")}</h3>
           <span className="font-mono text-[11px] text-muted">
-            {targets.length} fournisseurs
+            {t("apiDetail.deploy.providers", { count: targets.length })}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2.5 p-4 sm:grid-cols-4">
-          {targets.map((t) => {
-            const isLive = liveTargetId === t.id;
+          {targets.map((target) => {
+            const isLive = liveTargetId === target.id;
             return (
               <button
-                key={t.id}
+                key={target.id}
                 type="button"
-                onClick={() => setActive(t)}
+                onClick={() => setActive(target)}
                 className={cn(
                   "relative flex flex-col items-center gap-2 rounded-[11px] border bg-surface px-3 py-3.5 text-center transition hover:-translate-y-px",
                   isLive
@@ -85,18 +87,18 @@ export function JobDeployPanel({
                 <span
                   className={cn(
                     "grid h-8 w-8 place-items-center rounded-[8px] text-[14px] font-semibold",
-                    ICON_BG[t.id],
+                    ICON_BG[target.id],
                   )}
                 >
-                  {ICON[t.id]}
+                  {ICON[target.id]}
                 </span>
-                <div className="text-[13px] font-semibold">{t.label}</div>
+                <div className="text-[13px] font-semibold">{target.label}</div>
                 <div className="font-mono text-[10.5px] text-muted">
                   {isLive
                     ? liveVersion
-                      ? `live · ${liveVersion}`
-                      : "live"
-                    : "non configuré"}
+                      ? t("apiDetail.deploy.liveVersion", { version: liveVersion })
+                      : t("apiDetail.deploy.live")
+                    : t("apiDetail.deploy.notConfigured")}
                 </div>
               </button>
             );
@@ -118,7 +120,6 @@ export function JobDeployPanel({
 
 type Phase = "idle" | "deploying" | "online" | "error";
 
-/** How often we ask the server (which asks Coolify) for the real status. */
 const POLL_MS = 4000;
 
 function phaseFromStatus(status: ZeroApiCloudStatus["status"]): Phase {
@@ -142,6 +143,7 @@ function ZeroApiCloudCard({
   jobId: string;
   state: ZeroApiCloudStatus;
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(() => phaseFromStatus(state.status));
   const [liveUrl, setLiveUrl] = useState<string | null>(state.liveUrl ?? null);
@@ -150,9 +152,6 @@ function ZeroApiCloudCard({
     parseDeploymentLogs(state.logs),
   );
 
-  // Live polling: while a build is in flight, ask the server for Coolify's
-  // real state every few seconds. The server flips ONLINE/FAILED only when
-  // Coolify confirms, so the UI can never claim "en ligne" too early.
   useEffect(() => {
     if (phase !== "deploying") return;
     let cancelled = false;
@@ -168,11 +167,11 @@ function ZeroApiCloudCard({
         if (data.url) setLiveUrl(data.url);
         if (data.status === "ONLINE") {
           setPhase("online");
-          toast.success("API en ligne ✓");
+          toast.success(t("apiDetail.deploy.cloudApiOnline"));
           router.refresh();
         } else if (data.status === "FAILED") {
           setPhase("error");
-          setError("Le déploiement a échoué côté serveur. Consulte les logs ci-dessous.");
+          setError(t("apiDetail.deploy.cloudFailed"));
         }
       } catch {
         // Transient network error — keep polling.
@@ -185,15 +184,15 @@ function ZeroApiCloudCard({
       cancelled = true;
       clearInterval(id);
     };
-  }, [phase, jobId, router]);
+  }, [phase, jobId, router, t]);
 
   const deploy = useCallback(async () => {
     if (!state.unlocked) {
-      toast.error("Passe au plan Pro ou Business pour activer ZeroAPI Cloud.");
+      toast.error(t("apiDetail.deploy.cloudUpgradePro"));
       return;
     }
     if (!state.enabled) {
-      toast.error("ZeroAPI Cloud n'est pas activé sur cette instance.");
+      toast.error(t("apiDetail.deploy.cloudNotConfigured"));
       return;
     }
     setError(null);
@@ -204,18 +203,17 @@ function ZeroApiCloudCard({
       const data = (await res.json()) as StatusResponse;
       if (Array.isArray(data.logs)) setLogs(parseDeploymentLogs(data.logs));
       if (!res.ok || data.status === "FAILED") {
-        throw new Error(data.error ?? "Échec du déploiement.");
+        throw new Error(data.error ?? t("apiDetail.deploy.cloudErrorFailed"));
       }
       if (data.url) setLiveUrl(data.url);
-      // Stay in "deploying": the polling effect will confirm ONLINE/FAILED.
-      toast.message("Déploiement lancé — build en cours…");
+      toast.message(t("apiDetail.deploy.cloudLaunched"));
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Réessaie dans un instant.";
+      const message = err instanceof Error ? err.message : t("apiDetail.deploy.errorRetry");
       setError(message);
       setPhase("error");
       toast.error(message);
     }
-  }, [jobId, state.enabled, state.unlocked]);
+  }, [jobId, state.enabled, state.unlocked, t]);
 
   const locked = !state.unlocked;
   const disabled = !state.enabled;
@@ -229,14 +227,14 @@ function ZeroApiCloudCard({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-[15px] font-semibold">ZeroAPI Cloud</h3>
+            <h3 className="text-[15px] font-semibold">{t("apiDetail.deploy.cloudTitle")}</h3>
             <span className="inline-flex items-center gap-1 rounded-full border border-warn/40 bg-warn-soft px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-warn-ink">
-              BÊTA
+              {t("apiDetail.deploy.cloudBeta")}
             </span>
             {locked && (
               <span className="inline-flex items-center gap-1 rounded-full bg-bg-3 px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-muted">
                 <Lock className="h-2.5 w-2.5" />
-                plan PRO
+                {t("apiDetail.deploy.cloudPlanRequired")}
               </span>
             )}
             {phase === "online" && (
@@ -245,29 +243,22 @@ function ZeroApiCloudCard({
                   className="inline-block h-1.5 w-1.5 rounded-full bg-accent-ink"
                   style={{ boxShadow: "0 0 0 3px rgba(0,0,0,.18)" }}
                 />
-                EN LIGNE
+                {t("apiDetail.deploy.cloudOnline")}
               </span>
             )}
             {busy && (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-warn-soft px-2 py-0.5 font-mono text-[10.5px] tracking-[0.04em] text-warn-ink">
                 <span className="inline-block h-2.5 w-2.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                EN DÉPLOIEMENT
+                {t("apiDetail.deploy.cloudDeploying")}
               </span>
             )}
           </div>
           <p className="mt-1 text-[13px] text-muted">
-            Container Docker isolé, Postgres dédié, sous-domaine{" "}
-            <code className="rounded bg-bg-2 px-1.5 py-0.5 font-mono text-[11.5px]">
-              api-….zeroapi.app
-            </code>{" "}
-            · sans config.
+            {t("apiDetail.deploy.cloudDesc")}
           </p>
 
-          {/* Beta disclaimer — the deploy pipeline is still being hardened. */}
           <p className="mt-2 rounded-[8px] border border-warn/30 bg-warn-soft/60 px-2.5 py-1.5 text-[12px] text-warn-ink">
-            Fonctionnalité en cours d&apos;implémentation. Le déploiement peut prendre
-            quelques minutes et le statut ci-dessous reflète l&apos;état réel du build
-            côté serveur — l&apos;API n&apos;est joignable qu&apos;une fois « En ligne ».
+            {t("apiDetail.deploy.cloudBetaNotice")}
           </p>
 
           {liveUrl ? (
@@ -304,26 +295,26 @@ function ZeroApiCloudCard({
             )}
             title={
               locked
-                ? "Passe Pro pour activer"
+                ? t("apiDetail.deploy.cloudLockedTitle")
                 : disabled
-                  ? "ZeroAPI Cloud n'est pas configuré sur cette instance"
+                  ? t("apiDetail.deploy.cloudDisabledTitle")
                   : undefined
             }
           >
             {locked ? (
               <>
                 <Sparkles className="h-3.5 w-3.5" />
-                Passer Pro
+                {t("apiDetail.deploy.cloudUpgrade")}
               </>
             ) : phase === "online" ? (
               <>
                 <Rocket className="h-3.5 w-3.5" />
-                Redéployer
+                {t("apiDetail.deploy.cloudRedeploy")}
               </>
             ) : (
               <>
                 <Rocket className="h-3.5 w-3.5" />
-                {busy ? "Déploiement…" : "Déployer"}
+                {busy ? t("apiDetail.deploy.cloudDeploying2") : t("apiDetail.deploy.cloudDeploy")}
               </>
             )}
           </button>
@@ -333,8 +324,8 @@ function ZeroApiCloudCard({
   );
 }
 
-/** Server-side deployment journal, surfaced so the user can follow progress. */
 function DeployLogs({ logs, live }: { logs: DeploymentLogEntry[]; live: boolean }) {
+  const t = useTranslations("dashboard");
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "nearest" });
@@ -344,7 +335,7 @@ function DeployLogs({ logs, live }: { logs: DeploymentLogEntry[]; live: boolean 
     <div className="mt-3 overflow-hidden rounded-[10px] border border-line bg-bg">
       <div className="flex items-center gap-1.5 border-b border-line px-3 py-1.5 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
         <Terminal className="h-3 w-3" />
-        Logs de déploiement
+        {t("apiDetail.deploy.logsTitle")}
         {live && (
           <span className="ml-auto inline-block h-1.5 w-1.5 animate-pulse rounded-full bg-accent" />
         )}
@@ -375,6 +366,7 @@ function DeployLogs({ logs, live }: { logs: DeploymentLogEntry[]; live: boolean 
 }
 
 function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () => void }) {
+  const t = useTranslations("dashboard");
   const [copied, setCopied] = useState(false);
 
   async function copy() {
@@ -393,18 +385,22 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
         <div>
           <Dialog.Title asChild>
             <h2 className="font-serif text-[22px] leading-tight">
-              Déployer sur <em className="italic">{target.label}</em>
+              {t.rich("apiDetail.deploy.deployOn", {
+                label: target.label,
+                em: (chunks) => <em className="italic">{chunks}</em>,
+              })}
             </h2>
           </Dialog.Title>
           <Dialog.Description className="mt-1 text-[12.5px] text-muted">
-            Copie le contenu ci-dessous dans{" "}
-            <code className="font-mono">{target.filename}</code> à la racine de ton
-            projet.
+            {t.rich("apiDetail.deploy.copyConfig", {
+              filename: target.filename,
+              code: (chunks) => <code className="font-mono">{chunks}</code>,
+            })}
           </Dialog.Description>
         </div>
         <Dialog.Close asChild>
           <button
-            aria-label="Fermer"
+            aria-label={t("apiDetail.deploy.closeAriaLabel")}
             className="grid h-8 w-8 place-items-center rounded-[8px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
             <X className="h-4 w-4" />
@@ -424,11 +420,11 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
         >
           {copied ? (
             <>
-              <Check className="h-3 w-3 text-accent-ink" /> Copié
+              <Check className="h-3 w-3 text-accent-ink" /> {t("apiDetail.deploy.copied")}
             </>
           ) : (
             <>
-              <Copy className="h-3 w-3" /> Copier
+              <Copy className="h-3 w-3" /> {t("apiDetail.deploy.copyButton")}
             </>
           )}
         </button>
@@ -446,14 +442,14 @@ function DeployModal({ target, onClose }: { target: DeployTarget; onClose: () =>
           className="inline-flex items-center gap-1.5 font-mono text-[11.5px] text-muted transition hover:text-ink"
         >
           <ExternalLink className="h-3 w-3" />
-          Doc {target.label}
+          {t("apiDetail.deploy.docLink", { label: target.label })}
         </a>
         <button
           type="button"
           onClick={onClose}
           className="inline-flex h-8 items-center rounded-[8px] border border-line bg-surface px-3 text-[12.5px] font-medium text-ink transition hover:border-line-2"
         >
-          Fermer
+          {t("apiDetail.deploy.close")}
         </button>
       </footer>
     </>
