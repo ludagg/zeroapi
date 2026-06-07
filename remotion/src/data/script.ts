@@ -38,6 +38,36 @@ export const RESOURCES = [
 
 export const ENDPOINTS_TOTAL = 24;
 
+/**
+ * "En production" dashboard data (scene 4). A coherent snapshot of the
+ * generated backend running live — nothing here is random, it ties back to
+ * the booking API the user described.
+ */
+
+/** Requests/min time-series — a believable ramp that settles high. */
+export const REQ_SERIES = [
+  120, 180, 240, 360, 520, 700, 980, 1300, 1750, 2300, 3100, 4200, 5400,
+  6800, 8100, 9200, 10100, 10800, 11400, 11900, 12100, 12300, 12350, 12400,
+] as const;
+
+export const REQ_PEAK = 12400;
+
+/** Endpoints per resource (sums to ENDPOINTS_TOTAL = 24). */
+export const ENDPOINTS_BY_MODEL = [
+  { label: "Réservation", value: 7 },
+  { label: "Paiement", value: 5 },
+  { label: "User", value: 5 },
+  { label: "Trajet", value: 4 },
+  { label: "Siège", value: 3 },
+] as const;
+
+/** Headline KPIs shown as counters. */
+export const PROD_KPIS = [
+  { value: 99.98, label: "disponibilité", suffix: " %", decimals: 2 },
+  { value: 42, label: "latence p95", suffix: " ms", decimals: 0 },
+  { value: 100, label: "tests verts", suffix: " %", decimals: 0 },
+] as const;
+
 /** Deliverables that cascade in during the generation scene. */
 export const DELIVERABLES = [
   { label: "Code Hono.js", sub: "routes + handlers" },
