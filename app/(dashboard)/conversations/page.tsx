@@ -9,12 +9,12 @@ import {
 } from "@/components/conversations/conversation-card";
 import { NewConversationBox } from "@/components/conversations/new-conversation-box";
 import { lastMessageExcerpt, parseMessages } from "@/lib/conversation-helpers";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConversationsPage() {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
 
   const conversations = await prisma.conversation.findMany({

@@ -6,12 +6,12 @@ import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { ApiSubnav } from "@/components/api-detail/api-subnav";
 import { VariablesPanel } from "@/components/api-detail/variables-panel";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApiSettingsPage({ params }: { params: { id: string } }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },

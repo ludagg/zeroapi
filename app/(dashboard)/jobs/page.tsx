@@ -7,7 +7,7 @@ import { JobsSearch } from "@/components/dashboard/jobs-search";
 import { JobsPagination } from "@/components/dashboard/jobs-pagination";
 import { JobFilters } from "@/components/dashboard/job-filters";
 import { extractAuthMode, extractVersion, pickEmoji } from "@/lib/job-helpers";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +25,7 @@ export default async function JobsPage({
 }: {
   searchParams: { q?: string; status?: string; page?: string };
 }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const q = (searchParams.q ?? "").trim();
   const statusKey = searchParams.status ?? "all";

@@ -2,12 +2,12 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { MarketplaceBrowser } from "@/components/marketplace/marketplace-browser";
 import { requireUser } from "@/lib/session";
 import { loadMarketplace } from "@/lib/marketplace";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MarketplacePage() {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   await requireUser();
   const { official, community, categories } = await loadMarketplace();
 
