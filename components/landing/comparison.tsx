@@ -54,15 +54,33 @@ const ROWS: Array<{
 }> = [
   {
     label: "Approche",
-    zeroapi: <Txt>Génération IA depuis prompt FR / EN</Txt>,
+    zeroapi: <Txt>Conversation IA → spec → code</Txt>,
     supabase: <Txt dim>Schéma SQL + auto-API</Txt>,
     firebase: <Txt dim>SDK propriétaire</Txt>,
+  },
+  {
+    label: "Génération conversationnelle (IA)",
+    zeroapi: <Yes strong />,
+    supabase: <No />,
+    firebase: <No />,
   },
   {
     label: "Code source livré",
     zeroapi: <Yes strong />,
     supabase: <No />,
     firebase: <No />,
+  },
+  {
+    label: "Marketplace de templates",
+    zeroapi: <Yes strong />,
+    supabase: <No />,
+    firebase: <No />,
+  },
+  {
+    label: "Playground / client HTTP intégré",
+    zeroapi: <Yes />,
+    supabase: <Partial label="SQL editor" />,
+    firebase: <Partial label="console" />,
   },
   {
     label: "Sans vendor-lock",

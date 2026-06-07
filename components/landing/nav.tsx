@@ -9,7 +9,8 @@ import { MobileDrawer } from "@/components/ui/mobile-drawer";
 
 const NAV_ITEMS = [
   { href: "#produit", label: "Produit" },
-  { href: "#usages", label: "Cas d'usage" },
+  { href: "#marketplace", label: "Marketplace" },
+  { href: "#playground", label: "Playground" },
   { href: "#tarifs", label: "Tarifs" },
   { href: "#faq", label: "FAQ" },
 ];

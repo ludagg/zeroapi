@@ -4,11 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { Reveal } from "@/components/landing/reveal";
 
 const LINES = [
-  { t: "> décris ton API\n", c: "muted" },
-  { t: "Backend pour une app de transport\n", c: "ink" },
-  { t: "interurbain en Côte d'Ivoire :\n", c: "ink" },
-  { t: "users, trajets, sièges, paiements\n", c: "ink" },
-  { t: "Wave + Orange Money, RBAC chauffeur/admin", c: "ink" },
+  { t: "Kia › Qui gère les stocks : un seul\n", c: "muted" },
+  { t: "admin, ou un rôle par entrepôt ?\n", c: "muted" },
+  { t: "Toi › Un rôle par entrepôt, et un\n", c: "ink" },
+  { t: "super-admin qui voit tout.\n", c: "ink" },
+  { t: "Kia › Noté. RBAC à 2 niveaux ✓", c: "muted" },
 ];
 
 function useStepTypewriter() {
@@ -57,27 +57,28 @@ export function HowItWorks() {
         <Reveal className="section-head">
           <span className="kicker">Comment ça marche</span>
           <h2 className="display">
-            Trois étapes. <em>Zéro</em> code à écrire.
+            Une conversation. <em>Un backend</em> complet.
           </h2>
           <p>
-            Tu décris ce que tu veux. ZeroAPI réfléchit pendant que tu fais autre chose.
-            Tu déploies quand c&apos;est prêt.
+            Pas de formulaire, pas de schéma à dessiner. Tu discutes avec Kia, la spec se
+            construit sous tes yeux, et tu déploies quand tu es prêt.
           </p>
         </Reveal>
 
         <div className="steps">
           <Reveal as="div" className="step" delay={0}>
             <div className="step-num">
-              <b>01</b> · Décris
+              <b>01</b> · Discute
             </div>
             <h3>
-              Ton API,
+              Décris ton produit,
               <br />
-              en une phrase.
+              pas ta base de données.
             </h3>
             <p>
-              Français ou anglais. Modèles, relations, règles métier. ZeroAPI comprend
-              le langage humain — y compris le pidgin.
+              Français, anglais ou pidgin. Kia pose les bonnes questions — rôles,
+              relations, règles métier — et écrit la spec ressource par ressource, en
+              direct dans le chat.
             </p>
             <div className="step-visual step-visual-1">
               <div className="typed">
@@ -90,16 +91,17 @@ export function HowItWorks() {
           <Reveal as="div" className="step" delay={120}>
             <span className="async-note">⏱ asynchrone</span>
             <div className="step-num">
-              <b>02</b> · ZeroAPI génère
+              <b>02</b> · Génère
             </div>
             <h3>
-              Ferme l&apos;onglet.
+              Lance, puis
               <br />
-              On te prévient.
+              ferme l&apos;onglet.
             </h3>
             <p>
-              Génération en arrière-plan : spec, code Hono.js, tests, docs OpenAPI. Tu
-              reçois un email — ou une notif push — quand c&apos;est prêt.
+              Multi-IA (Claude, Mistral, Gemini) génère spec, code Hono.js, tests et docs
+              OpenAPI en arrière-plan. Tu reçois une notif — email, push ou Slack — quand
+              c&apos;est prêt.
             </p>
             <div className="step-visual step-visual-2">
               <div className="ring" />
@@ -108,26 +110,34 @@ export function HowItWorks() {
                 <span className="badge">spec</span>
                 <span className="badge">routes</span>
                 <span className="badge">tests</span>
-                <span className="badge">docs</span>
+                <span className="badge">SDK</span>
               </div>
             </div>
           </Reveal>
 
           <Reveal as="div" className="step" delay={240}>
             <div className="step-num">
-              <b>03</b> · Déploie
+              <b>03</b> · Teste &amp; déploie
             </div>
             <h3>
-              En un clic,
+              Playground intégré,
               <br />
-              partout.
+              puis en ligne.
             </h3>
             <p>
-              Railway, Render, Vercel, Fly.io — ou exporte le repo Git et fais ce que tu
-              veux. Ton code, ta liberté.
+              Teste chaque endpoint dans le navigateur. Déploie sur ZeroAPI Cloud en un
+              clic — ou exporte le repo Git vers Railway, Render, Vercel, Fly.io. Ton
+              code, ta liberté.
             </p>
             <div className="step-visual step-visual-3">
               <div className="target">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+                ZeroAPI Cloud
+                <span className="status" />
+              </div>
+              <div className="target dim">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <rect x="3" y="3" width="18" height="18" rx="3" />
                 </svg>
@@ -136,16 +146,9 @@ export function HowItWorks() {
               </div>
               <div className="target dim">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="9" />
-                </svg>
-                render.com
-                <span className="status" />
-              </div>
-              <div className="target dim">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M4 20L12 4l8 16z" />
                 </svg>
-                vercel.com
+                git export
                 <span className="status" />
               </div>
             </div>

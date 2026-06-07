@@ -3,53 +3,90 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
-const PROMPTS = [
-  "API de réservations pour un centre médical : patients, médecins, créneaux, rappels SMS.",
-  "Plateforme e-commerce avec panier persistant, paiement Mobile Money et gestion des stocks multi-entrepôts.",
-  "Backend pour app de livraison : commandes, livreurs en temps réel, calcul d'itinéraires et notes.",
-  "API SaaS multi-tenant avec abonnements, facturation au prorata et webhooks Stripe.",
+/** Scripted conversation between the user and Kia, ZeroAPI's spec architect.
+ *  The thread plays once, building a live spec panel as it goes — mirroring
+ *  the real /generate experience. */
+type Step =
+  | { kind: "user"; text: string }
+  | { kind: "kia"; text: string; resources?: string[]; endpoints?: number };
+
+const SCRIPT: Step[] = [
+  {
+    kind: "user",
+    text: "API pour une app de réservation de bus interurbain en Côte d'Ivoire. Wave + Orange Money.",
+  },
+  {
+    kind: "kia",
+    text: "Compris. Je pars sur **Trajet**, **Siège**, **Réservation**, **Paiement** et **User**. Qui réserve : un compte client, ou aussi des guichets ?",
+    resources: ["User", "Trajet", "Siège", "Réservation", "Paiement"],
+    endpoints: 21,
+  },
+  { kind: "user", text: "Client + guichet. Et un rôle admin pour la compagnie." },
+  {
+    kind: "kia",
+    text: "Parfait — RBAC **client / guichet / admin**, JWT, et webhooks Wave + Orange Money sur les paiements. La spec est prête. On lance ?",
+    resources: ["User", "Trajet", "Siège", "Réservation", "Paiement"],
+    endpoints: 24,
+  },
 ];
 
-function useTypewriter() {
-  const [text, setText] = useState("");
-  const stateRef = useRef({ pi: 0, ci: 0, deleting: false });
+function useScriptedChat() {
+  const [visible, setVisible] = useState(0); // steps fully shown
+  const [typed, setTyped] = useState(""); // currently-typing text
+  const [done, setDone] = useState(false);
+  const state = useRef({ step: 0, ci: 0 });
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const tick = () => {
-      const s = stateRef.current;
-      const full = PROMPTS[s.pi];
-      if (!s.deleting) {
+      const s = state.current;
+      if (s.step >= SCRIPT.length) {
+        setDone(true);
+        return;
+      }
+      const full = SCRIPT[s.step].text;
+      if (s.ci < full.length) {
         s.ci += 1;
-        setText(full.slice(0, s.ci));
-        if (s.ci === full.length) {
-          s.deleting = true;
-          timer = setTimeout(tick, 2400);
-          return;
-        }
-        timer = setTimeout(tick, 22 + Math.random() * 28);
+        setTyped(full.slice(0, s.ci));
+        timer = setTimeout(tick, 14 + Math.random() * 22);
       } else {
-        s.ci -= 3;
-        if (s.ci <= 0) {
-          s.ci = 0;
-          s.deleting = false;
-          s.pi = (s.pi + 1) % PROMPTS.length;
-          timer = setTimeout(tick, 320);
-          return;
-        }
-        setText(full.slice(0, s.ci));
-        timer = setTimeout(tick, 10);
+        setVisible(s.step + 1);
+        setTyped("");
+        s.step += 1;
+        s.ci = 0;
+        timer = setTimeout(tick, 620);
       }
     };
-    timer = setTimeout(tick, 400);
+    timer = setTimeout(tick, 600);
     return () => clearTimeout(timer);
   }, []);
 
-  return text;
+  return { visible, typed, done };
+}
+
+function renderRich(text: string) {
+  // bold **segments** only — lightweight, no markdown dep
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) =>
+    p.startsWith("**") && p.endsWith("**") ? (
+      <strong key={i}>{p.slice(2, -2)}</strong>
+    ) : (
+      <span key={i}>{p}</span>
+    ),
+  );
 }
 
 export function Hero() {
-  const typed = useTypewriter();
+  const { visible, typed, done } = useScriptedChat();
+
+  // The live spec reflects the most recent Kia step that carries one.
+  const lastSpec = [...SCRIPT.slice(0, visible)]
+    .reverse()
+    .find((s) => s.kind === "kia" && s.resources) as
+    | Extract<Step, { kind: "kia" }>
+    | undefined;
+  const typingStep =
+    visible < SCRIPT.length ? SCRIPT[visible] : undefined;
 
   return (
     <section className="hero" id="hero">
@@ -57,54 +94,93 @@ export function Hero() {
       <div className="wrap hero-inner">
         <span className="kicker">
           <span className="dot" />
-          Génération asynchrone · Hono.js
+          Génération conversationnelle · multi-IA
         </span>
         <h1 className="display">
-          Décris ton backend.
+          Parle à <em>Kia</em>.
           <br />
-          <em>Reviens</em> quand il est{" "}
-          <span className="accent-word">prêt</span>.
+          Ton backend <span className="accent-word">s&apos;écrit</span>.
         </h1>
         <p className="lede">
-          ZeroAPI transforme une description en français — ou en anglais — en une API
-          Hono.js complète : sécurisée, testée, documentée. Tu lances le job, tu fermes
-          l&apos;onglet. On te prévient.
+          ZeroAPI, c&apos;est une conversation avec Kia, ton architecte d&apos;API. Tu
+          décris ton produit en français ou en anglais — elle pose les bonnes questions,
+          construit la spec en direct, puis génère une API Hono.js complète : code,
+          tests, docs, SDK.
         </p>
 
-        <div className="prompt-card" role="textbox" aria-label="Décrivez votre API">
-          <div className="prompt-head">
-            <div className="lights">
-              <i />
-              <i />
-              <i />
+        <div className="chat-hero" aria-label="Conversation avec Kia">
+          <div className="chat-hero-main">
+            <div className="prompt-head">
+              <div className="lights">
+                <i />
+                <i />
+                <i />
+              </div>
+              <span>generate · conversation avec Kia</span>
             </div>
-            <span>nouveau-projet · prompt.md</span>
-          </div>
-          <div className="prompt-body">
-            <div className="prompt-icon">›_</div>
-            <div className="prompt-text">
-              <span>{typed}</span>
-              <span className="prompt-cursor" />
+            <div className="chat-thread">
+              {SCRIPT.slice(0, visible).map((s, i) => (
+                <ChatBubble key={i} step={s} />
+              ))}
+              {typingStep && !done && (
+                <ChatBubble step={typingStep} typed={typed} typing />
+              )}
+            </div>
+            <div className="chat-composer">
+              <span className="chat-composer-text">
+                {done ? "Décris la suite, ou ajuste la spec…" : ""}
+                <span className="prompt-cursor" />
+              </span>
+              <button className="submit" type="button" aria-hidden="true">
+                {done ? "Lancer" : "Kia réfléchit…"}
+                {done && (
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M5 12h14M13 6l6 6-6 6" />
+                  </svg>
+                )}
+              </button>
             </div>
           </div>
-          <div className="prompt-foot">
-            <span className="hint">
-              <kbd>⏎</kbd> pour générer · <kbd>⇧⏎</kbd> nouvelle ligne
-            </span>
-            <button className="submit" type="button">
-              Générer
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.4"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-          </div>
+
+          <aside className="chat-spec" aria-label="Spec en direct">
+            <div className="chat-spec-head">
+              <span className="chat-spec-title">Spec en direct</span>
+              <span className={`chat-spec-state${done ? " ready" : ""}`}>
+                <span className="dot" />
+                {done ? "PRÊTE" : "en cours"}
+              </span>
+            </div>
+            <ul className="chat-spec-resources">
+              {(lastSpec?.resources ?? []).map((r, i) => (
+                <li key={r} style={{ animationDelay: `${i * 60}ms` }}>
+                  <span className="chat-spec-dot" />
+                  {r}
+                </li>
+              ))}
+              {!lastSpec && <li className="chat-spec-empty">en attente…</li>}
+            </ul>
+            <div className="chat-spec-foot">
+              <div>
+                <b>{lastSpec?.endpoints ?? 0}</b>
+                <span>endpoints</span>
+              </div>
+              <div>
+                <b>{lastSpec?.resources?.length ?? 0}</b>
+                <span>modèles</span>
+              </div>
+              <div>
+                <b>{done ? "JWT" : "—"}</b>
+                <span>auth</span>
+              </div>
+            </div>
+          </aside>
         </div>
 
         <div className="hero-ctas">
@@ -157,7 +233,7 @@ export function Hero() {
             >
               <path d="M20 6L9 17l-5-5" />
             </svg>
-            Code exportable
+            Code 100 % exportable
           </span>
           <span>
             <svg
@@ -173,74 +249,37 @@ export function Hero() {
             Hébergé en Afrique de l&apos;Ouest
           </span>
         </div>
-
-        <div className="flow" aria-label="Flux de génération">
-          <div className="flow-node">
-            <div className="label">01 · Prompt</div>
-            <div className="body">
-              <span className="k">›</span> <span className="v">API de réservations</span>
-              {"\n"}
-              <span className="k">›</span> tables :{" "}
-              <span className="v">salles, créneaux, users</span>
-              {"\n"}
-              <span className="k">›</span> auth : <span className="g">JWT + RBAC</span>
-            </div>
-          </div>
-          <div className="arrow-cell">
-            <div className="arrow-line" />
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </div>
-          <div className="flow-node">
-            <div className="label">02 · Spec IA</div>
-            <div className="body">
-              <span className="k">&quot;models&quot;</span>: [{"\n"}
-              {"  "}
-              <span className="v">Salle</span>, <span className="v">Créneau</span>,{" "}
-              <span className="v">User</span>
-              {"\n"}],{"\n"}
-              <span className="k">&quot;endpoints&quot;</span>:{" "}
-              <span className="g">14</span>
-              {"\n"}
-              <span className="k">&quot;relations&quot;</span>:{" "}
-              <span className="g">3</span>
-            </div>
-          </div>
-          <div className="arrow-cell">
-            <div className="arrow-line" />
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M5 12h14M13 6l6 6-6 6" />
-            </svg>
-          </div>
-          <div className="flow-node">
-            <div className="label">03 · API Hono.js</div>
-            <div className="body">
-              <span className="g">✓</span> <span className="v">routes générées</span>
-              {"\n"}
-              <span className="g">✓</span> <span className="v">tests · 94% couv.</span>
-              {"\n"}
-              <span className="g">✓</span> <span className="v">OpenAPI 3.1</span>
-              {"\n"}
-              <span className="g">✓</span> <span className="v">prêt à déployer</span>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
+  );
+}
+
+function ChatBubble({
+  step,
+  typed,
+  typing = false,
+}: {
+  step: Step;
+  typed?: string;
+  typing?: boolean;
+}) {
+  const content = typing ? typed ?? "" : step.text;
+  if (step.kind === "user") {
+    return (
+      <div className="chat-row user">
+        <div className="chat-bubble user">{content}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="chat-row kia">
+      <div className="chat-avatar" aria-hidden="true">
+        K
+      </div>
+      <div className="chat-bubble kia">
+        {renderRich(content)}
+        {typing && <span className="prompt-cursor" />}
+      </div>
+    </div>
   );
 }

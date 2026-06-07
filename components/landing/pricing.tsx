@@ -40,20 +40,20 @@ export function Pricing() {
           <h2 className="display">
             Démarre gratuit.
             <br />
-            <em>Paye</em> quand tu déploies.
+            <em>Monte</em> en puissance.
           </h2>
           <p>
-            Génération illimitée même en gratuit. L&apos;hébergement sur
-            l&apos;infrastructure ZeroAPI est réservé aux plans payants.
+            Chaque plan ouvre un quota de générations par mois. L&apos;export du code et le
+            Dev Mode sont inclus partout — même en gratuit. Pas de vendor-lock, jamais.
           </p>
         </Reveal>
 
         <div className="plans">
           <Reveal as="div" className="plan" delay={0}>
-            <div className="plan-name">Gratuit</div>
+            <div className="plan-name">Free</div>
             <div className="plan-tag">Pour explorer et apprendre.</div>
             <div className="plan-price">
-              0<small>FCFA / mois</small>
+              0<small>€ / mois</small>
             </div>
             <div className="plan-meta">Pour toujours.</div>
             <div className="plan-divider" />
@@ -62,16 +62,16 @@ export function Pricing() {
                 <Check /> 3 générations / mois
               </li>
               <li>
-                <Check /> Export Git complet
+                <Check /> IA Mistral &amp; Gemini
               </li>
               <li>
-                <Check /> Docs OpenAPI
+                <Check /> Export Git + Dev Mode
+              </li>
+              <li>
+                <Check /> Marketplace en lecture
               </li>
               <li className="dim">
-                <Cross /> Hébergement ZeroAPI
-              </li>
-              <li className="dim">
-                <Cross /> Support prioritaire
+                <Cross /> Hébergement ZeroAPI Cloud
               </li>
             </ul>
             <Link href="/register" className="btn btn-ghost">
@@ -79,27 +79,57 @@ export function Pricing() {
             </Link>
           </Reveal>
 
-          <Reveal as="div" className="plan featured" delay={100}>
+          <Reveal as="div" className="plan" delay={80}>
+            <div className="plan-name">Starter</div>
+            <div className="plan-tag">Pour les projets perso sérieux.</div>
+            <div className="plan-price">
+              19<small>€ / mois</small>
+            </div>
+            <div className="plan-meta">~ 12 500 FCFA · mensuel.</div>
+            <div className="plan-divider" />
+            <ul className="plan-feat-list">
+              <li>
+                <Check /> 30 générations / mois
+              </li>
+              <li>
+                <Check /> ZeroAPI Cloud · 1 projet
+              </li>
+              <li>
+                <Check /> Playground &amp; partage public
+              </li>
+              <li>
+                <Check /> Publication de templates
+              </li>
+              <li>
+                <Check /> Support email
+              </li>
+            </ul>
+            <Link href="/register?plan=starter" className="btn btn-ghost">
+              Choisir Starter
+            </Link>
+          </Reveal>
+
+          <Reveal as="div" className="plan featured" delay={160}>
             <span className="plan-badge">★ Populaire</span>
             <div className="plan-name">Pro</div>
             <div className="plan-tag">Pour les builders sérieux.</div>
             <div className="plan-price">
-              15 000<small>FCFA / mois</small>
+              49<small>€ / mois</small>
             </div>
-            <div className="plan-meta">~ 24 € · facturable mensuellement.</div>
+            <div className="plan-meta">~ 32 000 FCFA · mensuel.</div>
             <div className="plan-divider" />
             <ul className="plan-feat-list">
               <li>
-                <Check /> Générations illimitées
+                <Check /> 150 générations / mois
               </li>
               <li>
-                <Check /> Hébergement ZeroAPI · 3 projets
+                <Check /> IA Claude premium
               </li>
               <li>
-                <Check /> Domaines personnalisés
+                <Check /> ZeroAPI Cloud · 3 projets
               </li>
               <li>
-                <Check /> Webhooks · notifications push
+                <Check /> Domaines perso · webhooks · push
               </li>
               <li>
                 <Check /> Support sous 24 h
@@ -110,20 +140,20 @@ export function Pricing() {
             </Link>
           </Reveal>
 
-          <Reveal as="div" className="plan" delay={200}>
+          <Reveal as="div" className="plan" delay={240}>
             <div className="plan-name">Business</div>
             <div className="plan-tag">Pour les équipes et agences.</div>
             <div className="plan-price">
-              75 000<small>FCFA / mois</small>
+              199<small>€ / mois</small>
             </div>
-            <div className="plan-meta">~ 120 € · jusqu&apos;à 10 sièges.</div>
+            <div className="plan-meta">~ 130 000 FCFA · jusqu&apos;à 10 sièges.</div>
             <div className="plan-divider" />
             <ul className="plan-feat-list">
               <li>
-                <Check /> Tout Pro, sans limite
+                <Check /> 1 000 générations / mois
               </li>
               <li>
-                <Check /> Projets illimités
+                <Check /> Projets &amp; membres illimités
               </li>
               <li>
                 <Check /> SSO · audit log · SLA 99,9 %

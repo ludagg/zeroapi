@@ -36,7 +36,8 @@ export function Features() {
             <h3>Backends complexes</h3>
             <p>
               Relations 1-N et N-N, transactions atomiques, soft delete, audit trails.
-              Filtrage, tri et pagination cursor sur chaque endpoint.
+              Filtrage, tri et pagination cursor sur chaque endpoint — avec une suite
+              Vitest générée par-dessus.
             </p>
             <div className="mini-code">
               <span className="ln">
@@ -118,14 +119,13 @@ export function Features() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M9 11l3 3L22 4" />
-                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
               </svg>
             </div>
-            <h3>Tests générés</h3>
+            <h3>Conversationnel</h3>
             <p>
-              Suite Vitest pour chaque route, cas limites inclus. Couverture moyenne
-              90%+.
+              Kia, l&apos;architecte d&apos;API, dialogue avec toi et construit la spec en
+              direct. Tu ajustes en parlant — pas de JSON à écrire à la main.
             </p>
           </Reveal>
 
@@ -139,14 +139,14 @@ export function Features() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" />
+                <circle cx="12" cy="12" r="3" />
+                <path d="M12 2v4M12 18v4M4.9 4.9l2.8 2.8M16.3 16.3l2.8 2.8M2 12h4M18 12h4M4.9 19.1l2.8-2.8M16.3 7.7l2.8-2.8" />
               </svg>
             </div>
-            <h3>Docs OpenAPI</h3>
+            <h3>Multi-IA</h3>
             <p>
-              Spec 3.1 interactive, Swagger UI, exemples curl. Toujours synchro avec ton
-              code.
+              Routage intelligent entre Claude, Mistral et Gemini selon ton plan, avec
+              bascule automatique en cas de panne. Jamais bloqué sur un seul fournisseur.
             </p>
           </Reveal>
 
@@ -160,13 +160,13 @@ export function Features() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
               >
-                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" />
+                <path d="M16 18l6-6-6-6M8 6l-6 6 6 6" />
               </svg>
             </div>
-            <h3>Déploiement multi-plateforme</h3>
+            <h3>Dev Mode</h3>
             <p>
-              Railway, Render, Vercel, Fly.io. Ou exporte le repo Git. Aucun vendor-lock.
+              Exporte depuis la spec en direct : OpenAPI 3.1, SDK TypeScript, collection
+              Postman, schéma Prisma, diagramme ER Mermaid et bundle ZIP complet.
             </p>
           </Reveal>
         </div>

@@ -9,11 +9,12 @@ type Scene = {
 };
 
 const PROMPT_LINES = [
-  "> décris ton API",
-  "Backend pour une app de réservation",
-  "interurbain en Côte d'Ivoire.",
-  "users · trajets · sièges · paiements",
-  "Wave + Orange Money · RBAC chauffeur/admin",
+  "Toi › App de réservation de bus interurbain,",
+  "paiement Wave + Orange Money.",
+  "Kia › Je pars sur Trajet, Siège, Réservation,",
+  "Paiement. Un rôle guichet en plus du client ?",
+  "Toi › Oui, + admin compagnie.",
+  "Kia › RBAC à 3 niveaux. Spec prête ✓",
 ];
 
 function PromptScene({ playing }: { playing: boolean }) {
@@ -33,7 +34,7 @@ function PromptScene({ playing }: { playing: boolean }) {
     <div className="vs-scene vs-scene-prompt">
       <div className="vs-prompt-shell">
         <div className="vs-prompt-bar">
-          <span className="vs-pill">/generate</span>
+          <span className="vs-pill">conversation · Kia</span>
           <span className="vs-pill faint">▾ Hono.js</span>
           <span className="vs-pill faint">▾ Postgres</span>
         </div>
@@ -64,11 +65,11 @@ function GeneratingScene({ playing }: { playing: boolean }) {
   const [stepIdx, setStepIdx] = useState(0);
 
   const STEPS = [
-    "Analyse du prompt",
+    "Validation de la spec",
     "Génération du schéma Prisma",
     "Routes Hono.js",
     "Tests Vitest",
-    "Docs OpenAPI 3.1",
+    "SDK + docs OpenAPI 3.1",
   ];
 
   useEffect(() => {
@@ -186,7 +187,7 @@ function DeployScene({ playing }: { playing: boolean }) {
 }
 
 const SCENES: Scene[] = [
-  { label: "01 · Décris", duration: 4200 },
+  { label: "01 · Discute", duration: 5200 },
   { label: "02 · Génère", duration: 5200 },
   { label: "03 · Déploie", duration: 4600 },
 ];
@@ -245,8 +246,8 @@ export function VideoScreencast() {
             Regarde-le. <em>Soixante secondes.</em>
           </h2>
           <p>
-            Du prompt à l&apos;API en ligne. Zéro coupure, zéro montage trompeur — c&apos;est
-            l&apos;outil tel qu&apos;il tourne aujourd&apos;hui.
+            De la conversation à l&apos;API en ligne. Zéro coupure, zéro montage trompeur —
+            c&apos;est l&apos;outil tel qu&apos;il tourne aujourd&apos;hui.
           </p>
         </Reveal>
 
