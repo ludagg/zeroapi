@@ -3,6 +3,7 @@ import { useTranslations } from "next-intl";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/utils";
 import type { Job, JobStatus, User } from "@prisma/client";
+import { JobRowActions } from "@/components/admin/job-row-actions";
 
 const STATUS_CLASS: Record<JobStatus, string> = {
   DRAFT: "text-muted-2 border border-dashed border-line-2",
@@ -46,6 +47,7 @@ function AdminJobsContent({ jobs }: { jobs: JobWithUser[] }) {
               <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.status")}</th>
               <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.endpoints")}</th>
               <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.createdAt")}</th>
+              <th className="px-4 py-3 text-right font-medium">{t("jobs.cols.actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -72,11 +74,16 @@ function AdminJobsContent({ jobs }: { jobs: JobWithUser[] }) {
                 </td>
                 <td className="px-4 py-3 font-mono text-[12px]">{j.endpoints ?? "—"}</td>
                 <td className="px-4 py-3 text-muted">{formatRelativeTime(j.createdAt)}</td>
+                <td className="px-4 py-3 text-right">
+                  <div className="flex justify-end">
+                    <JobRowActions jobId={j.id} name={j.name} />
+                  </div>
+                </td>
               </tr>
             ))}
             {jobs.length === 0 && (
               <tr>
-                <td colSpan={5} className="px-4 py-10 text-center text-muted">
+                <td colSpan={6} className="px-4 py-10 text-center text-muted">
                   {t("jobs.empty")}
                 </td>
               </tr>

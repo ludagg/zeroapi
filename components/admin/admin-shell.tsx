@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
 import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
-import { Briefcase, Home, KeyRound, Menu, Network, Users } from "lucide-react";
+import { Activity, Briefcase, Home, KeyRound, Menu, Network, Send, Users } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 
@@ -118,6 +118,17 @@ function AdminSidebar({
         </AdminLink>
 
         <div className="px-2 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
+          {t("nav.monitoring")}
+        </div>
+        <AdminLink
+          href="/admin/security"
+          icon={<Activity className="h-4 w-4" />}
+          onNavigate={onNavigate}
+        >
+          {t("nav.security")}
+        </AdminLink>
+
+        <div className="px-2 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
           {t("nav.platform")}
         </div>
         <AdminLink
@@ -133,6 +144,13 @@ function AdminSidebar({
           onNavigate={onNavigate}
         >
           {t("nav.llmRouting")}
+        </AdminLink>
+        <AdminLink
+          href="/admin/settings/telegram"
+          icon={<Send className="h-4 w-4" />}
+          onNavigate={onNavigate}
+        >
+          {t("nav.telegram")}
         </AdminLink>
       </nav>
 

@@ -6,6 +6,9 @@
     "platform": "Platform",
     "aiProviders": "AI Providers",
     "llmRouting": "LLM Routing",
+    "security": "Security & activity",
+    "telegram": "Telegram bot",
+    "monitoring": "Monitoring",
     "loggedInAs": "Signed in as",
     "leaveAdmin": "← Back to app",
     "openMenu": "Open menu",
@@ -27,6 +30,14 @@
       "runningJobs": { "label": "Running jobs", "hint": "active generation" },
       "deployments": { "label": "Deployments", "hint": "lifetime" },
       "failures": { "label": "Failures", "hint": "to investigate" }
+    },
+    "analytics": {
+      "title": "Last 30 days",
+      "signups": "Signups",
+      "jobs": "Jobs created",
+      "deployments": "Deployments",
+      "security": "Security events",
+      "empty": "No data for this period."
     }
   },
   "jobs": {
@@ -37,7 +48,16 @@
       "owner": "Owner",
       "status": "Status",
       "endpoints": "Endpoints",
-      "createdAt": "Created"
+      "createdAt": "Created",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "View job",
+      "delete": "Delete",
+      "confirmDelete": "Permanently delete job \"{name}\"?\n\nThis also removes its deployment, database and logs. Irreversible.",
+      "toastDeleted": "Job deleted.",
+      "toastError": "Action failed.",
+      "openActions": "Open actions"
     },
     "empty": "No jobs.",
     "status": {
@@ -155,5 +175,73 @@
     "toastSaved": "Routing matrix saved.",
     "toastSaveError": "Save failed.",
     "toastNoProvider": "Enable at least one provider in AI Providers before saving."
+  },
+  "security": {
+    "title": "Security & ",
+    "titleEm": "activity",
+    "subtitle": "Unified log of product activity and security events.",
+    "tabs": {
+      "all": "All",
+      "activity": "Activity",
+      "security": "Security"
+    },
+    "cols": {
+      "time": "When",
+      "event": "Event",
+      "severity": "Level",
+      "actor": "Actor",
+      "ip": "IP",
+      "path": "Path"
+    },
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Warning",
+      "CRITICAL": "Critical"
+    },
+    "empty": "No events.",
+    "prev": "← Previous",
+    "next": "Next →",
+    "showingRange": "{from}–{to} of {total}",
+    "legend": "Security events (failed logins, brute-force, scans, rate-limit) are also pushed to Telegram when enabled."
+  },
+  "telegram": {
+    "title": "Telegram ",
+    "titleEm": "bot",
+    "subtitle": "Real-time admin alerts: product activity and attacks. The token is encrypted with AES-256-GCM before storage.",
+    "statusEnabled": "Enabled",
+    "statusDisabled": "Disabled",
+    "sourceDb": "configured in admin",
+    "sourceEnv": "configured via environment variables",
+    "sourceNone": "not configured",
+    "enabledLabel": "Enable Telegram alerts",
+    "tokenLabel": "Bot token",
+    "tokenPlaceholderKeep": "Leave empty to keep the current token",
+    "tokenPlaceholderNew": "123456:ABC-DEF…",
+    "tokenHelp": "Create a bot via @BotFather to get a token.",
+    "currentToken": "Current token: ",
+    "noToken": "No token saved",
+    "chatIdLabel": "Admin chat ID",
+    "chatIdPlaceholder": "e.g. 123456789 or -1001234567890",
+    "chatIdHelp": "Message @userinfobot (or add the bot to your group) to get the chat ID.",
+    "triggersTitle": "Alert triggers",
+    "triggers": {
+      "failedLogin": "Failed logins / brute-force",
+      "rateLimit": "Rate-limit exceeded (abusive IP)",
+      "pathScan": "Suspicious path scans",
+      "productActivity": "Product activity (signups, jobs, deployments, admin actions)"
+    },
+    "saveBtn": "Save",
+    "testBtn": "Send a test",
+    "testingBtn": "Sending…",
+    "savingBtn": "Saving…",
+    "toastSaved": "Telegram configuration saved.",
+    "toastSaveError": "Save failed.",
+    "toastTestOk": "Test message sent ✓",
+    "toastTestFail": "Test failed: {reason}",
+    "toastTestNeedsConfig": "Enter the token and chat ID before testing.",
+    "howtoTitle": "Getting started",
+    "howto1": "Create a bot with @BotFather and copy its token.",
+    "howto2": "Get your chat ID via @userinfobot.",
+    "howto3": "Paste both below, enable, then send a test."
   }
 }
