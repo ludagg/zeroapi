@@ -6,10 +6,12 @@ import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
 import { ApiSubnav } from "@/components/api-detail/api-subnav";
 import { VariablesPanel } from "@/components/api-detail/variables-panel";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
 export default async function ApiSettingsPage({ params }: { params: { id: string } }) {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },
@@ -21,10 +23,10 @@ export default async function ApiSettingsPage({ params }: { params: { id: string
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "APIs", href: "/jobs" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("apis.crumbApis"), href: "/jobs" },
           { label: job.name, href: `/apis/${job.id}` },
-          { label: "Variables" },
+          { label: t("apis.tabVariables") },
         ]}
       />
 
@@ -35,14 +37,14 @@ export default async function ApiSettingsPage({ params }: { params: { id: string
             className="mb-3 inline-flex items-center gap-1.5 text-[12px] text-muted transition hover:text-ink"
           >
             <ArrowLeft className="h-3 w-3" />
-            Retour à l&apos;aperçu
+            {t("apis.backToOverview")}
           </Link>
 
           <h1 className="mb-1 font-serif text-[36px] leading-none tracking-[-0.01em]">
-            Variables de <em className="italic">{job.name}</em>.
+            {t("apis.variablesTitle", { name: job.name })}
           </h1>
           <p className="mb-6 text-[14px] text-muted">
-            Chaque API a ses propres variables, isolées et chiffrées au repos (AES-256-GCM).
+            {t("apis.variablesSubtitle")}
           </p>
 
           <ApiSubnav id={job.id} />

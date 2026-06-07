@@ -9,10 +9,12 @@ import {
 } from "@/components/conversations/conversation-card";
 import { NewConversationBox } from "@/components/conversations/new-conversation-box";
 import { lastMessageExcerpt, parseMessages } from "@/lib/conversation-helpers";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
 export default async function ConversationsPage() {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
 
   const conversations = await prisma.conversation.findMany({
@@ -39,8 +41,8 @@ export default async function ConversationsPage() {
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Conversations" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.conversations") },
         ]}
       />
 
@@ -49,11 +51,12 @@ export default async function ConversationsPage() {
           <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-                Tes <em className="italic">conversations</em>.
+                {t("conversations.pageTitle")}
               </h1>
               <p className="mt-2 text-[14.5px] text-muted">
-                {cards.length} conversation{cards.length > 1 ? "s" : ""} · reprends là où tu en
-                étais
+                {cards.length > 1
+                  ? t("conversations.totalPlural", { count: cards.length })
+                  : t("conversations.total", { count: cards.length })}
               </p>
             </div>
             <Link
@@ -61,7 +64,7 @@ export default async function ConversationsPage() {
               className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
             >
               <Plus className="h-3.5 w-3.5" />
-              Avancé
+              {t("conversations.newAdvanced")}
             </Link>
           </header>
 
@@ -82,13 +85,13 @@ export default async function ConversationsPage() {
             <div className="rounded-[14px] border border-dashed border-line-2 bg-surface px-6 py-12 text-center">
               <MessagesSquare className="mx-auto mb-3 h-5 w-5 text-muted-2" />
               <p className="font-serif text-[26px] leading-tight">
-                Aucune conversation <em className="italic">pour le moment</em>.
+                {t("conversations.empty.headline")}
               </p>
               <p className="mt-2 text-muted">
-                Commence par décrire ton API ↑
+                {t("conversations.empty.subtitle")}
               </p>
               <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
-                Démarrer
+                {t("conversations.empty.cta")}
               </Link>
             </div>
           ) : (

@@ -43,6 +43,7 @@ import {
   type GraphNodeModel,
 } from "@/lib/spec-graph";
 import { GlobalSettings } from "@/components/conversations/global-settings";
+import { useTranslations } from "next-intl";
 
 /** Result of applying a graph-emitted operation (resolved by the parent). */
 export type ApplyOperationResult =
@@ -111,6 +112,7 @@ const HANDLE_STYLE_RO = { ...HANDLE_STYLE, background: "var(--line-2)" };
 function ResourceNode({ data }: NodeProps) {
   const node = data as unknown as GraphNodeModel;
   const actions = useContext(GraphActionsContext);
+  const t = useTranslations("dashboard");
   const editable = actions.editable && !node.system;
   const b = node.badges;
   const hasBadges = b.stateMachine || b.aggregates > 0 || b.softDelete || b.timestamps;
@@ -147,7 +149,7 @@ function ResourceNode({ data }: NodeProps) {
         {editable ? (
           <span
             onDoubleClick={() => actions.onRenameResource(node.name)}
-            title="Double-cliquer pour renommer"
+            title={t("conversations.graph.doubleClickToRename")}
             className="nodrag min-w-0 flex-1 cursor-text truncate text-[13px] font-semibold text-ink"
           >
             {node.name}
@@ -156,13 +158,13 @@ function ResourceNode({ data }: NodeProps) {
           <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">{node.name}</span>
         )}
         {node.system ? (
-          <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted">système</span>
+          <span className="font-mono text-[9px] uppercase tracking-[0.08em] text-muted">{t("conversations.graph.systemBadge")}</span>
         ) : (
           editable && (
             <span className="flex items-center gap-1">
               <button
                 type="button"
-                title="Réglages de la ressource"
+                title={t("conversations.graph.resourceSettings")}
                 onClick={() => actions.onResourceSettings(node.name)}
                 className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
               >
@@ -170,7 +172,7 @@ function ResourceNode({ data }: NodeProps) {
               </button>
               <button
                 type="button"
-                title="Ajouter un champ"
+                title={t("conversations.graph.addField")}
                 onClick={() => actions.onAddField(node.name)}
                 className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-accent/50 hover:text-accent-ink"
               >
@@ -178,7 +180,7 @@ function ResourceNode({ data }: NodeProps) {
               </button>
               <button
                 type="button"
-                title="Supprimer la ressource"
+                title={t("conversations.graph.removeResource")}
                 onClick={() => actions.onRemoveResource(node.name)}
                 className="nodrag grid h-5 w-5 place-items-center rounded-[6px] border border-line bg-surface text-ink-2 transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger"
               >
@@ -202,7 +204,7 @@ function ResourceNode({ data }: NodeProps) {
                 <button
                   type="button"
                   onClick={() => actions.onEditField(node.name, f)}
-                  title="Éditer le champ"
+                  title={t("conversations.graph.editField")}
                   className="nodrag flex min-w-0 items-center gap-1.5 rounded-[5px] px-1 py-px text-left transition hover:bg-bg-2"
                 >
                   <span className={"h-1.5 w-1.5 flex-shrink-0 rounded-full " + FIELD_DOT[f.kind]} />
@@ -228,7 +230,7 @@ function ResourceNode({ data }: NodeProps) {
                 {removable && (
                   <button
                     type="button"
-                    title={`Supprimer ${f.name}`}
+                    title={t("conversations.graph.removeFieldNameTitle", { name: f.name })}
                     onClick={() => actions.onRemoveField(node.name, f.name)}
                     className="nodrag grid h-4 w-4 place-items-center rounded-[5px] text-muted opacity-0 transition hover:bg-danger-soft hover:text-danger group-hover:opacity-100"
                   >
@@ -308,7 +310,9 @@ const RELATION_CHOICES: Array<{ kebab: string; short: string; label: string }> =
  * the confirmation can list what will be affected WITHOUT a probe that would
  * auto-delete an unreferenced resource.
  */
-function computeRemoveImpact(spec: ZeroAPISpec | null, name: string): string[] {
+type TFn = ReturnType<typeof useTranslations<"dashboard">>;
+
+function computeRemoveImpact(spec: ZeroAPISpec | null, name: string, t: TFn): string[] {
   const lines: string[] = [];
   if (!spec) return lines;
   const rels: string[] = [];
@@ -320,11 +324,11 @@ function computeRemoveImpact(spec: ZeroAPISpec | null, name: string): string[] {
       if (rel.resource === name) rels.push(`${res.name} → ${name}`);
     }
   }
-  if (rels.length > 0) lines.push(`${rels.length} relation(s) supprimée(s) : ${rels.join(", ")}`);
+  if (rels.length > 0) lines.push(t("conversations.graph.impactRelations", { count: rels.length, list: rels.join(", ") }));
   if ((spec.permissions ?? []).some((p) => p.resource === name)) {
-    lines.push(`Permissions de ${name} supprimées`);
+    lines.push(t("conversations.graph.impactPermissions", { name }));
   }
-  lines.push("Action irréversible.");
+  lines.push(t("conversations.graph.impactIrreversible"));
   return lines;
 }
 
@@ -342,6 +346,7 @@ export default function SpecGraph({
   spec: ZeroAPISpec | null;
   onApplyOperation?: ApplyOperation;
 }) {
+  const t = useTranslations("dashboard");
   const editable = Boolean(onApplyOperation);
   const flow = useMemo(() => toFlow(spec), [spec]);
   const [nodes, setNodes, onNodesChange] = useNodesState(flow.nodes);
@@ -474,9 +479,9 @@ export default function SpecGraph({
   const requestRemoveResource = useCallback(
     (resource: string) => {
       closeAll();
-      setRemoveResourceFor({ name: resource, lines: computeRemoveImpact(spec, resource) });
+      setRemoveResourceFor({ name: resource, lines: computeRemoveImpact(spec, resource, t) });
     },
-    [closeAll, spec],
+    [closeAll, spec, t],
   );
 
   const actions = useMemo<GraphActions>(
@@ -518,7 +523,7 @@ export default function SpecGraph({
       setPending(null);
       setRelField("");
     } else {
-      setErr("error" in res ? res.error ?? "Relation rejetée." : "Relation rejetée.");
+      setErr("error" in res ? res.error ?? t("conversations.graph.errorRelation") : t("conversations.graph.errorRelation"));
     }
   }
 
@@ -548,7 +553,7 @@ export default function SpecGraph({
     const res = await onApplyOperation({ type: "addField", params });
     setBusy(false);
     if (res.ok) setAddFieldFor(null);
-    else setErr("error" in res ? res.error ?? "Champ rejeté." : "Champ rejeté.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorField") : t("conversations.graph.errorField"));
   }
 
   async function confirmRemoveField() {
@@ -562,7 +567,7 @@ export default function SpecGraph({
     });
     setBusy(false);
     if (res.ok) setRemoveConfirm(null);
-    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorDelete") : t("conversations.graph.errorDelete"));
   }
 
   async function submitRename(newName: string) {
@@ -575,7 +580,7 @@ export default function SpecGraph({
     });
     setBusy(false);
     if (res.ok) setRenameFor(null);
-    else setErr("error" in res ? res.error ?? "Renommage rejeté." : "Renommage rejeté.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorRename") : t("conversations.graph.errorRename"));
   }
 
   async function confirmRemoveResource() {
@@ -589,7 +594,7 @@ export default function SpecGraph({
     });
     setBusy(false);
     if (res.ok) setRemoveResourceFor(null);
-    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorDelete") : t("conversations.graph.errorDelete"));
   }
 
   async function submitCreateResource(form: { name: string; fieldName: string; fieldType: string }) {
@@ -603,7 +608,7 @@ export default function SpecGraph({
     const res = await onApplyOperation({ type: "addResource", params });
     setBusy(false);
     if (res.ok) setCreateOpen(false);
-    else setErr("error" in res ? res.error ?? "Création rejetée." : "Création rejetée.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorCreate") : t("conversations.graph.errorCreate"));
   }
 
   // Apply a field edit as a sequence of operations (safe ones first, then the
@@ -630,14 +635,14 @@ export default function SpecGraph({
         type: "setFieldRequired",
         params: { resource, field: field.name, required: form.required },
       });
-      if (!r.ok) return fail(r, "Échec (required).");
+      if (!r.ok) return fail(r, t("conversations.graph.errorRequired"));
     }
     if (form.unique) {
       const r = await onApplyOperation({
         type: "modifyFieldOptions",
         params: { resource, field: field.name, options: { unique: true } },
       });
-      if (!r.ok) return fail(r, "Échec (unique).");
+      if (!r.ok) return fail(r, t("conversations.graph.errorUnique"));
     }
     if (form.type !== field.type) {
       const params: Record<string, unknown> = { resource, field: field.name, fieldType: form.type };
@@ -651,12 +656,12 @@ export default function SpecGraph({
           setEditFieldFor(null);
           setConfirmOp({
             op: { type: "setFieldType", params },
-            title: <>Changer le type de <span className="font-mono">{field.name}</span> ?</>,
+            title: <>{t("conversations.graph.confirmChangeTypeTitle", { name: field.name })}</>,
             lines: r.requiresConfirmation.flatMap((im) => [im.reason, ...im.impact]),
           });
           return;
         }
-        return fail(r, "Échec du changement de type.");
+        return fail(r, t("conversations.graph.errorTypeChange"));
       }
     }
     if (form.newName.trim() && form.newName.trim() !== field.name) {
@@ -668,12 +673,12 @@ export default function SpecGraph({
           setEditFieldFor(null);
           setConfirmOp({
             op: { type: "renameField", params },
-            title: <>Renommer <span className="font-mono">{field.name}</span> ?</>,
+            title: <>{t("conversations.graph.confirmRenameFieldTitle", { name: field.name })}</>,
             lines: r.requiresConfirmation.flatMap((im) => [im.reason, ...im.impact]),
           });
           return;
         }
-        return fail(r, "Échec du renommage.");
+        return fail(r, t("conversations.graph.errorRenameField"));
       }
     }
     setBusy(false);
@@ -687,7 +692,7 @@ export default function SpecGraph({
     const res = await onApplyOperation({ ...confirmOp.op, confirmed: true });
     setBusy(false);
     if (res.ok) setConfirmOp(null);
-    else setErr("error" in res ? res.error ?? "Opération rejetée." : "Opération rejetée.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorOp") : t("conversations.graph.errorOp"));
   }
 
   async function setEdgeOnDelete(onDelete: string) {
@@ -700,7 +705,7 @@ export default function SpecGraph({
     });
     setBusy(false);
     if (res.ok) setEditEdgeFor(null);
-    else setErr("error" in res ? res.error ?? "Échec." : "Échec.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorFailed") : t("conversations.graph.errorFailed"));
   }
 
   async function removeEdgeRelation() {
@@ -713,7 +718,7 @@ export default function SpecGraph({
     const res = await onApplyOperation(op);
     setBusy(false);
     if (res.ok) setEditEdgeFor(null);
-    else setErr("error" in res ? res.error ?? "Suppression rejetée." : "Suppression rejetée.");
+    else setErr("error" in res ? res.error ?? t("conversations.graph.errorDelete") : t("conversations.graph.errorDelete"));
   }
 
   async function submitResourceSettings(form: {
@@ -738,23 +743,23 @@ export default function SpecGraph({
     const sortJoin = (a: string[]) => [...a].sort().join(",");
 
     if ((r?.description ?? "") !== form.description) {
-      if (fail(await onApplyOperation({ type: "setResourceDescription", params: { name, description: form.description } }), "Échec (description)."))
+      if (fail(await onApplyOperation({ type: "setResourceDescription", params: { name, description: form.description } }), t("conversations.graph.errorDescription")))
         return;
     }
     if (sortJoin(r?.endpoints ?? defaultEndpoints) !== sortJoin(form.endpoints)) {
-      if (fail(await onApplyOperation({ type: "setResourceEndpoints", params: { name, endpoints: form.endpoints } }), "Échec (endpoints)."))
+      if (fail(await onApplyOperation({ type: "setResourceEndpoints", params: { name, endpoints: form.endpoints } }), t("conversations.graph.errorEndpoints")))
         return;
     }
     if ((r?.softDelete === true) !== form.softDelete) {
-      if (fail(await onApplyOperation({ type: "setSoftDelete", params: { resource: name, enabled: form.softDelete } }), "Échec (soft-delete)."))
+      if (fail(await onApplyOperation({ type: "setSoftDelete", params: { resource: name, enabled: form.softDelete } }), t("conversations.graph.errorSoftDelete")))
         return;
     }
     if ((r?.timestamps !== false) !== form.timestamps) {
-      if (fail(await onApplyOperation({ type: "setTimestamps", params: { resource: name, enabled: form.timestamps } }), "Échec (timestamps)."))
+      if (fail(await onApplyOperation({ type: "setTimestamps", params: { resource: name, enabled: form.timestamps } }), t("conversations.graph.errorTimestamps")))
         return;
     }
     if (sortJoin(r?.searchable ?? []) !== sortJoin(form.searchable)) {
-      if (fail(await onApplyOperation({ type: "setSearchableFields", params: { name, fields: form.searchable } }), "Échec (recherche)."))
+      if (fail(await onApplyOperation({ type: "setSearchableFields", params: { name, fields: form.searchable } }), t("conversations.graph.errorSearch")))
         return;
     }
     setBusy(false);
@@ -768,10 +773,9 @@ export default function SpecGraph({
           <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-[12px] border border-line bg-bg-2 text-muted">
             <Share2 className="h-5 w-5" />
           </div>
-          <div className="text-[13px] font-medium text-ink-2">Aucune ressource à afficher</div>
+          <div className="text-[13px] font-medium text-ink-2">{t("conversations.graph.emptyTitle")}</div>
           <p className="mx-auto mt-1.5 max-w-[230px] text-[12px] leading-snug text-muted">
-            Décris ou génère ton API : les ressources et leurs relations
-            apparaîtront ici sous forme de schéma.
+            {t("conversations.graph.emptySubtitle")}
           </p>
         </div>
       </div>
@@ -806,7 +810,7 @@ export default function SpecGraph({
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
             >
               <Settings2 className="h-3.5 w-3.5" />
-              API
+              {t("conversations.graph.apiButton")}
             </button>
             <button
               type="button"
@@ -817,7 +821,7 @@ export default function SpecGraph({
               className="inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/95 px-3 py-1.5 text-[12px] font-medium text-ink-2 shadow-sm backdrop-blur transition hover:border-accent/50 hover:text-accent-ink"
             >
               <Plus className="h-3.5 w-3.5" />
-              Ressource
+              {t("conversations.graph.resourceButton")}
             </button>
           </div>
         )}
@@ -839,7 +843,7 @@ export default function SpecGraph({
           !confirmOp && (
             <div className="pointer-events-none absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full border border-line bg-surface/90 px-2.5 py-1 font-mono text-[10px] text-muted backdrop-blur">
               <Link2 className="h-3 w-3 text-accent-ink" />
-              Glisse pour relier · clic champ/relation = éditer · ⚙ = réglages
+              {t("conversations.graph.hint")}
             </div>
           )}
 
@@ -879,12 +883,10 @@ export default function SpecGraph({
         {removeConfirm && (
           <ConfirmDeleteCard
             title={
-              <>
-                Supprimer <span className="font-mono">{removeConfirm.resource}.{removeConfirm.field}</span> ?
-              </>
+              <span className="font-mono">{t("conversations.graph.removeFieldTitle")} {removeConfirm.resource}.{removeConfirm.field}</span>
             }
             lines={removeConfirm.impacts.flatMap((im) => [im.reason, ...im.impact])}
-            confirmLabel="Supprimer le champ"
+            confirmLabel={t("conversations.graph.removeFieldConfirmLabel")}
             busy={busy}
             error={err}
             onConfirm={confirmRemoveField}
@@ -894,13 +896,9 @@ export default function SpecGraph({
 
         {removeResourceFor && (
           <ConfirmDeleteCard
-            title={
-              <>
-                Supprimer la ressource <span className="font-mono">{removeResourceFor.name}</span> ?
-              </>
-            }
+            title={t("conversations.graph.removeResourceConfirmTitle", { name: removeResourceFor.name })}
             lines={removeResourceFor.lines}
-            confirmLabel="Supprimer la ressource"
+            confirmLabel={t("conversations.graph.removeResourceConfirmLabel")}
             busy={busy}
             error={err}
             onConfirm={confirmRemoveResource}
@@ -928,7 +926,7 @@ export default function SpecGraph({
           <ConfirmDeleteCard
             title={confirmOp.title}
             lines={confirmOp.lines}
-            confirmLabel="Confirmer"
+            confirmLabel={t("conversations.graph.confirmLabel")}
             busy={busy}
             error={err}
             onConfirm={confirmGeneric}
@@ -1008,6 +1006,7 @@ function PopoverShell({
   onCancel: () => void;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="absolute left-1/2 top-3 z-20 w-[280px] -translate-x-1/2 overflow-hidden rounded-[12px] border border-line bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
       <div className="flex items-center justify-between border-b border-line px-3 py-2">
@@ -1015,7 +1014,7 @@ function PopoverShell({
         <button
           type="button"
           onClick={onCancel}
-          aria-label="Annuler"
+          aria-label={t("conversations.graph.cancelAriaLabel")}
           className="grid h-5 w-5 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
         >
           <X className="h-3.5 w-3.5" />
@@ -1053,6 +1052,7 @@ function RelationPopover({
   onChoose: (kebab: string) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <PopoverShell
       onCancel={onCancel}
@@ -1062,7 +1062,7 @@ function RelationPopover({
         </>
       }
     >
-      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">Type de relation</div>
+      <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">{t("conversations.graph.relationTypeLabel")}</div>
       <div className="grid grid-cols-2 gap-1.5">
         {RELATION_CHOICES.map((c) => (
           <button
@@ -1081,7 +1081,7 @@ function RelationPopover({
         value={field}
         onChange={(e) => onField(e.target.value)}
         disabled={busy}
-        placeholder="champ FK (optionnel)"
+        placeholder={t("conversations.graph.addFieldFkPlaceholder")}
         className="mt-2.5 h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
       />
       {error && <ErrorNote error={error} />}
@@ -1103,6 +1103,7 @@ function AddFieldPopover({
   onSubmit: (form: { name: string; type: string; required: boolean; unique: boolean; values: string }) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [name, setName] = useState("");
   const [type, setType] = useState<string>("string");
   const [required, setRequired] = useState(false);
@@ -1113,18 +1114,14 @@ function AddFieldPopover({
   return (
     <PopoverShell
       onCancel={onCancel}
-      title={
-        <>
-          Champ sur <b className="text-ink">{resource}</b>
-        </>
-      }
+      title={t.rich("conversations.graph.addFieldTitle", { resource, b: (c) => <b className="text-ink">{c}</b> })}
     >
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         disabled={busy}
         autoFocus
-        placeholder="nom du champ"
+        placeholder={t("conversations.graph.addFieldPlaceholder")}
         className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
       />
       <select
@@ -1133,9 +1130,9 @@ function AddFieldPopover({
         disabled={busy}
         className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2 font-mono text-[12px] text-ink outline-none focus:border-ink disabled:opacity-50"
       >
-        {FIELD_TYPES.map((t) => (
-          <option key={t} value={t}>
-            {t}
+        {FIELD_TYPES.map((ft) => (
+          <option key={ft} value={ft}>
+            {ft}
           </option>
         ))}
       </select>
@@ -1144,7 +1141,7 @@ function AddFieldPopover({
           value={values}
           onChange={(e) => setValues(e.target.value)}
           disabled={busy}
-          placeholder="valeurs (séparées par ,)"
+          placeholder={t("conversations.graph.addFieldEnumPlaceholder")}
           className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
         />
       )}
@@ -1159,7 +1156,7 @@ function AddFieldPopover({
         className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-        Ajouter le champ
+        {t("conversations.graph.addFieldButton")}
       </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1177,29 +1174,30 @@ function CreateResourcePopover({
   onSubmit: (form: { name: string; fieldName: string; fieldType: string }) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [name, setName] = useState("");
   const [fieldName, setFieldName] = useState("");
   const [fieldType, setFieldType] = useState<string>("string");
   const canSubmit = name.trim().length > 0 && !busy;
   return (
-    <PopoverShell onCancel={onCancel} title={<>Nouvelle ressource</>}>
+    <PopoverShell onCancel={onCancel} title={t("conversations.graph.newResourceTitle")}>
       <input
         value={name}
         onChange={(e) => setName(e.target.value)}
         disabled={busy}
         autoFocus
-        placeholder="Nom (PascalCase, ex. Product)"
+        placeholder={t("conversations.graph.newResourceNamePlaceholder")}
         className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
       />
       <div className="mt-2.5 mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
-        Premier champ (optionnel)
+        {t("conversations.graph.newResourceFirstField")}
       </div>
       <div className="flex gap-1.5">
         <input
           value={fieldName}
           onChange={(e) => setFieldName(e.target.value)}
           disabled={busy}
-          placeholder="champ (ex. name)"
+          placeholder={t("conversations.graph.newResourceFieldPlaceholder")}
           className="h-8 min-w-0 flex-1 rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
         />
         <select
@@ -1208,9 +1206,9 @@ function CreateResourcePopover({
           disabled={busy}
           className="h-8 rounded-[8px] border border-line bg-bg px-2 font-mono text-[11px] text-ink outline-none focus:border-ink disabled:opacity-50"
         >
-          {FIELD_TYPES.map((t) => (
-            <option key={t} value={t}>
-              {t}
+          {FIELD_TYPES.map((ft) => (
+            <option key={ft} value={ft}>
+              {ft}
             </option>
           ))}
         </select>
@@ -1222,7 +1220,7 @@ function CreateResourcePopover({
         className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-        Créer la ressource
+        {t("conversations.graph.newResourceButton")}
       </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1246,6 +1244,7 @@ function EditFieldPopover({
   onDelete: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [newName, setNewName] = useState(field.name);
   const [type, setType] = useState<string>(field.type);
   const [required, setRequired] = useState(Boolean(field.required));
@@ -1260,18 +1259,14 @@ function EditFieldPopover({
   return (
     <PopoverShell
       onCancel={onCancel}
-      title={
-        <>
-          Éditer <b className="text-ink">{resource}.{field.name}</b>
-        </>
-      }
+      title={t.rich("conversations.graph.editFieldTitle", { resource, field: field.name, b: (c) => <b className="text-ink">{c}</b> })}
     >
       <input
         value={newName}
         onChange={(e) => setNewName(e.target.value)}
         disabled={busy}
         autoFocus
-        placeholder="nom du champ"
+        placeholder={t("conversations.graph.editFieldNamePlaceholder")}
         className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
       />
       <select
@@ -1280,9 +1275,9 @@ function EditFieldPopover({
         disabled={busy}
         className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2 font-mono text-[12px] text-ink outline-none focus:border-ink disabled:opacity-50"
       >
-        {typeOptions.map((t) => (
-          <option key={t} value={t}>
-            {t}
+        {typeOptions.map((ft) => (
+          <option key={ft} value={ft}>
+            {ft}
           </option>
         ))}
       </select>
@@ -1291,7 +1286,7 @@ function EditFieldPopover({
           value={values}
           onChange={(e) => setValues(e.target.value)}
           disabled={busy}
-          placeholder="valeurs (séparées par ,)"
+          placeholder={t("conversations.graph.editFieldEnumPlaceholder")}
           className="mt-2 h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[11px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
         />
       )}
@@ -1307,20 +1302,20 @@ function EditFieldPopover({
           className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-          Enregistrer
+          {t("conversations.graph.saveButton")}
         </button>
         <button
           type="button"
           disabled={busy}
           onClick={onDelete}
-          title="Supprimer le champ"
+          title={t("conversations.graph.editFieldDeleteTitle")}
           className="grid h-9 w-9 place-items-center rounded-[9px] border border-line bg-surface text-muted transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
       <p className="mt-2 text-[10.5px] leading-snug text-muted">
-        Le renommage et le changement de type peuvent demander une confirmation.
+        {t("conversations.graph.editFieldWarning")}
       </p>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1348,6 +1343,7 @@ function EditRelationPopover({
   onRemove: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <PopoverShell
       onCancel={onCancel}
@@ -1379,7 +1375,7 @@ function EditRelationPopover({
         </>
       ) : (
         <p className="text-[11px] leading-snug text-muted">
-          Le comportement onDelete se règle sur les relations top-level.
+          {t("conversations.graph.onDeleteNote")}
         </p>
       )}
       <button
@@ -1389,7 +1385,7 @@ function EditRelationPopover({
         className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] border border-line bg-surface text-[13px] font-medium text-ink-2 transition hover:border-danger/50 hover:bg-danger-soft hover:text-danger disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-        Supprimer la relation
+        {t("conversations.graph.removeRelationButton")}
       </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1427,6 +1423,7 @@ function ResourceSettingsPopover({
   }) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [description, setDescription] = useState(initial.description);
   const [endpoints, setEndpoints] = useState<string[]>(initial.endpoints);
   const [softDelete, setSoftDelete] = useState(initial.softDelete);
@@ -1455,23 +1452,19 @@ function ResourceSettingsPopover({
   return (
     <PopoverShell
       onCancel={onCancel}
-      title={
-        <>
-          Réglages · <b className="text-ink">{resource}</b>
-        </>
-      }
+      title={t.rich("conversations.graph.resourceSettingsTitle", { resource, b: (c) => <b className="text-ink">{c}</b> })}
     >
       <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-0.5 scrollbar-thin">
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           disabled={busy}
-          placeholder="description (optionnel)"
+          placeholder={t("conversations.graph.descriptionPlaceholder")}
           className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
         />
 
         <div>
-          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">Endpoints</div>
+          <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">{t("conversations.graph.endpointsLabel")}</div>
           <div className="flex flex-wrap gap-1.5">
             {CRUD_ACTIONS.map((a) => (
               <Pill key={a} active={endpoints.includes(a)} label={a} onClick={() => toggle(endpoints, setEndpoints, a)} />
@@ -1482,7 +1475,7 @@ function ResourceSettingsPopover({
         {fieldNames.length > 0 && (
           <div>
             <div className="mb-1.5 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
-              Champs cherchables
+              {t("conversations.graph.searchableLabel")}
             </div>
             <div className="flex flex-wrap gap-1.5">
               {fieldNames.map((f) => (
@@ -1510,7 +1503,7 @@ function ResourceSettingsPopover({
         className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-        Enregistrer
+        {t("conversations.graph.saveButton")}
       </button>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1530,16 +1523,13 @@ function RenamePopover({
   onSubmit: (newName: string) => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [name, setName] = useState(resource);
   const canSubmit = name.trim().length > 0 && name.trim() !== resource && !busy;
   return (
     <PopoverShell
       onCancel={onCancel}
-      title={
-        <>
-          Renommer <b className="text-ink">{resource}</b>
-        </>
-      }
+      title={t.rich("conversations.graph.renameTitle", { resource, b: (c) => <b className="text-ink">{c}</b> })}
     >
       <input
         value={name}
@@ -1549,7 +1539,7 @@ function RenamePopover({
         onKeyDown={(e) => {
           if (e.key === "Enter" && canSubmit) onSubmit(name);
         }}
-        placeholder="nouveau nom"
+        placeholder={t("conversations.graph.renameNewNamePlaceholder")}
         className="h-8 w-full rounded-[8px] border border-line bg-bg px-2.5 font-mono text-[12px] text-ink outline-none transition placeholder:text-muted-2 focus:border-ink disabled:opacity-50"
       />
       <button
@@ -1559,10 +1549,10 @@ function RenamePopover({
         className="mt-2.5 inline-flex h-9 w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
       >
         {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-        Renommer
+        {t("conversations.graph.renameButton")}
       </button>
       <p className="mt-2 text-[10.5px] leading-snug text-muted">
-        Le moteur propage le renommage (relations, permissions, FK).
+        {t("conversations.graph.renameNote")}
       </p>
       {error && <ErrorNote error={error} />}
     </PopoverShell>
@@ -1587,6 +1577,7 @@ function ConfirmDeleteCard({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="absolute left-1/2 top-3 z-20 w-[300px] -translate-x-1/2 overflow-hidden rounded-[12px] border border-warn/40 bg-surface shadow-[0_8px_30px_rgba(0,0,0,0.3)]">
       <div className="flex items-center gap-2 border-b border-warn/30 bg-warn-soft/40 px-3 py-2 text-[12px] font-medium text-warn-ink">
@@ -1620,7 +1611,7 @@ function ConfirmDeleteCard({
             onClick={onCancel}
             className="inline-flex h-9 items-center justify-center rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:border-line-2 disabled:opacity-50"
           >
-            Annuler
+            {t("conversations.graph.cancelButton")}
           </button>
         </div>
         {error && <ErrorNote error={error} />}
@@ -1655,10 +1646,11 @@ function Check({
 }
 
 function BusyNote() {
+  const t = useTranslations("dashboard");
   return (
     <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted">
       <Loader2 className="h-3 w-3 animate-spin" />
-      Application…
+      {t("conversations.graph.busyNote")}
     </div>
   );
 }

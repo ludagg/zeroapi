@@ -4,22 +4,16 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { toast } from "sonner";
-
-const PLACEHOLDERS = [
-  "API e-commerce avec paiement Wave et livraison à domicile…",
-  "Backend RH avec congés, paie, et fiches employés…",
-  "API de réservation de restaurants avec disponibilités…",
-  "Plateforme de cours en ligne avec quiz et certificats…",
-  "Système de tickets support avec attribution automatique…",
-  "API de marketplace de location de matériel pro…",
-];
+import { useTranslations } from "next-intl";
 
 export function DashboardChatbox() {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [value, setValue] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [placeholderIdx, setPlaceholderIdx] = useState(0);
+  const PLACEHOLDERS: string[] = t.raw("chatbox.placeholders") as string[];
 
   useEffect(() => {
     if (value.length > 0) return;
@@ -48,11 +42,11 @@ export function DashboardChatbox() {
       });
       const data = (await res.json()) as { id?: string; error?: string };
       if (!res.ok || !data.id) {
-        throw new Error(data.error ?? "Création impossible.");
+        throw new Error(data.error ?? t("chatbox.errorCreate"));
       }
       router.push(`/conversations/${data.id}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("chatbox.errorRetry"));
       setSubmitting(false);
     }
   }
@@ -92,7 +86,7 @@ export function DashboardChatbox() {
           <i className="h-[9px] w-[9px] rounded-full bg-line-2" />
           <i className="h-[9px] w-[9px] rounded-full bg-line-2" />
         </div>
-        <span>nouveau-projet · prompt.md</span>
+        <span>{t("chatbox.newProject")}</span>
       </div>
 
       <div className="flex min-h-[76px] items-start gap-3">
@@ -124,11 +118,11 @@ export function DashboardChatbox() {
           <kbd className="rounded-[5px] border border-b-2 border-line bg-bg px-1.5 py-0.5 text-ink-2">
             ⏎
           </kbd>{" "}
-          pour générer ·{" "}
+          {t("chatbox.generateHint")} ·{" "}
           <kbd className="rounded-[5px] border border-b-2 border-line bg-bg px-1.5 py-0.5 text-ink-2">
             ⇧⏎
           </kbd>{" "}
-          nouvelle ligne
+          {t("chatbox.newlineHint")}
         </span>
         <button
           type="button"
@@ -136,7 +130,7 @@ export function DashboardChatbox() {
           disabled={!canSubmit}
           className="inline-flex h-[34px] items-center gap-1.5 rounded-[8px] bg-ink px-3.5 text-[13px] font-medium text-bg transition hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
         >
-          {submitting ? "Création…" : "Générer"}
+          {submitting ? t("chatbox.generating") : t("chatbox.generate")}
           <ArrowRight className="h-3 w-3" strokeWidth={2.4} />
         </button>
       </div>

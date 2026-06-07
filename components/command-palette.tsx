@@ -17,6 +17,7 @@ import {
   Users,
 } from "lucide-react";
 import { useTheme } from "next-themes";
+import { useTranslations } from "next-intl";
 
 type RecentJob = { id: string; name: string };
 
@@ -27,6 +28,7 @@ export function CommandPalette({
   isAdmin: boolean;
   recentJobs: RecentJob[];
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
@@ -66,12 +68,12 @@ export function CommandPalette({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-[560px] overflow-hidden rounded-[14px] border border-line bg-surface shadow-2xl"
       >
-        <Command label="Palette de commandes">
+        <Command label={t("commandPalette.label")}>
           <div className="flex items-center gap-2 border-b border-line px-3.5 py-3">
             <Search className="h-4 w-4 text-muted" />
             <Command.Input
               autoFocus
-              placeholder="Aller à…, ouvrir un job, basculer le thème…"
+              placeholder={t("commandPalette.placeholder")}
               className="w-full bg-transparent text-[14px] text-ink outline-none placeholder:text-muted-2"
             />
             <kbd className="rounded-[5px] border border-line bg-bg px-1.5 py-0.5 font-mono text-[10.5px] text-muted">
@@ -81,49 +83,49 @@ export function CommandPalette({
 
           <Command.List className="max-h-[420px] overflow-y-auto p-2 scrollbar-thin">
             <Command.Empty className="px-3 py-6 text-center text-[13px] text-muted">
-              Aucun résultat.
+              {t("commandPalette.noResults")}
             </Command.Empty>
 
-            <Command.Group heading="Actions" className="cmdk-group">
-              <Item onSelect={() => go("/generate")} icon={<Plus />} keywords={["nouvelle", "api"]}>
-                Nouvelle API
+            <Command.Group heading={t("commandPalette.groupActions")} className="cmdk-group">
+              <Item onSelect={() => go("/generate")} icon={<Plus />} keywords={["nouvelle", "api", "new"]}>
+                {t("commandPalette.newApi")}
               </Item>
               <Item
                 onSelect={() => setTheme(theme === "dark" ? "light" : "dark")}
                 icon={theme === "dark" ? <Sun /> : <Moon />}
               >
-                Basculer le thème
+                {t("commandPalette.toggleTheme")}
               </Item>
             </Command.Group>
 
-            <Command.Group heading="Navigation" className="cmdk-group">
+            <Command.Group heading={t("commandPalette.groupNavigation")} className="cmdk-group">
               <Item onSelect={() => go("/dashboard")} icon={<Home />}>
-                Vue d&apos;ensemble
+                {t("commandPalette.overview")}
               </Item>
               <Item onSelect={() => go("/jobs")} icon={<Briefcase />}>
-                Jobs
+                {t("commandPalette.jobs")}
               </Item>
               <Item onSelect={() => go("/apis")} icon={<Terminal />}>
-                Playground
+                {t("commandPalette.playground")}
               </Item>
               <Item onSelect={() => go("/deployments")} icon={<GitBranch />}>
-                Déploiements
+                {t("commandPalette.deployments")}
               </Item>
               <Item onSelect={() => go("/members")} icon={<Users />}>
-                Membres
+                {t("commandPalette.members")}
               </Item>
               <Item onSelect={() => go("/settings")} icon={<Settings />}>
-                Paramètres
+                {t("commandPalette.settings")}
               </Item>
               {isAdmin && (
                 <Item onSelect={() => go("/admin")} icon={<Shield />}>
-                  Admin
+                  {t("commandPalette.admin")}
                 </Item>
               )}
             </Command.Group>
 
             {recentJobs.length > 0 && (
-              <Command.Group heading="Jobs récents" className="cmdk-group">
+              <Command.Group heading={t("commandPalette.groupRecentJobs")} className="cmdk-group">
                 {recentJobs.map((j) => (
                   <Item
                     key={j.id}

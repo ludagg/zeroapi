@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { SettingsCard } from "./profile-card";
 
 export function NotificationsCard({
@@ -11,6 +12,7 @@ export function NotificationsCard({
 }: {
   initial: { notifyOnReady: boolean; notifyOnFailed: boolean };
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [notifyOnReady, setNotifyOnReady] = useState(initial.notifyOnReady);
   const [notifyOnFailed, setNotifyOnFailed] = useState(initial.notifyOnFailed);
@@ -29,12 +31,12 @@ export function NotificationsCard({
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Enregistrement impossible.");
+        throw new Error(data.error ?? t("settings.notifications.errorSave"));
       }
-      toast.success("Préférences enregistrées.");
+      toast.success(t("settings.notifications.successSave"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("settings.notifications.errorRetry"));
     } finally {
       setSubmitting(false);
     }
@@ -42,19 +44,19 @@ export function NotificationsCard({
 
   return (
     <SettingsCard
-      title="Notifications"
-      subtitle="On t'envoie un email quand un job change d'état. Tu peux désactiver ici."
+      title={t("settings.notifications.title")}
+      subtitle={t("settings.notifications.subtitle")}
     >
       <div className="space-y-3">
         <Toggle
-          label="Email quand un job est prêt"
-          description="Quand une API que tu as générée passe en statut PRÊT."
+          label={t("settings.notifications.readyLabel")}
+          description={t("settings.notifications.readyDesc")}
           checked={notifyOnReady}
           onChange={setNotifyOnReady}
         />
         <Toggle
-          label="Email en cas d'échec"
-          description="Quand une génération échoue, on t'avertit avec le message d'erreur."
+          label={t("settings.notifications.failedLabel")}
+          description={t("settings.notifications.failedDesc")}
           checked={notifyOnFailed}
           onChange={setNotifyOnFailed}
         />
@@ -68,11 +70,11 @@ export function NotificationsCard({
           className="btn-primary h-9 px-4 text-[13px] disabled:opacity-50"
         >
           {submitting ? (
-            "Enregistrement…"
+            t("settings.notifications.saving")
           ) : (
             <>
               <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
-              Enregistrer
+              {t("settings.notifications.save")}
             </>
           )}
         </button>

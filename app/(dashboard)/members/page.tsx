@@ -5,10 +5,12 @@ import { DashboardHeader } from "@/components/dashboard/header";
 import { InviteButton } from "@/components/members/invite-button";
 import { RemoveButton } from "@/components/members/remove-button";
 import { formatRelativeTime } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
 
   const owner = await prisma.user.findUnique({
@@ -24,13 +26,14 @@ export default async function MembersPage() {
   if (!owner) return null;
 
   const locked = owner.plan === "FREE";
+  const total = members.length + 1;
 
   return (
     <>
       <DashboardHeader
         crumbs={[
-          { label: "Workspace", href: "/dashboard" },
-          { label: "Membres" },
+          { label: t("header.workspace"), href: "/dashboard" },
+          { label: t("nav.members") },
         ]}
       />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
@@ -38,10 +41,12 @@ export default async function MembersPage() {
           <header className="mb-6 flex flex-wrap items-end justify-between gap-4">
             <div>
               <h1 className="font-serif text-[34px] leading-[1.05] tracking-[-0.01em] sm:text-[44px] sm:leading-none">
-                Ton <em className="italic">équipe</em>.
+                {t.rich("members.pageTitle", { em: (chunks) => <em className="italic">{chunks}</em> })}
               </h1>
               <p className="mt-2 text-[14.5px] text-muted">
-                {members.length + 1} membre{members.length > 0 ? "s" : ""} · plan {owner.plan}
+                {total > 1
+                  ? t("members.totalPlural", { count: total, plan: owner.plan })
+                  : t("members.total", { count: total, plan: owner.plan })}
               </p>
             </div>
             <InviteButton plan={owner.plan} />
@@ -49,8 +54,7 @@ export default async function MembersPage() {
 
           {locked && (
             <div className="mb-5 rounded-[12px] border border-line bg-bg-2 px-4 py-3 text-[13px] text-muted">
-              Le plan <b className="text-ink">FREE</b> est limité à un seul utilisateur. Passe à
-              Pro pour inviter des coéquipiers.
+              {t.rich("members.freePlanNotice", { b: (chunks) => <b className="text-ink">{chunks}</b> })}
             </div>
           )}
 
@@ -78,7 +82,7 @@ export default async function MembersPage() {
               <div className="border-t border-line px-4 py-8 text-center">
                 <Users className="mx-auto mb-2 h-4 w-4 text-muted-2" />
                 <p className="text-[13.5px] text-muted">
-                  Pas encore de coéquipier. Invite quelqu&apos;un pour commencer.
+                  {t("members.noMembers")}
                 </p>
               </div>
             )}
@@ -104,7 +108,12 @@ function Row({
   joined: Date;
   memberId?: string;
 }) {
-  const ROLE_LABEL = { owner: "OWNER", admin: "ADMIN", member: "MEMBRE" } as const;
+  const t = useTranslations("dashboard");
+  const ROLE_LABEL = {
+    owner: t("members.roles.owner"),
+    admin: t("members.roles.admin"),
+    member: t("members.roles.member"),
+  } as const;
   const ROLE_CLASS = {
     owner: "bg-accent text-accent-ink",
     admin: "bg-bg-3 text-ink",
@@ -135,7 +144,9 @@ function Row({
       </span>
 
       <div className="hidden font-mono text-[11.5px] text-muted sm:block">
-        {role === "owner" ? "créateur" : `ajouté ${formatRelativeTime(joined)}`}
+        {role === "owner"
+          ? t("members.joinedOwner")
+          : t("members.joinedMember", { time: formatRelativeTime(joined) })}
       </div>
 
       <div className="justify-self-end">

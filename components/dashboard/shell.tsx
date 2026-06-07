@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Sidebar, type SidebarUser } from "@/components/dashboard/sidebar";
 import { MobileDrawer } from "@/components/ui/mobile-drawer";
 
@@ -27,6 +28,7 @@ export function DashboardShell({
   initialCollapsed?: boolean;
   children: React.ReactNode;
 }) {
+  const t = useTranslations("dashboard");
   const [open, setOpen] = useState(false);
   // The collapsed preference is resolved on the server from a cookie, so the
   // sidebar renders in its final state on the first paint (no post-hydration
@@ -62,7 +64,7 @@ export function DashboardShell({
         onClose={() => setOpen(false)}
         side="left"
         width={280}
-        label="Menu de navigation"
+        label={t("shell.mobileMenuLabel")}
         className="bg-bg"
       >
         <Sidebar user={user} variant="drawer" onNavigate={() => setOpen(false)} />

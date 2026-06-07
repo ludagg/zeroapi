@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
@@ -49,24 +50,23 @@ import {
 import { auditSpec, auditScore, type AuditFinding, type AuditSeverity } from "@/lib/spec-audit";
 
 // React Flow is client-only and heavy — load it lazily, only for the Graph tab.
+// The loading text is a static string here (outside the component) — we use the
+// EN/FR fallback via a data attribute resolved at runtime instead of t().
 const SpecGraph = dynamic(() => import("@/components/conversations/spec-graph"), {
   ssr: false,
-  loading: () => (
-    <div className="grid h-full place-items-center text-[12px] text-muted">
-      Chargement du graphe…
-    </div>
-  ),
+  loading: () => <SpecGraphLoader />,
 });
 
-type TabKey = "summary" | "spec" | "endpoints" | "graph" | "dev";
+function SpecGraphLoader() {
+  const t = useTranslations("dashboard");
+  return (
+    <div className="grid h-full place-items-center text-[12px] text-muted">
+      {t("conversations.spec.loadingGraph")}
+    </div>
+  );
+}
 
-const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
-  { key: "summary", label: "Audit", icon: <Gauge className="h-3 w-3" /> },
-  { key: "spec", label: "Spec", icon: <FileJson className="h-3 w-3" /> },
-  { key: "endpoints", label: "Endpoints", icon: <ListTree className="h-3 w-3" /> },
-  { key: "graph", label: "Graphe", icon: <Share2 className="h-3 w-3" /> },
-  { key: "dev", label: "Dev", icon: <Terminal className="h-3 w-3" /> },
-];
+type TabKey = "summary" | "spec" | "endpoints" | "graph" | "dev";
 
 /**
  * Order-insensitive structural equality for two specs. Keys are sorted before
@@ -150,11 +150,20 @@ export function SpecPanel({
   onRedo?: () => void;
   onRestore?: (index: number) => void;
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
   // The graph is the hero of this panel — open on it by default.
   const [tab, setTab] = useState<TabKey>("graph");
+
+  const TABS: Array<{ key: TabKey; label: string; icon: React.ReactNode }> = [
+    { key: "summary", label: t("conversations.spec.auditTab"), icon: <Gauge className="h-3 w-3" /> },
+    { key: "spec", label: t("conversations.spec.specTab"), icon: <FileJson className="h-3 w-3" /> },
+    { key: "endpoints", label: t("conversations.spec.endpointsTab"), icon: <ListTree className="h-3 w-3" /> },
+    { key: "graph", label: t("conversations.spec.graphTab"), icon: <Share2 className="h-3 w-3" /> },
+    { key: "dev", label: t("conversations.spec.devTab"), icon: <Terminal className="h-3 w-3" /> },
+  ];
   const [historyOpen, setHistoryOpen] = useState(false);
 
   // Marketplace visibility (Phase 2). PRIVATE by default; PUBLIC publishes the
@@ -195,13 +204,13 @@ export function SpecPanel({
       });
       const data = (await res.json()) as { jobId?: string; error?: string };
       if (!res.ok || !data.jobId) {
-        throw new Error(data.error ?? "Sauvegarde impossible.");
+        throw new Error(data.error ?? t("conversations.spec.errorSave"));
       }
-      toast.success(vis === "PUBLIC" ? "Job sauvegardé et publié." : "Job sauvegardé en brouillon.");
+      toast.success(vis === "PUBLIC" ? t("conversations.spec.successSavedPublic") : t("conversations.spec.successSaved"));
       onLaunch?.();
       router.push(`/jobs/${data.jobId}`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.spec.errorRetry"));
       setSubmitting(false);
     }
   }
@@ -218,12 +227,12 @@ export function SpecPanel({
       });
       const data = (await res.json()) as { hasActiveDeployment?: boolean; error?: string };
       if (!res.ok) {
-        throw new Error(data.error ?? "Mise à jour impossible.");
+        throw new Error(data.error ?? t("conversations.spec.errorUpdate"));
       }
-      toast.success("Job mis à jour.");
+      toast.success(t("conversations.spec.successUpdated"));
       onJobUpdated?.(spec, Boolean(data.hasActiveDeployment));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.spec.errorRetry"));
     } finally {
       setUpdating(false);
     }
@@ -260,12 +269,12 @@ export function SpecPanel({
         body: JSON.stringify({ visibility: "PRIVATE" }),
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Action impossible.");
+      if (!res.ok) throw new Error(data.error ?? t("conversations.spec.errorAction"));
       setVisibility("PRIVATE");
       onVisibilityChange?.("PRIVATE");
-      toast.success("Retiré de la marketplace.");
+      toast.success(t("conversations.spec.successPrivate"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.spec.errorRetry"));
     } finally {
       setBusyVisibility(false);
     }
@@ -279,7 +288,7 @@ export function SpecPanel({
       category: pubCategory,
     };
     if (!template.title) {
-      toast.error("Donne un titre à ton template.");
+      toast.error(t("conversations.spec.errorTitleRequired"));
       return;
     }
     // No job yet → create it directly as PUBLIC (redirects to the job page).
@@ -296,13 +305,13 @@ export function SpecPanel({
         body: JSON.stringify({ visibility: "PUBLIC", template }),
       });
       const data = (await res.json()) as { error?: string };
-      if (!res.ok) throw new Error(data.error ?? "Publication impossible.");
+      if (!res.ok) throw new Error(data.error ?? t("conversations.spec.errorPublish"));
       setVisibility("PUBLIC");
       onVisibilityChange?.("PUBLIC");
       setPublishOpen(false);
-      toast.success("Publié dans la marketplace.");
+      toast.success(t("conversations.spec.successPublic"));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.spec.errorRetry"));
     } finally {
       setBusyVisibility(false);
     }
@@ -347,7 +356,7 @@ export function SpecPanel({
             type="button"
             onClick={onUndo}
             disabled={!canUndo}
-            title="Annuler (⌘Z)"
+            title={t("conversations.spec.undoTitle")}
             className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Undo2 className="h-3.5 w-3.5" />
@@ -356,7 +365,7 @@ export function SpecPanel({
             type="button"
             onClick={onRedo}
             disabled={!canRedo}
-            title="Rétablir (⌘⇧Z)"
+            title={t("conversations.spec.redoTitle")}
             className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
           >
             <Redo2 className="h-3.5 w-3.5" />
@@ -366,7 +375,7 @@ export function SpecPanel({
               type="button"
               onClick={() => setHistoryOpen((v) => !v)}
               disabled={historyEntries.length === 0}
-              title="Historique des versions"
+              title={t("conversations.spec.versionsTitle")}
               className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-3 hover:text-ink-2 disabled:opacity-30 disabled:hover:bg-transparent"
             >
               <History className="h-3.5 w-3.5" />
@@ -376,7 +385,7 @@ export function SpecPanel({
                 <div className="fixed inset-0 z-20" onClick={() => setHistoryOpen(false)} aria-hidden />
                 <div className="absolute left-0 top-full z-30 mt-1 max-h-[60vh] w-[280px] overflow-y-auto rounded-[10px] border border-line bg-surface shadow-xl scrollbar-thin">
                   <div className="border-b border-line px-3 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-                    Versions
+                    {t("conversations.spec.versionsLabel")}
                   </div>
                   {[...historyEntries].reverse().map((e) => {
                     const active = e.index === version;
@@ -403,7 +412,7 @@ export function SpecPanel({
                           <span className="block truncate text-[12.5px] text-ink">{e.summary}</span>
                           <span className="block font-mono text-[10px] text-muted">
                             {formatRelativeTime(new Date(e.ts))}
-                            {active ? " · actuel" : ""}
+                            {active ? t("conversations.spec.currentVersion") : ""}
                           </span>
                         </span>
                       </button>
@@ -437,7 +446,7 @@ export function SpecPanel({
               type="button"
               onClick={() => saveJob("PRIVATE")}
               disabled={!canSave}
-              title={canSave ? "Sauvegarder en brouillon" : "Décris au moins une ressource"}
+              title={canSave ? t("conversations.spec.saveJobTitle") : t("conversations.spec.saveJobDisabledTitle")}
               className={
                 "inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition " +
                 (canSave
@@ -446,14 +455,14 @@ export function SpecPanel({
               }
             >
               <Save className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">{submitting ? "Sauvegarde…" : "Sauvegarder le job"}</span>
+              <span className="hidden sm:inline">{submitting ? t("conversations.spec.saving") : t("conversations.spec.saveJobLabel")}</span>
             </button>
           ) : specChanged ? (
             <button
               type="button"
               onClick={updateJob}
               disabled={!canUpdate}
-              title="Mettre à jour le job avec la version courante"
+              title={t("conversations.spec.updateJobTitle")}
               className={
                 "relative inline-flex h-8 items-center gap-1.5 rounded-[9px] px-3 text-[12px] font-medium transition " +
                 (canUpdate
@@ -466,7 +475,7 @@ export function SpecPanel({
               ) : (
                 <RefreshCw className="h-3.5 w-3.5" />
               )}
-              <span className="hidden sm:inline">{updating ? "Mise à jour…" : "Mettre à jour le job"}</span>
+              <span className="hidden sm:inline">{updating ? t("conversations.spec.updating") : t("conversations.spec.updateJobLabel")}</span>
               {/* Unsaved-changes indicator: pulsing dot on the button corner. */}
               {!updating && (
                 <span
@@ -481,7 +490,7 @@ export function SpecPanel({
               href={`/jobs/${jobId}`}
               className="inline-flex h-8 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3 text-[12px] font-medium text-ink-2 transition hover:border-line-2"
             >
-              Voir le job
+              {t("conversations.spec.viewJob")}
             </a>
           )}
         </div>
@@ -493,15 +502,14 @@ export function SpecPanel({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-warn-ink" />
           <div className="min-w-0 flex-1">
             <p className="text-[12px] leading-snug text-ink-2">
-              Ton déploiement n&apos;est plus à jour avec cette version. Redéploie pour appliquer
-              les changements.
+              {t("conversations.spec.deploymentStale")}
             </p>
             <a
               href={`/jobs/${jobId}`}
               className="mt-1.5 inline-flex h-7 items-center gap-1.5 rounded-[8px] bg-accent px-2.5 text-[11.5px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
             >
               <Rocket className="h-3 w-3" />
-              Redéployer
+              {t("conversations.spec.redeploy")}
             </a>
           </div>
         </div>
@@ -552,37 +560,38 @@ function VisibilityToggle({
   busy: boolean;
   onPick: (v: TemplateVisibility) => void;
 }) {
+  const t = useTranslations("dashboard");
   const isPublic = visibility === "PUBLIC";
   return (
     <div
       className="inline-flex h-8 items-center rounded-[9px] border border-line bg-surface p-0.5"
-      title="Visibilité dans la marketplace"
+      title={t("conversations.spec.visibilityTitle")}
     >
       <button
         type="button"
         disabled={busy}
         onClick={() => onPick("PRIVATE")}
-        title="Privé — visible de toi seul"
+        title={t("conversations.spec.privateTitle")}
         className={
           "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-[11.5px] font-medium transition disabled:opacity-50 " +
           (!isPublic ? "bg-ink text-bg" : "text-muted hover:text-ink-2")
         }
       >
         <Lock className="h-3 w-3" />
-        <span className="hidden sm:inline">Privé</span>
+        <span className="hidden sm:inline">{t("conversations.spec.private")}</span>
       </button>
       <button
         type="button"
         disabled={busy}
         onClick={() => onPick("PUBLIC")}
-        title="Public — publié comme template communauté"
+        title={t("conversations.spec.publicTitle")}
         className={
           "inline-flex h-7 items-center gap-1 rounded-[7px] px-2 text-[11.5px] font-medium transition disabled:opacity-50 " +
           (isPublic ? "bg-accent text-accent-ink" : "text-muted hover:text-ink-2")
         }
       >
         {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Globe className="h-3 w-3" />}
-        <span className="hidden sm:inline">Public</span>
+        <span className="hidden sm:inline">{t("conversations.spec.public")}</span>
       </button>
     </div>
   );
@@ -610,6 +619,7 @@ function PublishModal({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="fixed inset-0 z-50 grid place-items-center p-4">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={busy ? undefined : onCancel} aria-hidden />
@@ -619,13 +629,13 @@ function PublishModal({
             <span className="grid h-7 w-7 place-items-center rounded-[8px] bg-accent-soft text-accent-ink">
               <Globe className="h-3.5 w-3.5" />
             </span>
-            <h3 className="text-[14px] font-semibold text-ink">Publier dans la marketplace</h3>
+            <h3 className="text-[14px] font-semibold text-ink">{t("conversations.spec.publishTitle")}</h3>
           </div>
           <button
             type="button"
             onClick={onCancel}
             disabled={busy}
-            aria-label="Fermer"
+            aria-label={t("conversations.spec.closeAriaLabel")}
             className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink disabled:opacity-50"
           >
             <X className="h-3.5 w-3.5" />
@@ -634,34 +644,34 @@ function PublishModal({
 
         <div className="space-y-3.5 px-4 py-4">
           <p className="text-[12.5px] leading-snug text-muted">
-            Ton template devient visible par la communauté. Tu peux le retirer à tout moment.
+            {t("conversations.spec.publishSubtitle")}
           </p>
 
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Titre</span>
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">{t("conversations.spec.publishFieldTitle")}</span>
             <input
               value={title}
               onChange={(e) => onTitle(e.target.value)}
               maxLength={80}
-              placeholder="Ex : API de réservation de salles"
+              placeholder={t("conversations.spec.publishTitlePlaceholder")}
               className="block h-9 w-full rounded-[9px] border border-line bg-bg-2 px-3 text-[13.5px] text-ink outline-none transition focus:border-ink placeholder:text-muted-2"
             />
           </label>
 
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Description</span>
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">{t("conversations.spec.publishFieldDesc")}</span>
             <textarea
               value={description}
               onChange={(e) => onDescription(e.target.value)}
               maxLength={280}
               rows={3}
-              placeholder="Ce que fait l'API, en une ou deux phrases…"
+              placeholder={t("conversations.spec.publishDescPlaceholder")}
               className="block w-full resize-none rounded-[9px] border border-line bg-bg-2 px-3 py-2 text-[13.5px] leading-snug text-ink outline-none transition focus:border-ink placeholder:text-muted-2"
             />
           </label>
 
           <label className="block">
-            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Catégorie</span>
+            <span className="mb-1 block font-mono text-[10px] uppercase tracking-[0.1em] text-muted">{t("conversations.spec.publishFieldCat")}</span>
             <select
               value={category}
               onChange={(e) => onCategory(e.target.value)}
@@ -683,7 +693,7 @@ function PublishModal({
             disabled={busy}
             className="inline-flex h-9 items-center rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:border-line-2 disabled:opacity-50"
           >
-            Annuler
+            {t("conversations.spec.publishCancel")}
           </button>
           <button
             type="button"
@@ -692,7 +702,7 @@ function PublishModal({
             className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:translate-y-0 disabled:opacity-50"
           >
             {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Globe className="h-3.5 w-3.5" />}
-            Publier
+            {t("conversations.spec.publishConfirm")}
           </button>
         </div>
       </div>
@@ -717,6 +727,7 @@ function AuditTab({
   score: number;
   onApplyOperation?: ApplyOperation;
 }) {
+  const t = useTranslations("dashboard");
   const tone = confidenceTone(score);
   const barColor = tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger";
   const errors = findings.filter((f) => f.severity === "error").length;
@@ -733,7 +744,7 @@ function AuditTab({
     });
     setApplyingId(null);
     if (!res.ok) {
-      toast.error("error" in res && res.error ? res.error : "Correction rejetée.");
+      toast.error("error" in res && res.error ? res.error : t("conversations.chat.errorCorrectionRejected"));
     }
     // ok → the spec updates → findings recompute (parent passes a new spec).
   }
@@ -743,7 +754,7 @@ function AuditTab({
       <div className="rounded-[12px] border border-line bg-surface p-4">
         <div className="flex items-center justify-between">
           <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-            Score d&apos;architecture
+            {t("conversations.spec.archScore")}
           </span>
           <span className="font-serif text-[22px] leading-none">
             {score}
@@ -758,17 +769,17 @@ function AuditTab({
         </div>
         <p className="mt-2.5 text-[12px] leading-snug text-muted">
           {errors > 0
-            ? `${errors} problème${errors > 1 ? "s" : ""} critique${errors > 1 ? "s" : ""}`
+            ? errors > 1 ? t("conversations.spec.criticalPlural", { count: errors }) : t("conversations.spec.criticalSingular", { count: errors })
             : warns > 0
-              ? `${warns} amélioration${warns > 1 ? "s" : ""} recommandée${warns > 1 ? "s" : ""}`
-              : "Architecture saine."}
+              ? warns > 1 ? t("conversations.spec.warnPlural", { count: warns }) : t("conversations.spec.warnSingular", { count: warns })
+              : t("conversations.spec.archHealthy")}
         </p>
       </div>
 
       {findings.length === 0 ? (
         <div className="rounded-[12px] border border-dashed border-line-2 bg-surface p-6 text-center text-[12px] text-muted">
           <ShieldCheck className="mx-auto mb-2 h-4 w-4 text-accent-ink" />
-          Architecture saine — aucun problème détecté.
+          {t("conversations.spec.noProblems")}
         </div>
       ) : (
         <div className="space-y-2">
@@ -825,11 +836,12 @@ function FindingRow({
 // ── Spec tab (formatted JSON) ────────────────────────────────────────────────
 
 function SpecJsonTab({ spec }: { spec: ZeroAPISpec | null }) {
+  const t = useTranslations("dashboard");
   if (!spec) {
     return (
       <EmptyState
         icon={<FileJson className="mx-auto mb-2 h-4 w-4" />}
-        text="La spec se construit au fil de la discussion avec Kia — elle apparaîtra ici."
+        text={t("conversations.spec.specEmpty")}
       />
     );
   }
@@ -853,6 +865,7 @@ const METHOD_COLOR: Record<string, string> = {
 };
 
 function EndpointsTab({ spec }: { spec: ZeroAPISpec | null }) {
+  const t = useTranslations("dashboard");
   const endpoints = useMemo(
     () => (spec ? deriveEndpoints(spec.resources) : []),
     [spec],
@@ -861,12 +874,12 @@ function EndpointsTab({ spec }: { spec: ZeroAPISpec | null }) {
     return (
       <EmptyState
         icon={<ListTree className="mx-auto mb-2 h-4 w-4" />}
-        text="Décris des ressources à Kia — les routes apparaîtront ici en direct."
+        text={t("conversations.spec.endpointsEmpty")}
       />
     );
   }
   if (endpoints.length === 0) {
-    return <EmptyState icon={<ListTree className="mx-auto mb-2 h-4 w-4" />} text="Aucun endpoint dérivé de la spec." />;
+    return <EmptyState icon={<ListTree className="mx-auto mb-2 h-4 w-4" />} text={t("conversations.spec.endpointsNone")} />;
   }
   return (
     <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
@@ -917,18 +930,19 @@ function ConfidenceCard({
   confidence: number;
   tone: "high" | "med" | "low";
 }) {
+  const t = useTranslations("dashboard");
   const barColor = tone === "high" ? "bg-accent" : tone === "med" ? "bg-warn" : "bg-danger";
   const message =
     tone === "high"
-      ? "Spec quasi complète, tu peux lancer."
+      ? t("conversations.spec.confidenceHigh")
       : tone === "med"
-        ? "Bon début. Précise auth, rôles et ressources."
-        : "Trop tôt — décris les ressources principales.";
+        ? t("conversations.spec.confidenceMed")
+        : t("conversations.spec.confidenceLow");
 
   return (
     <div className="rounded-[12px] border border-line bg-surface p-4">
       <div className="flex items-center justify-between">
-        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">Confiance</span>
+        <span className="font-mono text-[10px] uppercase tracking-[0.1em] text-muted">{t("conversations.spec.auditTab")}</span>
         <span className="font-serif text-[22px] leading-none">{confidence}%</span>
       </div>
       <div className="mt-3 h-[5px] overflow-hidden rounded-full bg-bg-3">

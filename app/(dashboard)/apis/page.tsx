@@ -8,6 +8,7 @@ import {
 } from "@/components/playground/playground-console";
 import { buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { readSpec } from "@/lib/job-helpers";
+import { useTranslations } from "next-intl";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ function extractPathParams(path: string): string[] {
 }
 
 export default async function PlaygroundPage() {
+  const t = useTranslations("dashboard");
   const user = await requireUser();
 
   const jobs = await prisma.job.findMany({
@@ -66,17 +68,16 @@ export default async function PlaygroundPage() {
 
   return (
     <>
-      <DashboardHeader crumbs={[{ label: "Workspace", href: "/dashboard" }, { label: "Playground" }]} />
+      <DashboardHeader crumbs={[{ label: t("header.workspace"), href: "/dashboard" }, { label: t("nav.playground") }]} />
       <div className="flex-1 overflow-y-auto scrollbar-thin">
         <div className="px-4 py-5 sm:px-6 sm:py-7 lg:px-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3 sm:mb-6 sm:gap-5">
             <div className="min-w-0">
               <h1 className="font-serif text-[26px] italic leading-[1.05] tracking-[-0.01em] sm:text-[42px] sm:leading-none">
-                Playground
+                {t("playground.pageTitle")}
               </h1>
               <p className="mt-1.5 max-w-2xl text-[13.5px] text-muted sm:mt-2 sm:text-[14.5px]">
-                Choisis une API, sélectionne un endpoint, ajuste les paramètres et lance la
-                requête. Le résultat s&apos;affiche sous le formulaire.
+                {t("playground.subtitle")}
               </p>
             </div>
             <div className="flex items-center gap-2 rounded-[10px] border border-line bg-surface px-2.5 py-1.5 font-mono text-[10.5px] text-muted sm:gap-3 sm:px-3 sm:py-2 sm:text-[11px]">
@@ -85,10 +86,10 @@ export default async function PlaygroundPage() {
                   className="inline-block h-2 w-2 rounded-full bg-accent"
                   style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
                 />
-                {apis.filter((a) => a.isOnline).length} en ligne
+                {t("playground.onlineCount", { count: apis.filter((a) => a.isOnline).length })}
               </span>
               <span className="text-line-2">·</span>
-              <span>{apis.length} total</span>
+              <span>{t("playground.totalCount", { count: apis.length })}</span>
             </div>
           </div>
 

@@ -4,10 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Lock, Mail, UserPlus, X } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 
 type Plan = "FREE" | "STARTER" | "PRO" | "BUSINESS";
 
 export function InviteButton({ plan }: { plan: Plan }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [email, setEmail] = useState("");
@@ -28,14 +30,14 @@ export function InviteButton({ plan }: { plan: Plan }) {
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(data.error ?? "Invitation impossible.");
+        throw new Error(data.error ?? t("members.invite.errorInvite"));
       }
-      toast.success("Invitation envoyée.");
+      toast.success(t("members.invite.successInvite"));
       setEmail("");
       setOpen(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("members.invite.errorRetry"));
     } finally {
       setPending(false);
     }
@@ -47,11 +49,11 @@ export function InviteButton({ plan }: { plan: Plan }) {
         type="button"
         onClick={() => !locked && setOpen(true)}
         disabled={locked}
-        title={locked ? "Passe en Pro pour inviter des membres" : undefined}
+        title={locked ? t("members.invite.lockedTitle") : undefined}
         className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0"
       >
         {locked ? <Lock className="h-3.5 w-3.5" /> : <UserPlus className="h-3.5 w-3.5" />}
-        Inviter
+        {t("members.invite.button")}
       </button>
 
       {open && (
@@ -64,11 +66,11 @@ export function InviteButton({ plan }: { plan: Plan }) {
             className="w-full max-w-md overflow-hidden rounded-[14px] border border-line bg-surface shadow-xl"
           >
             <header className="flex items-center justify-between border-b border-line px-5 py-3.5">
-              <h2 className="text-[15px] font-semibold">Inviter un membre</h2>
+              <h2 className="text-[15px] font-semibold">{t("members.invite.dialogTitle")}</h2>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                aria-label="Fermer"
+                aria-label={t("members.invite.closeAriaLabel")}
                 className="grid h-7 w-7 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
               >
                 <X className="h-3.5 w-3.5" />
@@ -78,7 +80,7 @@ export function InviteButton({ plan }: { plan: Plan }) {
             <form onSubmit={submit} className="space-y-4 px-5 py-4">
               <div>
                 <label htmlFor="invite-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-                  Email
+                  {t("members.invite.emailLabel")}
                 </label>
                 <div className="relative">
                   <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -88,7 +90,7 @@ export function InviteButton({ plan }: { plan: Plan }) {
                     autoComplete="off"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="prenom.nom@exemple.com"
+                    placeholder={t("members.invite.emailPlaceholder")}
                     className="input-base pl-10"
                     required
                   />
@@ -96,13 +98,15 @@ export function InviteButton({ plan }: { plan: Plan }) {
               </div>
 
               <div>
-                <label className="mb-2 block text-[13px] font-medium text-ink-2">Rôle</label>
+                <label className="mb-2 block text-[13px] font-medium text-ink-2">
+                  {t("members.invite.roleLabel")}
+                </label>
                 <div className="grid grid-cols-2 gap-2">
-                  <RolePill checked={role === "member"} label="Membre" onClick={() => setRole("member")} />
-                  <RolePill checked={role === "admin"} label="Admin" onClick={() => setRole("admin")} />
+                  <RolePill checked={role === "member"} label={t("members.invite.roleMember")} onClick={() => setRole("member")} />
+                  <RolePill checked={role === "admin"} label={t("members.invite.roleAdmin")} onClick={() => setRole("admin")} />
                 </div>
                 <p className="mt-1.5 text-[11.5px] text-muted">
-                  Les admins peuvent inviter et supprimer d&apos;autres membres.
+                  {t("members.invite.roleAdminNote")}
                 </p>
               </div>
 
@@ -112,14 +116,14 @@ export function InviteButton({ plan }: { plan: Plan }) {
                   onClick={() => setOpen(false)}
                   className="inline-flex h-9 items-center rounded-[9px] border border-line bg-surface px-3 text-[13px] font-medium text-ink-2 transition hover:border-line-2"
                 >
-                  Annuler
+                  {t("members.invite.cancel")}
                 </button>
                 <button
                   type="submit"
                   disabled={pending}
                   className="btn-primary h-9 px-4 text-[13px] disabled:opacity-50"
                 >
-                  {pending ? "Envoi…" : "Envoyer l'invitation"}
+                  {pending ? t("members.invite.sending") : t("members.invite.send")}
                 </button>
               </div>
             </form>

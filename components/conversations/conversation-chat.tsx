@@ -19,6 +19,7 @@ import type { ApplyOperationResult } from "@/components/conversations/spec-graph
 import type { ConfirmationImpact, OperationType } from "@/lib/operations/types";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 
 /** A single operation Kia applied, ready to render as a chip. */
 type AppliedOp = { type: string; danger: string; text: string };
@@ -91,6 +92,7 @@ export function ConversationChat({
   hasActiveDeployment: boolean;
   user: { name: string | null; email: string; initials: string };
 }) {
+  const t = useTranslations("dashboard");
   const router = useRouter();
   const [messages, setMessages] = useState<Message[]>(() =>
     initialMessages.map((m, i) => ({ ...m, id: `seed-${i}-${m.ts ?? 0}` })),
@@ -258,7 +260,7 @@ export function ConversationChat({
       });
       if (!res.ok || !res.body) {
         const errData = (await res.json().catch(() => ({}))) as { error?: string };
-        throw new Error(errData.error ?? "Erreur de l'agent Kia.");
+        throw new Error(errData.error ?? t("conversations.chat.errorAgent"));
       }
 
       const reader = res.body.getReader();
@@ -302,7 +304,7 @@ export function ConversationChat({
             const opsNow = liveOps;
             setMsg({ ops: opsNow });
           } else if (ev.type === "error") {
-            throw new Error(ev.error ?? "Erreur de l'agent Kia.");
+            throw new Error(ev.error ?? t("conversations.chat.errorAgent"));
           } else if (ev.type === "done") {
             if (ev.status === "confirmation") {
               setMsg({
@@ -324,7 +326,7 @@ export function ConversationChat({
                 .map((o) => ({ type: o.type, danger: o.danger, text: describeOperation(o.type, o.params) }));
               setMsg({ streaming: false, meta: ev.meta, content: ev.assistant ?? "", ops });
             } else {
-              setMsg({ streaming: false, meta: ev.meta, content: ev.assistant || "Aucun changement." });
+              setMsg({ streaming: false, meta: ev.meta, content: ev.assistant || t("conversations.chat.noChange") });
             }
             break streamLoop;
           }
@@ -340,7 +342,7 @@ export function ConversationChat({
       }
     } catch (err) {
       setMessages((m) => m.filter((msg) => msg.id !== assistantId));
-      toast.error(err instanceof Error ? err.message : "Réessaie dans un instant.");
+      toast.error(err instanceof Error ? err.message : t("conversations.chat.errorRetry"));
     } finally {
       setPending(false);
     }
@@ -392,7 +394,7 @@ export function ConversationChat({
       }
 
       if (!res.ok || !data.spec) {
-        const error = data.error ?? "Opération rejetée.";
+        const error = data.error ?? t("conversations.chat.errorOpRejected");
         toast.error(error);
         return { ok: false, error };
       }
@@ -417,10 +419,10 @@ export function ConversationChat({
           ops,
         },
       ]);
-      toast.success("Spec mise à jour.");
+      toast.success(t("conversations.chat.specUpdated"));
       return { ok: true };
     } catch (err) {
-      const error = err instanceof Error ? err.message : "Erreur réseau.";
+      const error = err instanceof Error ? err.message : t("conversations.chat.errorNetwork");
       toast.error(error);
       return { ok: false, error };
     }
@@ -451,13 +453,13 @@ export function ConversationChat({
         error?: string;
       };
       if (!res.ok) {
-        if (res.status !== 409) toast.error(data.error ?? "Action impossible.");
+        if (res.status !== 409) toast.error(data.error ?? t("conversations.chat.errorActionImpossible"));
         return;
       }
       setSpec((data.spec ?? null) as ZeroAPISpec | null);
       syncHistory(data);
     } catch {
-      toast.error("Erreur réseau.");
+      toast.error(t("conversations.chat.errorNetwork"));
     }
   }
 
@@ -471,8 +473,8 @@ export function ConversationChat({
         <header className="flex h-[60px] flex-shrink-0 items-center gap-2.5 border-b border-line bg-bg px-3 sm:px-5">
           <Link
             href="/conversations"
-            aria-label="Toutes les conversations"
-            title="Toutes les conversations"
+            aria-label={t("conversations.chat.backAriaLabel")}
+            title={t("conversations.chat.backTitle")}
             className="grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-[9px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -490,7 +492,7 @@ export function ConversationChat({
               <EditableTitle id={conversationId} initialTitle={initialTitle} />
             </div>
             <div className="truncate pl-3.5 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
-              {job ? `liée au job · ${job.name}` : "brouillon · sauvegarde auto"}
+              {job ? t("conversations.chat.linkedJob", { name: job.name }) : t("conversations.chat.draft")}
             </div>
           </div>
 
@@ -498,12 +500,12 @@ export function ConversationChat({
             <button
               type="button"
               onClick={() => setSpecOpen(true)}
-              aria-label="Voir la spec"
+              aria-label={t("conversations.chat.viewSpecAriaLabel")}
               className="inline-flex h-[34px] items-center gap-1.5 rounded-[9px] border border-line bg-surface px-2.5 text-[12px] font-medium text-ink-2 transition hover:border-line-2 lg:hidden"
             >
               <ListChecks className="h-[15px] w-[15px]" />
               <span className="font-mono text-[11px] tracking-[0.04em]">
-                {insights.confidence}%
+                {t("conversations.chat.confidence", { pct: insights.confidence })}
               </span>
             </button>
             <ShareButton conversationId={conversationId} initialSlug={initialShareSlug} />
@@ -547,25 +549,25 @@ export function ConversationChat({
                 rows={1}
                 placeholder={
                   isModification
-                    ? "Demande une modification… (Kia applique l'opération)"
-                    : "Continue à décrire, demande des changements…"
+                    ? t("conversations.chat.composerModification")
+                    : t("conversations.chat.composerCreation")
                 }
                 className="block min-h-12 w-full resize-none rounded-t-[16px] border-0 bg-transparent px-4 pb-1.5 pt-3.5 text-[15px] leading-snug text-ink outline-none placeholder:text-muted-2"
               />
               <div className="flex items-center justify-between px-2.5 py-1.5">
                 <span className="px-2 font-mono text-[10.5px] tracking-[0.03em] text-muted">
-                  {isModification ? "mode modification · agent Kia (opérations)" : "mode création"}
+                  {isModification ? t("conversations.chat.modeModification") : t("conversations.chat.modeCreation")}
                 </span>
                 <div className="flex items-center gap-2.5">
                   <span className="font-mono text-[10.5px] tracking-[0.04em] text-muted-2">
                     <kbd className="rounded-[4px] border border-line bg-bg px-1.5 py-px font-mono">
                       ⏎
                     </kbd>{" "}
-                    envoyer
+                    {t("conversations.chat.sendHint")}
                   </span>
                   <button
                     type="button"
-                    aria-label="Envoyer"
+                    aria-label={t("conversations.chat.sendAriaLabel")}
                     disabled={!canSend}
                     onClick={() => send(draft)}
                     className={
@@ -589,7 +591,7 @@ export function ConversationChat({
         onPointerDown={startResize}
         role="separator"
         aria-orientation="vertical"
-        aria-label="Redimensionner les panneaux"
+        aria-label={t("conversations.chat.resizeSeparator")}
         className="hidden cursor-col-resize bg-line transition-colors hover:bg-accent lg:block"
       />
 
@@ -621,7 +623,7 @@ export function ConversationChat({
         onClose={() => setSpecOpen(false)}
         side="right"
         width={340}
-        label="Spec en cours"
+        label={t("shell.specDrawerLabel")}
         className="bg-bg-2"
       >
         <SpecPanel
@@ -675,6 +677,7 @@ function Bubble({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   if (message.role === "user") {
     return (
       <div className="grid animate-fade-in grid-cols-[32px_minmax(0,1fr)] items-start gap-3.5">
@@ -683,7 +686,7 @@ function Bubble({
         </div>
         <div>
           <div className="mb-2 text-[12.5px] text-muted">
-            <b className="font-medium text-ink">Toi</b>
+            <b className="font-medium text-ink">{t("conversations.chat.you")}</b>
           </div>
           <div className="rounded-[16px] rounded-tl-[5px] border border-line bg-bg-2 px-4 py-3 text-[15px] leading-snug text-ink shadow-sm">
             {message.content}
@@ -706,7 +709,7 @@ function Bubble({
                 className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent"
                 style={{ boxShadow: "0 0 0 3px var(--accent-glow)" }}
               />
-              au travail
+              {t("conversations.chat.working")}
             </span>
           ) : (
             !message.streaming &&
@@ -753,10 +756,13 @@ function Bubble({
 
 /** Renders the operations Kia applied as readable chips (no raw JSON). */
 function OperationsList({ ops }: { ops: AppliedOp[] }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="overflow-hidden rounded-[12px] border border-line bg-surface">
       <div className="border-b border-line px-3.5 py-2 font-mono text-[10px] uppercase tracking-[0.1em] text-muted">
-        {ops.length} opération{ops.length > 1 ? "s" : ""} appliquée{ops.length > 1 ? "s" : ""}
+        {ops.length > 1
+          ? t("conversations.chat.opsAppliedPlural", { count: ops.length })
+          : t("conversations.chat.opsApplied", { count: ops.length })}
       </div>
       <ul className="divide-y divide-line">
         {ops.map((op, i) => (
@@ -791,11 +797,12 @@ function ConfirmationCard({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("dashboard");
   return (
     <div className="overflow-hidden rounded-[12px] border border-warn/40 bg-warn-soft/40">
       <div className="flex items-center gap-2 border-b border-warn/30 px-3.5 py-2.5 text-[12.5px] font-medium text-warn-ink">
         <AlertTriangle className="h-3.5 w-3.5" />
-        Confirmation requise — opération destructive
+        {t("conversations.chat.confirmTitle")}
       </div>
       <div className="space-y-3 px-3.5 py-3">
         {confirm.impacts.map((impact, i) => (
@@ -823,7 +830,7 @@ function ConfirmationCard({
               className="inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-danger px-3.5 text-[13px] font-medium text-white transition hover:-translate-y-px disabled:opacity-50"
             >
               <Check className="h-3.5 w-3.5" />
-              Confirmer
+              {t("conversations.chat.confirm")}
             </button>
             <button
               type="button"
@@ -832,18 +839,18 @@ function ConfirmationCard({
               className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:border-line-2 disabled:opacity-50"
             >
               <X className="h-3.5 w-3.5" />
-              Annuler
+              {t("conversations.chat.cancel")}
             </button>
           </div>
         ) : confirm.status === "confirmed" ? (
           <div className="inline-flex items-center gap-1.5 rounded-[8px] bg-accent-soft px-2.5 py-1 text-[12px] font-medium text-accent-ink">
             <Check className="h-3 w-3" strokeWidth={2.8} />
-            Confirmé
+            {t("conversations.chat.confirmed")}
           </div>
         ) : (
           <div className="inline-flex items-center gap-1.5 rounded-[8px] bg-bg-2 px-2.5 py-1 text-[12px] font-medium text-muted">
             <X className="h-3 w-3" />
-            Annulé
+            {t("conversations.chat.cancelled")}
           </div>
         )}
       </div>

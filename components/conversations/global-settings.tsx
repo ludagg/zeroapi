@@ -5,6 +5,7 @@ import { Loader2, Plus, X } from "lucide-react";
 import { toast } from "sonner";
 import type { ZeroAPISpec } from "@ludagg/zeroapi-runtime";
 import type { ApplyOperation } from "@/components/conversations/spec-graph";
+import { useTranslations } from "next-intl";
 
 const OAUTH_PROVIDERS = ["google", "apple", "github"] as const;
 const PERM_ACTIONS = ["create", "read", "update", "delete"] as const;
@@ -24,6 +25,7 @@ export function GlobalSettings({
   onApplyOperation: ApplyOperation;
   onClose: () => void;
 }) {
+  const t = useTranslations("dashboard");
   const [busy, setBusy] = useState(false);
 
   async function apply(
@@ -35,7 +37,7 @@ export function GlobalSettings({
     const res = await onApplyOperation({ type, params, confirmed: opts?.confirmed });
     setBusy(false);
     if (!res.ok) {
-      toast.error("error" in res && res.error ? res.error : "Opération rejetée.");
+      toast.error("error" in res && res.error ? res.error : t("conversations.chat.errorOpRejected"));
       return false;
     }
     return true;
@@ -56,13 +58,13 @@ export function GlobalSettings({
         className="flex h-full w-[360px] max-w-[90%] flex-col overflow-hidden border-l border-line bg-surface shadow-[0_8px_40px_rgba(0,0,0,0.35)]"
       >
         <div className="flex items-center justify-between border-b border-line px-4 py-3">
-          <span className="text-[13.5px] font-semibold text-ink">Réglages de l&apos;API</span>
+          <span className="text-[13.5px] font-semibold text-ink">{t("conversations.settings.title")}</span>
           <div className="flex items-center gap-2">
             {busy && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted" />}
             <button
               type="button"
               onClick={onClose}
-              aria-label="Fermer"
+              aria-label={t("conversations.settings.closeAriaLabel")}
               className="grid h-6 w-6 place-items-center rounded-[6px] text-muted transition hover:bg-bg-2 hover:text-ink"
             >
               <X className="h-4 w-4" />
@@ -72,15 +74,15 @@ export function GlobalSettings({
 
         <div className="flex-1 space-y-5 overflow-y-auto p-4 scrollbar-thin">
           {/* ── Méta ─────────────────────────────────────────────── */}
-          <Section title="Général">
+          <Section title={t("conversations.settings.sectionGeneral")}>
             <TextSave
-              label="Nom (kebab-case)"
+              label={t("conversations.settings.fieldName")}
               initial={spec.name ?? ""}
               busy={busy}
               onSave={(v) => apply("setApiName", { name: v })}
             />
             <TextSave
-              label="Description"
+              label={t("conversations.settings.fieldDescription")}
               initial={spec.description ?? ""}
               busy={busy}
               onSave={(v) => apply("setApiDescription", { description: v })}
@@ -88,15 +90,15 @@ export function GlobalSettings({
           </Section>
 
           {/* ── Auth ─────────────────────────────────────────────── */}
-          <Section title="Authentification">
+          <Section title={t("conversations.settings.sectionAuth")}>
             <Toggle
-              label="JWT (comptes utilisateurs)"
+              label={t("conversations.settings.toggleJwt")}
               checked={jwtOn}
               busy={busy}
               onChange={(v) => (v ? apply("enableJwt", {}) : apply("disableJwt", {}, { confirmed: true }))}
             />
             <Toggle
-              label="Clé API"
+              label={t("conversations.settings.toggleApiKey")}
               checked={apiKeyOn}
               busy={busy}
               onChange={(v) => (v ? apply("enableApiKey", {}) : apply("disableApiKey", {}))}
@@ -118,13 +120,13 @@ export function GlobalSettings({
               ))}
             </div>
             <Toggle
-              label="Vérification d'email"
+              label={t("conversations.settings.toggleEmailVerification")}
               checked={Boolean(spec.auth?.emailVerification)}
               busy={busy}
               onChange={(v) => apply("setAuthFlag", { flag: "emailVerification", value: v })}
             />
             <Toggle
-              label="Réinitialisation du mot de passe"
+              label={t("conversations.settings.togglePasswordReset")}
               checked={Boolean(spec.auth?.passwordReset)}
               busy={busy}
               onChange={(v) => apply("setAuthFlag", { flag: "passwordReset", value: v })}
@@ -132,11 +134,11 @@ export function GlobalSettings({
           </Section>
 
           {/* ── Rôles ────────────────────────────────────────────── */}
-          <Section title="Rôles (RBAC)">
+          <Section title={t("conversations.settings.sectionRoles")}>
             <ChipList
               items={roles}
               busy={busy}
-              placeholder="nouveau rôle (ex. admin)"
+              placeholder={t("conversations.settings.rolePlaceholder")}
               onAdd={(name) => apply("addRole", { name })}
               onRemove={(name) => apply("removeRole", { name }, { confirmed: true })}
             />
@@ -144,7 +146,7 @@ export function GlobalSettings({
 
           {/* ── Permissions ──────────────────────────────────────── */}
           {roles.length > 0 && resources.length > 0 && (
-            <Section title="Permissions">
+            <Section title={t("conversations.settings.sectionPermissions")}>
               {resources.map((resource) => (
                 <PermissionResource
                   key={resource}
@@ -159,9 +161,9 @@ export function GlobalSettings({
           )}
 
           {/* ── Features ─────────────────────────────────────────── */}
-          <Section title="Fonctionnalités">
+          <Section title={t("conversations.settings.sectionFeatures")}>
             <Toggle
-              label="Upload de fichiers"
+              label={t("conversations.settings.toggleFileUpload")}
               checked={uploadOn}
               busy={busy}
               onChange={(v) =>
@@ -169,39 +171,39 @@ export function GlobalSettings({
               }
             />
             <Toggle
-              label="Recherche plein-texte"
+              label={t("conversations.settings.toggleSearch")}
               checked={searchOn}
               busy={busy}
               onChange={(v) => apply("setSearch", { enabled: v })}
             />
             <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
-              Webhooks sortants
+              {t("conversations.settings.outboundWebhooks")}
             </div>
             <ChipList
               items={spec.features?.webhooks?.outbound ?? []}
               busy={busy}
-              placeholder="event (ex. order.created)"
+              placeholder={t("conversations.settings.webhookOutboundPlaceholder")}
               onAdd={(event) => apply("addOutboundWebhook", { event })}
               onRemove={(event) => apply("removeOutboundWebhook", { event })}
             />
             <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.1em] text-muted">
-              Webhooks entrants
+              {t("conversations.settings.inboundWebhooks")}
             </div>
             <ChipList
               items={spec.features?.webhooks?.inbound ?? []}
               busy={busy}
-              placeholder="source (ex. stripe)"
+              placeholder={t("conversations.settings.webhookInboundPlaceholder")}
               onAdd={(source) => apply("addInboundWebhook", { source })}
               onRemove={(source) => apply("removeInboundWebhook", { source })}
             />
           </Section>
 
           {/* ── Env ──────────────────────────────────────────────── */}
-          <Section title="Variables d'environnement">
+          <Section title={t("conversations.settings.sectionEnv")}>
             <ChipList
               items={(spec.env ?? []).map((e) => e.name)}
               busy={busy}
-              placeholder="NOM_VARIABLE"
+              placeholder={t("conversations.settings.envPlaceholder")}
               onAdd={(name) => apply("addEnvVar", { name })}
               onRemove={(name) => apply("removeEnvVar", { name }, { confirmed: true })}
             />
@@ -323,11 +325,12 @@ function ChipList({
   onAdd: (v: string) => Promise<boolean>;
   onRemove: (v: string) => void;
 }) {
+  const t = useTranslations("dashboard");
   const [draft, setDraft] = useState("");
   return (
     <div>
       <div className="flex flex-wrap gap-1.5">
-        {items.length === 0 && <span className="text-[11px] text-muted">Aucun</span>}
+        {items.length === 0 && <span className="text-[11px] text-muted">{t("conversations.settings.none")}</span>}
         {items.map((it) => (
           <span
             key={it}
@@ -339,7 +342,7 @@ function ChipList({
               disabled={busy}
               onClick={() => onRemove(it)}
               className="text-muted transition hover:text-danger disabled:opacity-50"
-              aria-label={`Retirer ${it}`}
+              aria-label={t("conversations.settings.removeAriaLabel", { name: it })}
             >
               <X className="h-3 w-3" />
             </button>
