@@ -1,1 +1,1325 @@
-{}
+{
+  "layout": {},
+  "terms": {
+    "meta": {
+      "title": "Conditions générales d'utilisation — ZeroAPI",
+      "description": "Les conditions générales d'utilisation du service ZeroAPI : accès, abonnements, propriété du code généré, responsabilité, juridiction."
+    },
+    "eyebrow": "Légal",
+    "title": "Conditions générales",
+    "titleAccent": "d'utilisation",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "callout": "En créant un compte ou en utilisant ZeroAPI, tu acceptes ces conditions. Lis-les — elles sont courtes et écrites pour être comprises.",
+    "toc": {
+      "title": "Sommaire",
+      "items": [
+        "Objet et acceptation",
+        "Description du service",
+        "Compte utilisateur",
+        "Abonnements et facturation",
+        "Propriété intellectuelle et code généré",
+        "Obligations de l'utilisateur",
+        "Suspension et résiliation",
+        "Disponibilité et SLA",
+        "Limitation de responsabilité",
+        "Données personnelles",
+        "Modifications",
+        "Droit applicable et juridiction"
+      ]
+    },
+    "sections": [
+      {
+        "id": "article-1",
+        "heading": "1. Objet et acceptation",
+        "paragraphs": [
+          "Les présentes Conditions Générales d'Utilisation (« CGU ») régissent l'accès et l'utilisation du service ZeroAPI (le « Service »), édité par ZeroAPI SAS, société par actions simplifiée de droit sénégalais immatriculée à Dakar, ayant son siège social à Dakar, Sénégal (ci-après « ZeroAPI », « nous »).",
+          "L'utilisation du Service implique l'acceptation pleine et entière des présentes CGU. Si tu n'es pas d'accord, tu ne dois pas utiliser le Service."
+        ]
+      },
+      {
+        "id": "article-2",
+        "heading": "2. Description du service",
+        "intro": "ZeroAPI est une plateforme de génération asynchrone de backends. À partir d'une description en langage naturel, le Service produit :",
+        "items": [
+          "une spécification technique (modèles, endpoints, relations) ;",
+          "du code source TypeScript basé sur Hono.js ;",
+          "des tests automatisés (Vitest) et une documentation OpenAPI 3.1 ;",
+          "des options de déploiement (Railway, Render, Vercel, Fly.io) ou d'hébergement sur l'infrastructure ZeroAPI selon le plan souscrit."
+        ],
+        "outro": "Le Service est en évolution constante. Certaines fonctionnalités peuvent être marquées « bêta » et fournies sans garantie."
+      },
+      {
+        "id": "article-3",
+        "heading": "3. Compte utilisateur",
+        "paragraphs": [
+          "L'accès au Service nécessite la création d'un compte. Tu t'engages à fournir des informations exactes, à maintenir la confidentialité de tes identifiants et à nous notifier sans délai toute utilisation non autorisée. Tu es responsable de toute activité réalisée depuis ton compte.",
+          "Tu dois avoir au moins 16 ans pour utiliser ZeroAPI. Les comptes professionnels engagent l'organisation représentée."
+        ]
+      },
+      {
+        "id": "article-4",
+        "heading": "4. Abonnements et facturation",
+        "intro": "Le Service propose trois plans :",
+        "tableHeaders": ["Plan", "Prix", "Engagement"],
+        "plans": [
+          { "name": "Gratuit", "price": "0 FCFA", "commitment": "Aucun" },
+          { "name": "Pro", "price": "15 000 FCFA / mois (~ 24 €)", "commitment": "Mensuel, résiliable à tout moment" },
+          { "name": "Business", "price": "75 000 FCFA / mois (~ 120 €)", "commitment": "Mensuel ou annuel" }
+        ],
+        "outro": "Les paiements sont traités par Stripe. Le paiement par Mobile Money (Orange Money, Wave, MTN MoMo, Moov Money) est en cours d'intégration. Les prix sont indiqués hors taxes ; les taxes applicables sont ajoutées le cas échéant. Les paiements sont non remboursables sauf disposition légale contraire, mais tu peux résilier à tout moment et tu conserves l'accès jusqu'à la fin de la période payée."
+      },
+      {
+        "id": "article-5",
+        "heading": "5. Propriété intellectuelle et code généré",
+        "sub": [
+          {
+            "heading": "5.1 Le code généré t'appartient",
+            "body": "Tu es propriétaire du code source généré par ZeroAPI pour tes prompts, sans restriction d'usage. Tu peux l'exporter, le modifier, le redistribuer ou le commercialiser. Il n'y a aucune licence rétroactive sur ton code, aucun vendor lock-in."
+          },
+          {
+            "heading": "5.2 La plateforme nous appartient",
+            "body": "Le logiciel ZeroAPI, l'interface, les modèles propriétaires, la documentation et les marques restent notre propriété exclusive. Tu obtiens un droit personnel, non exclusif et non transférable d'utilisation, limité à la durée de ton abonnement."
+          },
+          {
+            "heading": "5.3 Tes prompts",
+            "body": "Tu conserves la propriété de tes prompts. Tu nous accordes une licence limitée d'utilisation pour exécuter le Service. Nous n'utilisons pas tes prompts pour entraîner nos modèles sans ton consentement explicite."
+          }
+        ]
+      },
+      {
+        "id": "article-6",
+        "heading": "6. Obligations de l'utilisateur",
+        "intro": "Tu t'engages à ne pas :",
+        "items": [
+          "utiliser le Service pour générer du contenu illicite, frauduleux, discriminatoire ou portant atteinte à autrui ;",
+          "contourner les limitations techniques ou les quotas (rate limiting, authentification) ;",
+          "procéder à de l'ingénierie inverse ou à du scraping automatisé non autorisé ;",
+          "partager ton compte ou revendre l'accès au Service sans accord écrit."
+        ]
+      },
+      {
+        "id": "article-7",
+        "heading": "7. Suspension et résiliation",
+        "body": "Nous pouvons suspendre ou résilier ton compte en cas de violation des CGU, d'impayé prolongé (au-delà de 14 jours après notification), ou d'usage manifestement frauduleux. Tu peux résilier ton compte à tout moment depuis ton tableau de bord. Tes données et ton code généré sont conservés 30 jours après résiliation, puis supprimés définitivement, sauf demande contraire de ta part avant ce délai."
+      },
+      {
+        "id": "article-8",
+        "heading": "8. Disponibilité et SLA",
+        "body": "Nous nous efforçons d'assurer une disponibilité élevée du Service. Un SLA contractuel de 99,9 % est garanti sur le plan Business. Les plans Gratuit et Pro sont fournis « best effort ». Les opérations de maintenance planifiées sont annoncées sur",
+        "statusLink": "status.zeroapi.app"
+      },
+      {
+        "id": "article-9",
+        "heading": "9. Limitation de responsabilité",
+        "paragraphs": [
+          "Le Service est fourni « tel quel ». Nous ne garantissons pas qu'il sera exempt d'erreurs ou que le code généré conviendra à tout usage spécifique. Tu es responsable de la revue, des tests et du déploiement du code en production.",
+          "Dans toute la mesure permise par la loi, notre responsabilité totale envers toi au titre des CGU est limitée au montant que tu as payé à ZeroAPI au cours des douze (12) derniers mois précédant l'événement déclencheur. Nous ne sommes pas responsables des dommages indirects, pertes de données, pertes d'exploitation ou pertes de chiffre d'affaires."
+        ]
+      },
+      {
+        "id": "article-10",
+        "heading": "10. Données personnelles",
+        "body": "Le traitement de tes données personnelles est décrit dans notre",
+        "privacyLink": "politique de confidentialité",
+        "and": "et notre",
+        "gdprLink": "page conformité RGPD",
+        "outro": ". ZeroAPI agit en tant que responsable du traitement pour les données de compte et en tant que sous-traitant pour les prompts soumis dans le cadre du Service."
+      },
+      {
+        "id": "article-11",
+        "heading": "11. Modifications",
+        "body": "Nous pouvons modifier les présentes CGU. Toute modification substantielle te sera notifiée par email au moins 30 jours avant son entrée en vigueur. La poursuite de l'utilisation du Service après cette notification vaut acceptation."
+      },
+      {
+        "id": "article-12",
+        "heading": "12. Droit applicable et juridiction",
+        "body": "Les présentes CGU sont régies par le droit sénégalais. Tout litige relatif à leur interprétation ou leur exécution sera soumis à la compétence exclusive des tribunaux de Dakar, sauf disposition d'ordre public contraire applicable aux utilisateurs consommateurs résidant dans l'Union européenne."
+      }
+    ],
+    "contact": {
+      "heading": "Contact",
+      "body": "Pour toute question relative aux CGU :"
+    }
+  },
+  "privacy": {
+    "meta": {
+      "title": "Politique de confidentialité — ZeroAPI",
+      "description": "Comment ZeroAPI collecte, utilise et protège tes données personnelles. Conforme au RGPD et à la loi sénégalaise n° 2008-12."
+    },
+    "eyebrow": "Légal · Confidentialité",
+    "title": "Politique de",
+    "titleAccent": "confidentialité",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "callout": {
+      "lead": "L'essentiel.",
+      "body": "On ne vend pas tes données. On ne les utilise pas pour entraîner nos modèles. On collecte le strict nécessaire pour faire fonctionner le service, on chiffre tout en transit et au repos, et tu peux exporter ou supprimer tes données quand tu veux."
+    },
+    "toc": {
+      "title": "Sommaire",
+      "items": [
+        "Responsable du traitement",
+        "Données collectées",
+        "Finalités et bases légales",
+        "Partage avec des tiers",
+        "Transferts hors UE / hors UEMOA",
+        "Durée de conservation",
+        "Tes droits",
+        "Sécurité",
+        "Contact et réclamation"
+      ]
+    },
+    "sections": [
+      {
+        "id": "responsable",
+        "heading": "1. Responsable du traitement",
+        "body": "Le responsable du traitement est ZeroAPI SAS, dont le siège social est à Dakar, Sénégal, immatriculée au registre du commerce de Dakar. Pour toute question relative à tes données personnelles, contacte notre Délégué à la protection des données (DPO) à"
+      },
+      {
+        "id": "donnees",
+        "heading": "2. Données collectées",
+        "sub": [
+          {
+            "heading": "2.1 Données de compte",
+            "items": [
+              "Adresse email, nom et prénom (ou pseudo) ;",
+              "Mot de passe (haché avec argon2id, jamais en clair) ;",
+              "Identifiant tiers si tu utilises Google / GitHub OAuth (sub, email, nom)."
+            ]
+          },
+          {
+            "heading": "2.2 Données de facturation",
+            "items": [
+              "Plan souscrit, historique de facturation, identifiant client Stripe (le numéro de carte est traité par Stripe, jamais stocké chez nous) ;",
+              "Pour les comptes professionnels : raison sociale, NINEA / numéro de TVA, adresse de facturation."
+            ]
+          },
+          {
+            "heading": "2.3 Données d'usage",
+            "items": [
+              "Prompts soumis et spécifications générées (nécessaires pour exécuter le Service) ;",
+              "Logs techniques (adresse IP, user-agent, horodatage, type d'action) conservés pour la sécurité et le debug ;",
+              "Statistiques d'usage anonymisées (nombre de générations, taux d'erreur)."
+            ]
+          },
+          {
+            "heading": "2.4 Cookies",
+            "body": "Détails complets dans notre",
+            "cookieLink": "politique cookies",
+            "outro": ". Nous utilisons des cookies essentiels (session, préférence de thème) et, si tu y consens, des cookies analytiques anonymes."
+          }
+        ]
+      },
+      {
+        "id": "finalites",
+        "heading": "3. Finalités et bases légales",
+        "tableHeaders": ["Finalité", "Base légale", "Durée"],
+        "rows": [
+          { "purpose": "Fournir le Service (compte, génération, hébergement)", "basis": "Exécution du contrat", "duration": "Durée du compte" },
+          { "purpose": "Facturation et comptabilité", "basis": "Obligation légale", "duration": "10 ans" },
+          { "purpose": "Sécurité, prévention de la fraude", "basis": "Intérêt légitime", "duration": "12 mois (logs)" },
+          { "purpose": "Communication produit (emails transactionnels)", "basis": "Exécution du contrat", "duration": "Durée du compte" },
+          { "purpose": "Newsletter et communications marketing", "basis": "Consentement", "duration": "Jusqu'à retrait" },
+          { "purpose": "Analytics anonymisés", "basis": "Consentement", "duration": "13 mois" }
+        ],
+        "noTraining": "Nous n'utilisons pas tes prompts ni ton code généré pour entraîner des modèles d'IA, ni les nôtres ni ceux de tiers, sauf consentement explicite et révocable de ta part."
+      },
+      {
+        "id": "partage",
+        "heading": "4. Partage avec des tiers",
+        "intro": "Nous travaillons avec des sous-traitants qui interviennent strictement pour fournir le Service :",
+        "tableHeaders": ["Sous-traitant", "Rôle", "Localisation"],
+        "rows": [
+          { "name": "Anthropic, Mistral AI, Google AI", "role": "Modèles d'IA pour génération de code", "location": "États-Unis, Union européenne" },
+          { "name": "Stripe", "role": "Traitement des paiements", "location": "États-Unis, Irlande" },
+          { "name": "Resend", "role": "Emails transactionnels", "location": "États-Unis" },
+          { "name": "Cloudflare", "role": "CDN, protection DDoS", "location": "Mondial (data centers Afrique de l'Ouest privilégiés)" },
+          { "name": "AWS, OVH", "role": "Hébergement et stockage", "location": "Paris, Francfort, Dakar (en cours)" },
+          { "name": "Trigger.dev", "role": "Orchestration des jobs asynchrones", "location": "États-Unis" }
+        ],
+        "outro": "Tous nos sous-traitants sont liés par un accord de traitement des données (DPA) offrant un niveau de protection équivalent au nôtre."
+      },
+      {
+        "id": "transferts",
+        "heading": "5. Transferts hors UE / hors UEMOA",
+        "body": "Certains sous-traitants sont situés hors de l'Union européenne et hors de l'UEMOA. Les transferts sont encadrés par les clauses contractuelles types de la Commission européenne (CCT 2021/914) et, pour les transferts vers les États-Unis, par le cadre Data Privacy Framework lorsque le sous-traitant y adhère."
+      },
+      {
+        "id": "duree",
+        "heading": "6. Durée de conservation",
+        "items": [
+          { "label": "Compte actif", "body": "les données sont conservées tant que ton compte est actif." },
+          { "label": "Après suppression du compte", "body": "30 jours en zone tampon (pour permettre la récupération en cas d'erreur), puis suppression définitive." },
+          { "label": "Données de facturation", "body": "10 ans (obligation comptable)." },
+          { "label": "Logs de sécurité", "body": "12 mois." }
+        ]
+      },
+      {
+        "id": "droits",
+        "heading": "7. Tes droits",
+        "intro": "Conformément au RGPD et à la loi sénégalaise n° 2008-12, tu disposes :",
+        "items": [
+          { "label": "Droit d'accès", "body": "obtenir une copie de tes données." },
+          { "label": "Droit de rectification", "body": "corriger des données inexactes." },
+          { "label": "Droit à l'effacement", "body": "supprimer tes données (sauf obligation légale de conservation)." },
+          { "label": "Droit à la portabilité", "body": "recevoir tes données dans un format structuré et machine-lisible (JSON)." },
+          { "label": "Droit d'opposition", "body": "t'opposer à un traitement fondé sur l'intérêt légitime." },
+          { "label": "Droit à la limitation", "body": "suspendre temporairement un traitement." },
+          { "label": "Droit de retirer ton consentement", "body": "à tout moment, sans remettre en cause la licéité du traitement passé." },
+          { "label": "Droit de définir des directives post-mortem", "body": "sur le sort de tes données." }
+        ],
+        "outro": "Pour exercer ces droits, écris à dpo@zeroapi.app. Nous répondons sous 30 jours maximum. La plupart de ces droits sont aussi exerçables directement depuis ton tableau de bord (« Mes données »)."
+      },
+      {
+        "id": "securite",
+        "heading": "8. Sécurité",
+        "body": "Détails complets sur notre",
+        "securityLink": "page sécurité",
+        "outro": ". En résumé : chiffrement TLS 1.3 en transit, AES-256 au repos, authentification deux facteurs disponible, audits internes trimestriels, programme de divulgation responsable."
+      },
+      {
+        "id": "contact",
+        "heading": "9. Contact et réclamation",
+        "para1": "Pour toute question :",
+        "para2": "Si tu estimes que tes droits ne sont pas respectés, tu peux introduire une réclamation auprès de la Commission de protection des données personnelles (CDP) du Sénégal, ou, si tu résides dans l'Union européenne, auprès de l'autorité de contrôle de ton pays (en France : la CNIL —",
+        "cnilLink": "www.cnil.fr",
+        "para2end": ")."
+      }
+    ]
+  },
+  "cookies": {
+    "meta": {
+      "title": "Politique cookies — ZeroAPI",
+      "description": "Quels cookies utilise ZeroAPI, pourquoi, et comment les refuser ou les supprimer."
+    },
+    "eyebrow": "Légal · Cookies",
+    "title": "Politique",
+    "titleAccent": "cookies",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "callout": "Tu peux refuser tous les cookies non essentiels sans dégrader le fonctionnement du site. Aucun mur de consentement déguisé : un bouton « Refuser » est aussi visible que le bouton « Accepter ».",
+    "sections": [
+      {
+        "id": "what",
+        "heading": "1. C'est quoi un cookie ?",
+        "body": "Un cookie est un petit fichier texte déposé par un site web sur ton appareil (ordinateur, mobile) via ton navigateur. Il peut contenir des informations comme un identifiant de session, une préférence d'affichage, ou un compteur statistique. ZeroAPI utilise également des technologies similaires (localStorage, sessionStorage) — elles sont couvertes par cette politique."
+      },
+      {
+        "id": "used",
+        "heading": "2. Cookies utilisés par ZeroAPI",
+        "sub": [
+          {
+            "id": "necessary",
+            "heading": "2.1 Cookies strictement nécessaires",
+            "intro": "Ces cookies sont indispensables au fonctionnement du site. Ils ne nécessitent pas ton consentement.",
+            "tableHeaders": ["Nom", "Finalité", "Durée", "Émetteur"],
+            "rows": [
+              { "name": "zeroapi-session", "purpose": "Authentification (cookie httpOnly, secure, SameSite=Lax)", "duration": "30 jours", "issuer": "ZeroAPI" },
+              { "name": "zeroapi-csrf", "purpose": "Protection CSRF", "duration": "Session", "issuer": "ZeroAPI" },
+              { "name": "zeroapi-theme", "purpose": "Mémorise ta préférence clair / sombre (localStorage)", "duration": "1 an", "issuer": "ZeroAPI" },
+              { "name": "zeroapi-cookie-consent", "purpose": "Mémorise ton choix sur le bandeau cookies (localStorage)", "duration": "6 mois", "issuer": "ZeroAPI" }
+            ]
+          },
+          {
+            "id": "analytics",
+            "heading": "2.2 Cookies analytiques (consentement requis)",
+            "intro": "Si tu acceptes, nous utilisons un outil d'analytique respectueux de la vie privée (Plausible Analytics, auto-hébergé en Europe). Aucune donnée personnelle n'est collectée : pas d'adresse IP complète, pas de fingerprint, pas de cookie cross-site. Plausible utilise un identifiant de session anonyme (haché par jour et par site) pour distinguer les visiteurs.",
+            "tableHeaders": ["Nom", "Finalité", "Durée", "Émetteur"],
+            "rows": [
+              { "name": "_pl_*", "purpose": "Mesure d'audience anonyme (page vues, pays, referrer)", "duration": "24 h", "issuer": "Plausible (auto-hébergé)" }
+            ]
+          },
+          {
+            "id": "third",
+            "heading": "2.3 Cookies tiers",
+            "intro": "Si tu utilises l'authentification Google ou GitHub OAuth, ces services peuvent déposer leurs propres cookies sur leurs domaines respectifs. Ils ne sont pas accessibles par ZeroAPI. Consulte leurs politiques :",
+            "links": [
+              { "label": "Google — Politique de confidentialité", "href": "https://policies.google.com/privacy" },
+              { "label": "GitHub — Privacy Statement", "href": "https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "manage",
+        "heading": "3. Gérer ton consentement",
+        "sub": [
+          {
+            "heading": "3.1 Bandeau de consentement",
+            "intro": "Lors de ta première visite, un bandeau te propose d'accepter ou de refuser les cookies non essentiels. Ton choix est mémorisé pendant 6 mois. Tu peux changer d'avis à tout moment en :",
+            "items": [
+              "supprimant la clé zeroapi-cookie-consent dans le localStorage de ton navigateur, ou",
+              "écrivant à dpo@zeroapi.app qui prendra le relais."
+            ]
+          },
+          {
+            "heading": "3.2 Désactiver les cookies dans ton navigateur",
+            "intro": "Tu peux configurer ton navigateur pour bloquer ou supprimer les cookies. Les cookies strictement nécessaires sont indispensables au fonctionnement de l'application : leur blocage empêchera la connexion.",
+            "browsers": [
+              { "label": "Firefox", "href": "https://support.mozilla.org/fr/kb/cookies-informations-sites-enregistrent" },
+              { "label": "Chrome", "href": "https://support.google.com/chrome/answer/95647" },
+              { "label": "Safari", "href": "https://support.apple.com/fr-fr/guide/safari/sfri11471" },
+              { "label": "Edge", "href": "https://support.microsoft.com/fr-fr/microsoft-edge" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "noad",
+        "heading": "4. Pas de tracking publicitaire",
+        "body": "ZeroAPI ne diffuse pas de publicité, ne s'intègre à aucune régie publicitaire et ne partage aucun cookie à des fins de profilage marketing. Pas de Facebook Pixel, pas de Google Ads, pas de retargeting."
+      },
+      {
+        "id": "evolution",
+        "heading": "5. Évolution",
+        "body": "Cette politique peut évoluer pour suivre nos pratiques et la réglementation. La date en haut de page indique la dernière mise à jour. En cas de modification significative, nous t'en informerons par email ou via un nouveau bandeau de consentement."
+      },
+      {
+        "id": "contact",
+        "heading": "6. Contact",
+        "body": "Questions ?"
+      }
+    ]
+  },
+  "gdpr": {
+    "meta": {
+      "title": "RGPD et protection des données — ZeroAPI",
+      "description": "Conformité de ZeroAPI au Règlement général sur la protection des données (RGPD) et à la loi sénégalaise n° 2008-12."
+    },
+    "eyebrow": "Légal · RGPD",
+    "title": "Conformité",
+    "titleAccent": "RGPD",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "callout": "ZeroAPI est conforme au Règlement (UE) 2016/679 (RGPD) et à la loi sénégalaise n° 2008-12 du 25 janvier 2008 sur la protection des données à caractère personnel. Cette page résume nos engagements pratiques.",
+    "sections": [
+      {
+        "id": "cadre",
+        "heading": "1. Cadre légal applicable",
+        "intro": "ZeroAPI traite des données personnelles d'utilisateurs situés au Sénégal, dans la zone UEMOA, en Europe et au-delà. Nous appliquons le standard de protection le plus élevé applicable à chaque traitement :",
+        "items": [
+          { "label": "RGPD", "body": "(UE 2016/679) pour les utilisateurs européens et au-delà ;" },
+          { "label": "Loi n° 2008-12", "body": "du Sénégal pour les utilisateurs sénégalais ;" },
+          { "label": "Acte additionnel A/SA.1/01/10", "body": "de la CEDEAO relatif à la protection des données à caractère personnel." }
+        ]
+      },
+      {
+        "id": "dpo",
+        "heading": "2. Délégué à la protection des données (DPO)",
+        "intro": "Un DPO est désigné. Tu peux le contacter pour toute question relative au traitement de tes données :",
+        "emailLabel": "Email",
+        "addressLabel": "Adresse postale",
+        "address": "ZeroAPI SAS, à l'attention du DPO, Dakar, Sénégal."
+      },
+      {
+        "id": "principes",
+        "heading": "3. Principes que nous appliquons",
+        "items": [
+          { "label": "Licéité et transparence", "body": "chaque traitement a une base légale claire, documentée dans notre", "link": "politique de confidentialité", "linkHref": "/privacy" },
+          { "label": "Minimisation", "body": "nous ne collectons que ce qui est strictement nécessaire au service." },
+          { "label": "Exactitude", "body": "tu peux corriger tes données depuis ton compte." },
+          { "label": "Limitation de conservation", "body": "durées précises définies dans la politique de confidentialité." },
+          { "label": "Intégrité et confidentialité", "body": "chiffrement systématique, accès restreint, audits réguliers." },
+          { "label": "Responsabilité", "body": "registre des traitements à jour, analyses d'impact pour les traitements à risque, formation continue des équipes." }
+        ]
+      },
+      {
+        "id": "droits",
+        "heading": "4. Tes droits",
+        "sub": [
+          {
+            "heading": "4.1 Comment les exercer",
+            "intro": "Tous les droits décrits ci-dessous sont exerçables :",
+            "channels": [
+              { "label": "en ligne", "body": "depuis l'onglet « Mes données » de ton tableau de bord ;" },
+              { "label": "par email", "body": "dpo@zeroapi.app" }
+            ],
+            "outro": "Nous répondons dans un délai maximum de 30 jours. La réponse est gratuite, sauf demande manifestement infondée ou excessive (auquel cas nous pouvons facturer des frais raisonnables ou refuser, en motivant)."
+          },
+          {
+            "heading": "4.2 Détail des droits",
+            "tableHeaders": ["Droit", "Description", "Article RGPD"],
+            "rows": [
+              { "right": "Information", "desc": "Savoir ce qu'on fait de tes données.", "article": "13–14" },
+              { "right": "Accès", "desc": "Obtenir une copie de tes données.", "article": "15" },
+              { "right": "Rectification", "desc": "Corriger des données inexactes ou incomplètes.", "article": "16" },
+              { "right": "Effacement", "desc": "Supprimer tes données (« droit à l'oubli »).", "article": "17" },
+              { "right": "Limitation", "desc": "Geler temporairement un traitement contesté.", "article": "18" },
+              { "right": "Portabilité", "desc": "Recevoir tes données dans un format structuré et machine-lisible.", "article": "20" },
+              { "right": "Opposition", "desc": "T'opposer à un traitement fondé sur l'intérêt légitime.", "article": "21" },
+              { "right": "Décision automatisée", "desc": "Ne pas faire l'objet d'une décision purement automatisée. Nous n'en faisons aucune.", "article": "22" },
+              { "right": "Retrait du consentement", "desc": "Révoquer ton consentement à tout moment.", "article": "7" },
+              { "right": "Directives post-mortem", "desc": "Définir le sort de tes données après ton décès.", "article": "Loi française 2016-1321" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "transferts",
+        "heading": "5. Transferts internationaux",
+        "intro": "Certains de nos sous-traitants (Anthropic, Stripe, Resend, Trigger.dev) sont établis aux États-Unis. Ces transferts reposent sur :",
+        "items": [
+          { "label": "les clauses contractuelles types", "body": "de la Commission européenne (décision 2021/914) ;" },
+          { "label": "l'adhésion au Data Privacy Framework", "body": "UE–US pour les sous-traitants certifiés ;" },
+          { "body": "des mesures techniques complémentaires : chiffrement, pseudonymisation des payloads quand possible, minimisation du périmètre transféré." }
+        ],
+        "outro": "La liste détaillée des sous-traitants et de leurs localisations est dans la",
+        "privacyLink": "politique de confidentialité",
+        "outroEnd": "."
+      },
+      {
+        "id": "aipd",
+        "heading": "6. Analyses d'impact (AIPD)",
+        "intro": "Nous réalisons des analyses d'impact relatives à la protection des données pour les traitements présentant un risque élevé pour tes droits et libertés. Une AIPD a notamment été conduite pour :",
+        "items": [
+          "le traitement des prompts par des modèles d'IA tiers ;",
+          "les transferts hors UE ;",
+          "l'hébergement du code généré."
+        ],
+        "outro": "Le résumé des AIPD est disponible sur demande motivée à"
+      },
+      {
+        "id": "violations",
+        "heading": "7. Violations de données",
+        "intro": "En cas de violation de données personnelles, nous notifions :",
+        "items": [
+          { "label": "la CDP du Sénégal", "body": "dans les 72 heures (loi 2008-12, art. 61) ;" },
+          { "label": "l'autorité de contrôle européenne", "body": "compétente dans les 72 heures (RGPD art. 33) ;" },
+          { "body": "les personnes concernées sans délai injustifié quand la violation est susceptible d'engendrer un risque élevé (RGPD art. 34)." }
+        ]
+      },
+      {
+        "id": "dpa",
+        "heading": "8. DPA pour les clients Business",
+        "body": "Pour les clients Business agissant en tant que responsables du traitement de données personnelles transitant par leur API hébergée chez nous, un",
+        "dpaLabel": "Data Processing Agreement (DPA)",
+        "body2": "standard est disponible. Pour l'obtenir, écris à",
+        "outro": "— il est conforme aux articles 28 du RGPD et inclut les clauses contractuelles types pour les transferts internationaux."
+      },
+      {
+        "id": "autorites",
+        "heading": "9. Autorités de contrôle",
+        "intro": "Si tu estimes que tes droits ne sont pas respectés, tu peux réclamer auprès :",
+        "items": [
+          { "label": "Sénégal", "body": "Commission de protection des données personnelles (CDP) —", "link": "cdp.sn", "href": "https://www.cdp.sn" },
+          { "label": "France", "body": "Commission nationale de l'informatique et des libertés (CNIL) —", "link": "cnil.fr", "href": "https://www.cnil.fr" },
+          { "label": "Côte d'Ivoire", "body": "Autorité de Régulation des Télécommunications/TIC (ARTCI) —", "link": "artci.ci", "href": "https://www.artci.ci" },
+          { "label": "Autres pays UE", "body": "autorité de ton pays de résidence, listée sur", "link": "edpb.europa.eu", "href": "https://edpb.europa.eu/about-edpb/about-edpb/members_en" }
+        ]
+      },
+      {
+        "id": "contact",
+        "heading": "10. Contact",
+        "body": "Pour toute question RGPD ou exercice de tes droits :"
+      }
+    ]
+  },
+  "security": {
+    "meta": {
+      "title": "Sécurité — ZeroAPI",
+      "description": "Architecture de sécurité de ZeroAPI : chiffrement, authentification, code généré sécurisé, divulgation responsable."
+    },
+    "eyebrow": "Sécurité",
+    "titleAccent": "Sécurité",
+    "titleRest": "chez ZeroAPI",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "callout": "On prend la sécurité au sérieux parce qu'on génère du code qui ira en production. Voici comment on protège ta plateforme, tes données et le code qu'on produit pour toi.",
+    "sections": [
+      {
+        "id": "chiffrement",
+        "heading": "1. Chiffrement",
+        "items": [
+          { "label": "En transit", "body": "toutes les communications utilisent TLS 1.3 (TLS 1.2 minimum pour la rétro-compatibilité). HSTS activé, redirection automatique HTTPS." },
+          { "label": "Au repos", "body": "bases de données et stockage objet chiffrés en AES-256. Les sauvegardes le sont aussi." },
+          { "label": "Secrets", "body": "variables d'environnement chiffrées, rotation trimestrielle des clés sensibles, séparation stricte des environnements (dev, staging, prod)." }
+        ]
+      },
+      {
+        "id": "auth",
+        "heading": "2. Authentification et accès",
+        "items": [
+          "Mots de passe hachés avec argon2id, jamais stockés en clair.",
+          "OAuth 2.0 avec Google et GitHub (le mot de passe n'est jamais transmis à ZeroAPI).",
+          "Double authentification (2FA) par TOTP (applications type Authy, Google Authenticator) disponible pour tous les comptes, obligatoire pour les plans Business.",
+          "Sessions à expiration courte côté UI, refresh tokens rotatifs côté API.",
+          "SSO SAML / OIDC disponible sur le plan Business pour les organisations.",
+          "Accès du personnel : principe du moindre privilège, MFA obligatoire, audit log de toutes les actions admin."
+        ]
+      },
+      {
+        "id": "code",
+        "heading": "3. Sécurité du code généré",
+        "intro": "Chaque backend généré par ZeroAPI inclut par défaut :",
+        "items": [
+          "Validation Zod sur toutes les entrées (body, params, query, headers) ;",
+          "Échappement contextuel anti-XSS et requêtes paramétrées anti-SQLi (Prisma) ;",
+          "En-têtes de sécurité HTTP (Helmet) : CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy ;",
+          "CORS strict configuré explicitement, pas de wildcard sauf demande ;",
+          "Rate limiting par IP et par token, configurable par endpoint ;",
+          "Authentification JWT signée HS256 ou RS256, expiration courte et rotation des clés ;",
+          "RBAC fin par rôle et par ressource ;",
+          "Logging structuré avec masquage automatique des champs sensibles (mots de passe, tokens, numéros de carte)."
+        ],
+        "outro": "Une revue statique de sécurité (analyse AST + règles propriétaires) est exécutée avant la livraison du code, et toute alerte critique bloque la génération.",
+        "outroLabel": "revue statique de sécurité"
+      },
+      {
+        "id": "infra",
+        "heading": "4. Infrastructure",
+        "items": [
+          "Hébergement sur AWS (régions eu-west-3, eu-central-1) et OVH (Roubaix, Strasbourg). Région Afrique (Dakar) en cours de déploiement.",
+          "Cloudflare en frontal : protection DDoS, WAF, mitigation bot.",
+          "Sauvegardes chiffrées toutes les 6 heures, conservation 30 jours, restauration testée mensuellement.",
+          "Architecture multi-AZ, réplication automatique des données critiques."
+        ]
+      },
+      {
+        "id": "secrets",
+        "heading": "5. Cycle de vie des secrets clients",
+        "intro": "Les secrets que tu fournis pour déployer (clés API Stripe, tokens cloud, identifiants base de données) sont :",
+        "items": [
+          "chiffrés côté client avec une clé dérivée par PBKDF2 avant transit ;",
+          "stockés dans un coffre dédié (Vault), jamais en clair en base ;",
+          "injectés en variables d'environnement uniquement au moment du déploiement ;",
+          "supprimés du coffre 24 h après le déploiement réussi."
+        ]
+      },
+      {
+        "id": "incidents",
+        "heading": "6. Gestion des incidents",
+        "intro": "Notre équipe de garde est joignable 24/7 pour les plans Business. En cas d'incident affectant tes données :",
+        "items": [
+          "Notification par email et sur status.zeroapi.app dans les 4 heures.",
+          "Notification CDP (Sénégal) et CNIL (France) dans les 72 heures en cas de violation de données personnelles, conformément au RGPD article 33.",
+          "Rapport post-mortem public publié dans les 14 jours après résolution."
+        ],
+        "statusLink": "status.zeroapi.app"
+      },
+      {
+        "id": "disclosure",
+        "heading": "7. Programme de divulgation responsable",
+        "intro": "Tu as trouvé une faille ? Merci. Écris à",
+        "emailNote": "(clé PGP disponible sur demande) avec :",
+        "items": [
+          "une description du problème et des étapes pour le reproduire ;",
+          "l'impact estimé ;",
+          "tes coordonnées si tu souhaites être crédité."
+        ],
+        "response": "On accuse réception sous 48 h ouvrées. Pour les vulnérabilités confirmées, nous proposons des récompenses (« bug bounty ») selon la gravité, de 50 € à 2 000 €. Toute découverte effectuée de bonne foi et dans le respect du périmètre ne donnera lieu à aucune poursuite.",
+        "outOfScope": "Hors périmètre : déni de service, ingénierie sociale, attaques physiques, vulnérabilités déjà reportées, tests sur les comptes d'utilisateurs sans leur consentement.",
+        "outOfScopeLabel": "Hors périmètre"
+      },
+      {
+        "id": "conformite",
+        "heading": "8. Conformité et audits",
+        "items": [
+          "Conformité RGPD et loi sénégalaise n° 2008-12 — voir notre page RGPD.",
+          "Certification ISO 27001 en cours (objectif Q4 2026).",
+          "Tests d'intrusion externes annuels, rapports résumés disponibles sur demande pour les clients Business.",
+          "Revue de code obligatoire à deux pour toute modification touchant l'authentification, le stockage, le paiement ou la génération."
+        ],
+        "gdprLink": "notre page RGPD"
+      },
+      {
+        "id": "role",
+        "heading": "9. Ton rôle",
+        "intro": "La sécurité est un travail d'équipe. Quelques recommandations :",
+        "items": [
+          "active la 2FA, utilise un gestionnaire de mots de passe ;",
+          "ne mets pas de vrais secrets dans tes prompts (utilise des placeholders) ;",
+          "relis le code généré avant un déploiement en production ;",
+          "maintiens à jour les dépendances de ton projet — on intègre Dependabot par défaut dans le repo généré."
+        ]
+      },
+      {
+        "id": "contact",
+        "heading": "10. Contact",
+        "technical": "Questions techniques :",
+        "compliance": "Conformité et données :"
+      }
+    ]
+  },
+  "legalNotice": {
+    "meta": {
+      "title": "Mentions légales — ZeroAPI",
+      "description": "Mentions légales de ZeroAPI : éditeur, hébergeur, propriété intellectuelle et contact."
+    },
+    "eyebrow": "Légal",
+    "title": "Mentions",
+    "titleAccent": "légales",
+    "updated": "Dernière mise à jour : 26 mai 2026",
+    "sections": [
+      {
+        "id": "editeur",
+        "heading": "Éditeur du site",
+        "lines": [
+          "Société par actions simplifiée au capital de 1 000 000 FCFA",
+          "Siège social : Dakar, Sénégal",
+          "Immatriculation : Registre du commerce de Dakar",
+          "Email :"
+        ]
+      },
+      {
+        "id": "directeur",
+        "heading": "Directeur de la publication",
+        "body": "Le représentant légal de ZeroAPI SAS."
+      },
+      {
+        "id": "hebergement",
+        "heading": "Hébergement",
+        "intro": "Le site et l'application zeroapi.app sont hébergés par :",
+        "hosts": [
+          { "name": "Vercel Inc.", "address": "440 N Barranca Ave #4133, Covina, CA 91723, États-Unis", "link": "vercel.com", "href": "https://vercel.com" },
+          { "name": "Amazon Web Services EMEA SARL", "address": "38 avenue John F. Kennedy, L-1855 Luxembourg (régions Paris et Francfort)." },
+          { "name": "OVH SAS", "address": "2 rue Kellermann, 59100 Roubaix, France." }
+        ]
+      },
+      {
+        "id": "pi",
+        "heading": "Propriété intellectuelle",
+        "para1": "L'ensemble du site — design, textes, illustrations, code source de la plateforme — est protégé par le droit de la propriété intellectuelle et reste la propriété exclusive de ZeroAPI SAS, sauf mention contraire. Toute reproduction ou représentation, totale ou partielle, sans autorisation préalable écrite est interdite.",
+        "para2": "Le code généré par ZeroAPI à la demande d'un utilisateur appartient à cet utilisateur, dans les conditions prévues aux",
+        "termsLink": "conditions générales d'utilisation",
+        "para2end": "."
+      },
+      {
+        "id": "marques",
+        "heading": "Marques",
+        "body": "« ZeroAPI » et le logo associé sont des marques de ZeroAPI SAS. Les autres marques citées (Railway, Render, Vercel, Fly.io, Stripe, Anthropic, etc.) appartiennent à leurs propriétaires respectifs."
+      },
+      {
+        "id": "liens",
+        "heading": "Liens hypertextes",
+        "body": "Le site peut contenir des liens vers des sites tiers. ZeroAPI n'exerce aucun contrôle sur ces sites et décline toute responsabilité quant à leur contenu."
+      },
+      {
+        "id": "credits",
+        "heading": "Crédits",
+        "body": "Conception et développement : équipe ZeroAPI. Polices : Instrument Serif et Space Grotesk (Google Fonts, licence SIL Open Font). Icônes : Lucide (licence ISC)."
+      },
+      {
+        "id": "contact",
+        "heading": "Contact",
+        "general": "Pour toute question d'ordre général :",
+        "legal": "Pour les questions juridiques :",
+        "data": "Pour les données personnelles :",
+        "security": "Pour la sécurité :"
+      }
+    ]
+  },
+  "changelog": {
+    "meta": {
+      "title": "Changelog — ZeroAPI",
+      "description": "Historique des évolutions de ZeroAPI : releases, nouveautés, corrections et changements importants."
+    },
+    "eyebrow": "Changelog",
+    "title": "Ce qui a",
+    "titleAccent": "changé",
+    "intro": "On versionne sémantiquement. Tu peux nous suivre par RSS (",
+    "rssLink": "flux",
+    "introEnd": ") ou par email — réglages dans ton profil.",
+    "releases": [
+      {
+        "version": "0.9.0",
+        "date": "26 mai 2026",
+        "tag": "minor",
+        "title": "Pré-lancement : crédibilité, docs et templates",
+        "sections": [
+          {
+            "kind": "added",
+            "title": "Nouveautés",
+            "items": [
+              "Section comparaison ZeroAPI vs Supabase vs Firebase sur la landing.",
+              "Vidéo screencast intégrée — démo en 3 chapitres.",
+              "Documentation publique : Getting Started, Guides, API Reference.",
+              "Galerie de 6 templates prêts à cloner.",
+              "Page /changelog avec versionnement sémantique."
+            ]
+          },
+          {
+            "kind": "changed",
+            "title": "Évolutions",
+            "items": [
+              "Footer : les liens Ressources pointent vers les nouvelles pages internes.",
+              "Refonte du visuel « Comment ça marche » avec animations cycliques."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.8.2",
+        "date": "12 mai 2026",
+        "tag": "patch",
+        "title": "Corrections du générateur",
+        "sections": [
+          {
+            "kind": "fixed",
+            "title": "Bugs",
+            "items": [
+              "Les relations N-N étaient parfois inversées dans le schéma Prisma.",
+              "Les tests Vitest générés ne couvraient pas les routes DELETE soft.",
+              "L'export Git ratait sur les noms de projet avec espaces."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.8.0",
+        "date": "28 avril 2026",
+        "tag": "minor",
+        "title": "Paiements Mobile Money en bêta",
+        "sections": [
+          {
+            "kind": "added",
+            "title": "Nouveautés",
+            "items": [
+              "Intégration Wave Sénégal — webhooks signés, vérification HMAC.",
+              "Intégration Orange Money CI / SN / ML — sandbox et production.",
+              "Module de réconciliation quotidienne avec rapport exportable.",
+              "Nouveau type de champ `money` avec devise et précision décimale."
+            ]
+          },
+          {
+            "kind": "changed",
+            "title": "Évolutions",
+            "items": [
+              "Le prompt accepte désormais des montants en FCFA et EUR sans conversion manuelle.",
+              "Les webhooks sortants gagnent un retry exponentiel jusqu'à 6 tentatives."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.7.0",
+        "date": "5 avril 2026",
+        "tag": "minor",
+        "title": "Génération asynchrone",
+        "sections": [
+          {
+            "kind": "added",
+            "title": "Nouveautés",
+            "items": [
+              "Files d'attente Trigger.dev : tu peux fermer l'onglet pendant la génération.",
+              "Notifications email + push web à la fin du job.",
+              "Webhook Slack et Discord configurables par workspace.",
+              "Console /jobs : suivi temps réel des générations en cours."
+            ]
+          },
+          {
+            "kind": "changed",
+            "title": "Évolutions",
+            "items": [
+              "Temps moyen de génération réduit de 4 min à 2 min sur un backend de taille moyenne."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.6.1",
+        "date": "18 mars 2026",
+        "tag": "patch",
+        "title": "Robustesse de la sécurité par défaut",
+        "sections": [
+          {
+            "kind": "fixed",
+            "title": "Bugs",
+            "items": [
+              "Les en-têtes CSP étaient trop permissifs sur les uploads.",
+              "Le rate limiter ne respectait pas le préfixe `/admin/*`."
+            ]
+          },
+          {
+            "kind": "changed",
+            "title": "Évolutions",
+            "items": [
+              "Hash des mots de passe migré de bcrypt vers argon2id.",
+              "Cookies de session : Secure + HttpOnly + SameSite=Lax par défaut."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.6.0",
+        "date": "1er mars 2026",
+        "tag": "minor",
+        "title": "Multi-langue : pidgin et wolof acceptés",
+        "sections": [
+          {
+            "kind": "added",
+            "title": "Nouveautés",
+            "items": [
+              "Le prompt comprend désormais le pidgin nigerian et le wolof courant.",
+              "Détection automatique de la langue dominante du prompt.",
+              "Suggestions de complétion dans la langue de l'utilisateur."
+            ]
+          }
+        ]
+      },
+      {
+        "version": "0.5.0",
+        "date": "10 février 2026",
+        "tag": "major",
+        "title": "Bêta publique",
+        "sections": [
+          {
+            "kind": "added",
+            "title": "Nouveautés",
+            "items": [
+              "Ouverture des inscriptions au grand public.",
+              "Plan Gratuit avec 3 générations / mois.",
+              "Plan Pro à 15 000 FCFA / mois (hébergement inclus).",
+              "Tableau de bord workspace avec invitations d'équipe.",
+              "Templates : e-commerce, blog, réservation, chat, marketplace, CRM."
+            ]
+          },
+          {
+            "kind": "changed",
+            "title": "Évolutions",
+            "items": [
+              "Sortie de la bêta privée — merci aux 124 premiers builders ❤︎"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "templates": {
+    "meta": {
+      "title": "Templates — ZeroAPI",
+      "description": "Galerie de backends prêts à cloner — e-commerce mobile money, marketplace, réservation, chat, CRM, SaaS."
+    },
+    "eyebrow": "Templates",
+    "title": "Démarre",
+    "titleAccent": "plus vite",
+    "intro": "Six backends qu'on a peaufinés — schémas, routes, tests, prompts. Clone, ajuste, déploie. Tu pars d'une base qui tient en prod, pas d'une feuille blanche.",
+    "endpointsLabel": "endpoints",
+    "useLabel": "Utiliser",
+    "suggestIntro": "Une idée à partager ?",
+    "suggestLink": "Propose un template",
+    "suggestOutro": "— on rémunère les contributeurs publiés.",
+    "items": [
+      {
+        "slug": "ecommerce-mobile-money",
+        "name": "E-commerce Mobile Money",
+        "category": "Commerce",
+        "blurb": "Boutique en ligne avec Wave, Orange Money et MTN MoMo. Gestion stock, livraisons et coupons promo.",
+        "tags": ["Wave", "OM", "MTN", "Stripe", "stock"],
+        "endpoints": 38,
+        "generations": "1 240",
+        "rating": "4.8"
+      },
+      {
+        "slug": "marketplace",
+        "name": "Marketplace multi-vendeurs",
+        "category": "Commerce",
+        "blurb": "Plateforme à plusieurs vendeurs avec commission automatique, KYC vendeur et système de litige.",
+        "tags": ["multi-tenant", "KYC", "litiges", "commission"],
+        "endpoints": 52,
+        "generations": "640",
+        "rating": "4.7"
+      },
+      {
+        "slug": "transport-reservation",
+        "name": "Réservation interurbaine",
+        "category": "Mobilité",
+        "blurb": "Réservation de sièges, trajets récurrents, billet QR code, suivi GPS chauffeur, paiement Mobile Money.",
+        "tags": ["réservation", "QR", "GPS", "FCFA"],
+        "endpoints": 28,
+        "generations": "510",
+        "rating": "4.9"
+      },
+      {
+        "slug": "chat-realtime",
+        "name": "Chat temps réel",
+        "category": "Social",
+        "blurb": "Salons publics et privés, presence, typing indicator, modération, push web. WebSocket sécurisé.",
+        "tags": ["WS", "presence", "modération", "push"],
+        "endpoints": 24,
+        "generations": "830",
+        "rating": "4.6"
+      },
+      {
+        "slug": "crm",
+        "name": "CRM petite équipe",
+        "category": "Business",
+        "blurb": "Pipeline commercial avec leads, deals, tâches, notes et historique d'interactions. Vue Kanban.",
+        "tags": ["pipeline", "kanban", "notes", "RBAC"],
+        "endpoints": 33,
+        "generations": "390",
+        "rating": "4.5"
+      },
+      {
+        "slug": "saas-multi-tenant",
+        "name": "SaaS multi-tenant",
+        "category": "Business",
+        "blurb": "Squelette SaaS B2B : workspaces, invitations, rôles, billing récurrent Stripe, audit log.",
+        "tags": ["SaaS", "billing", "audit", "invitations"],
+        "endpoints": 46,
+        "generations": "1 080",
+        "rating": "4.8"
+      }
+    ]
+  },
+  "docs": {
+    "meta": {
+      "title": "Documentation — ZeroAPI",
+      "description": "Tout ce qu'il faut pour générer, héberger et faire évoluer un backend ZeroAPI. Getting started, guides et référence API."
+    },
+    "eyebrow": "Documentation",
+    "title": "Tout pour",
+    "titleAccent": "builder",
+    "titleRest": "avec ZeroAPI.",
+    "intro": "Trois entrées : démarrer vite, plonger dans un cas concret, ou chercher un endpoint précis. La doc évolue avec le produit — dernière mise à jour le 26 mai 2026.",
+    "cards": [
+      {
+        "href": "/docs/getting-started",
+        "title": "Getting Started",
+        "desc": "Du compte gratuit à ton premier endpoint en ligne — en moins de 5 minutes.",
+        "items": [
+          "Créer un compte",
+          "Écrire ton premier prompt",
+          "Tester avec la console intégrée",
+          "Déployer sur Railway en un clic"
+        ],
+        "cta": "Démarrer"
+      },
+      {
+        "href": "/docs/guides",
+        "title": "Guides",
+        "desc": "Patterns concrets — auth, paiements Mobile Money, RBAC, webhooks, multi-tenant.",
+        "items": [
+          "Authentification JWT et OAuth",
+          "Intégrer Wave & Orange Money",
+          "RBAC fin par rôle et ressource",
+          "Webhooks, queues, cron"
+        ],
+        "cta": "Parcourir les guides"
+      },
+      {
+        "href": "/docs/api",
+        "title": "API Reference",
+        "desc": "Référence complète des endpoints REST exposés par les backends générés.",
+        "items": [
+          "Endpoints CRUD générés",
+          "Authentification et tokens",
+          "Filtres, tri, pagination cursor",
+          "Codes erreur HTTP et JSON"
+        ],
+        "cta": "Voir la référence"
+      }
+    ]
+  },
+  "gettingStarted": {
+    "meta": {
+      "title": "Getting Started — ZeroAPI",
+      "description": "Du compte gratuit à ton premier endpoint déployé en moins de cinq minutes avec ZeroAPI."
+    },
+    "eyebrow": "Documentation",
+    "eyebrowSub": "Getting Started",
+    "title": "Ton",
+    "titleAccent": "premier backend",
+    "titleRest": "en cinq minutes.",
+    "subtitle": "Aucune installation locale. Un navigateur et l'envie d'écrire une phrase suffisent.",
+    "onThisPage": "Sur cette page",
+    "nav": [
+      { "href": "#account", "label": "1. Crée un compte" },
+      { "href": "#prompt", "label": "2. Décris ton API" },
+      { "href": "#review", "label": "3. Inspecte le code" },
+      { "href": "#deploy", "label": "4. Déploie" },
+      { "href": "#next", "label": "5. Et après ?" }
+    ],
+    "goFurther": "Aller plus loin",
+    "goFurtherLinks": [
+      { "href": "/docs/guides", "label": "Guides" },
+      { "href": "/docs/api", "label": "Référence API" },
+      { "href": "/templates", "label": "Templates" }
+    ],
+    "callout": {
+      "label": "Pas de carte bancaire requise.",
+      "body": "Le plan gratuit autorise 3 générations par mois et l'export Git complet."
+    },
+    "sections": [
+      {
+        "id": "account",
+        "heading": "1. Crée un compte",
+        "intro": "Va sur app.zeroapi.app/register. Trois options d'inscription :",
+        "items": [
+          "Email + mot de passe (vérification par lien magique) ;",
+          "OAuth Google ;",
+          "OAuth GitHub."
+        ],
+        "outro": "La création du workspace par défaut se fait automatiquement. Tu peux inviter d'autres membres plus tard depuis",
+        "settingsPath": "Paramètres → Équipe"
+      },
+      {
+        "id": "prompt",
+        "heading": "2. Décris ton API",
+        "intro": "Dans le dashboard, clique sur Nouvelle génération. Tu tombes sur l'éditeur de prompt. Quelques règles utiles :",
+        "newGenLabel": "Nouvelle génération",
+        "items": [
+          "Écris en français, anglais ou pidgin — ZeroAPI comprend les trois.",
+          "Liste les entités, leurs relations, puis les règles métier.",
+          "Précise les contraintes : auth, rôles, paiements, notifications, fichiers."
+        ],
+        "exampleLabel": "Un exemple qui marche bien :"
+      },
+      {
+        "id": "review",
+        "heading": "3. Inspecte le code généré",
+        "intro": "La génération est asynchrone — tu peux fermer l'onglet, on te notifiera par email. Compte environ deux minutes pour un projet de taille moyenne. Quand c'est prêt, tu accèdes à un explorateur de fichiers avec :",
+        "items": [
+          "Le schéma Prisma complet ;",
+          "Les routes Hono.js typées, regroupées par ressource (routes/users.ts, routes/orders.ts...) ;",
+          "Les tests Vitest générés en miroir des routes ;",
+          "La spec OpenAPI 3.1 et un Swagger UI prêt à l'emploi."
+        ],
+        "outro": "Tu peux modifier directement dans la console, ou télécharger le repo Git en zip / git push."
+      },
+      {
+        "id": "deploy",
+        "heading": "4. Déploie",
+        "intro": "Trois chemins. Choisis selon ton confort :",
+        "items": [
+          { "label": "Hébergement ZeroAPI", "body": "(plan Pro) : un clic, un sous-domaine *.zeroapi.app, c'est en ligne." },
+          { "label": "Déploiement chez un partenaire", "body": ": connecte ton compte Railway, Render, Fly.io ou Vercel. ZeroAPI génère le Dockerfile et le manifest associé." },
+          { "label": "Export Git", "body": ": récupère le repo, fais ce que tu veux. Aucun lien magique avec ZeroAPI — tu pars libre." }
+        ]
+      },
+      {
+        "id": "next",
+        "heading": "5. Et après ?",
+        "body": "Lis les guides pour les cas avancés (paiements, SSO, multi-tenant, webhooks signés), parcours la référence API pour les détails endpoint par endpoint, ou regarde nos templates si tu préfères partir d'une base existante.",
+        "contact": "Une question ? Écris-nous à bonjour@zeroapi.app — on répond sous 24h en semaine.",
+        "guidesLink": "guides",
+        "apiLink": "référence API",
+        "templatesLink": "templates"
+      }
+    ]
+  },
+  "guides": {
+    "meta": {
+      "title": "Guides — ZeroAPI",
+      "description": "Patterns concrets pour les backends ZeroAPI : authentification, Mobile Money, RBAC, webhooks, multi-tenant."
+    },
+    "eyebrow": "Documentation",
+    "eyebrowSub": "Guides",
+    "title": "Guides",
+    "titleAccent": "orientés pratique",
+    "intro": "Chaque guide part d'un problème réel et finit par un backend qui le résout. Code commenté, captures d'écran, prompt prêt à copier.",
+    "categories": [
+      {
+        "cat": "Authentification",
+        "items": [
+          {
+            "slug": "jwt-oauth",
+            "title": "JWT + OAuth Google / GitHub",
+            "desc": "Activer la connexion par provider externe, gérer les refresh tokens rotatifs et lier plusieurs identités à un même compte.",
+            "time": "8 min"
+          },
+          {
+            "slug": "two-factor",
+            "title": "Double authentification (TOTP)",
+            "desc": "Forcer la 2FA pour les rôles admin, gérer les codes de récupération et les sessions de confiance.",
+            "time": "5 min"
+          },
+          {
+            "slug": "sso-saml",
+            "title": "SSO SAML / OIDC pour l'enterprise",
+            "desc": "Connecter Okta, Azure AD, Google Workspace. Auto-provisionnement et mapping des groupes.",
+            "time": "12 min"
+          }
+        ]
+      },
+      {
+        "cat": "Paiements Afrique",
+        "items": [
+          {
+            "slug": "mobile-money",
+            "title": "Intégrer Wave, Orange Money, MTN MoMo",
+            "desc": "Webhook signé, statut idempotent, réconciliation quotidienne. Le code généré gère les trois en un seul flux.",
+            "time": "10 min"
+          },
+          {
+            "slug": "stripe",
+            "title": "Stripe pour les paiements carte",
+            "desc": "Checkout hosted, webhooks Stripe vérifiés, gestion des disputes et refunds.",
+            "time": "7 min"
+          }
+        ]
+      },
+      {
+        "cat": "Sécurité & permissions",
+        "items": [
+          {
+            "slug": "rbac",
+            "title": "RBAC fin par rôle et ressource",
+            "desc": "Définir des rôles imbriqués, restreindre par champ, et générer des policies testées automatiquement.",
+            "time": "9 min"
+          },
+          {
+            "slug": "rate-limit",
+            "title": "Rate limiting par token et IP",
+            "desc": "Configurer des limites par endpoint, gérer les bursts et les exemptions pour partenaires de confiance.",
+            "time": "4 min"
+          }
+        ]
+      },
+      {
+        "cat": "Architecture",
+        "items": [
+          {
+            "slug": "multi-tenant",
+            "title": "Multi-tenant : isoler les workspaces",
+            "desc": "Schéma partagé ou DB par tenant, middleware de contexte, garde-fous pour éviter les fuites cross-tenant.",
+            "time": "11 min"
+          },
+          {
+            "slug": "webhooks",
+            "title": "Webhooks sortants signés",
+            "desc": "Notifier des systèmes tiers avec retry exponentiel, signature HMAC et journal de livraison.",
+            "time": "6 min"
+          },
+          {
+            "slug": "cron",
+            "title": "Tâches planifiées (cron) et queues",
+            "desc": "Exécuter des jobs récurrents, gérer les rejouages et la dead-letter queue.",
+            "time": "8 min"
+          }
+        ]
+      }
+    ]
+  },
+  "api": {
+    "meta": {
+      "title": "API Reference — ZeroAPI",
+      "description": "Référence complète des endpoints REST générés par ZeroAPI : auth, CRUD, filtres, pagination, codes erreur."
+    },
+    "eyebrow": "Documentation",
+    "eyebrowSub": "API Reference",
+    "title": "Référence",
+    "titleAccent": "API",
+    "subtitle": "Toutes les réponses sont en JSON, encodées en UTF-8, avec en-tête Content-Type: application/json.",
+    "sidebarTitle": "Endpoints",
+    "otherResources": "Autres ressources",
+    "otherLinks": [
+      { "href": "/docs/getting-started", "label": "Getting Started" },
+      { "href": "/docs/guides", "label": "Guides" },
+      { "href": "/changelog", "label": "Changelog" }
+    ],
+    "callout": "Le code généré inclut une route /openapi.json et un Swagger UI sur /docs. Ce qui suit est la base commune ; ton schéma spécifique est servi par ton backend déployé.",
+    "authHeader": "Authentification",
+    "authNote": "Toutes les routes protégées attendent un header :",
+    "errorsTitle": "Codes d'erreur",
+    "errorsNote": "Format unifié pour toutes les erreurs :",
+    "rateLimitsTitle": "Rate limits",
+    "rateLimitsBody": "Par défaut, 120 requêtes / minute par token authentifié, 60 / minute par IP non-authentifiée. Trois en-têtes sont retournés sur chaque réponse : RateLimit-Limit, RateLimit-Remaining, RateLimit-Reset. Modulable par endpoint dans le code généré.",
+    "errorsLink": "Codes d'erreur",
+    "rateLimitsLink": "Rate limits",
+    "paramHeaders": ["Paramètre", "Type", "Requis", "Description"],
+    "errorHeaders": ["Code", "Nom", "Description"],
+    "yes": "oui",
+    "na": "—",
+    "groups": [
+      {
+        "group": "Authentification",
+        "intro": "Tous les endpoints d'authentification renvoient un access token JWT et un refresh token rotatif. Stocke le refresh token dans un cookie HTTP-only.",
+        "eps": [
+          {
+            "method": "POST",
+            "path": "/auth/register",
+            "desc": "Crée un nouveau compte avec un email et un mot de passe. Envoie un email de vérification.",
+            "params": [
+              { "name": "email", "type": "string", "required": true, "desc": "Email valide, non déjà utilisé." },
+              { "name": "password", "type": "string", "required": true, "desc": "12 caractères minimum, complexité enforced." },
+              { "name": "name", "type": "string", "required": false, "desc": "Nom affiché." }
+            ]
+          },
+          {
+            "method": "POST",
+            "path": "/auth/login",
+            "desc": "Authentifie un utilisateur existant. Renvoie un access token et écrit un cookie de refresh.",
+            "params": [
+              { "name": "email", "type": "string", "required": true, "desc": "Email du compte." },
+              { "name": "password", "type": "string", "required": true, "desc": "Mot de passe en clair, hashé argon2id côté serveur." }
+            ]
+          },
+          {
+            "method": "POST",
+            "path": "/auth/refresh",
+            "desc": "Échange un refresh token contre une nouvelle paire access + refresh."
+          },
+          {
+            "method": "POST",
+            "path": "/auth/logout",
+            "desc": "Révoque le refresh token courant et clear le cookie associé."
+          }
+        ]
+      },
+      {
+        "group": "Ressources CRUD",
+        "intro": "Pour chaque entité déclarée dans ton prompt, ZeroAPI génère ces cinq endpoints en respectant le RBAC configuré. Exemple ici sur la ressource users.",
+        "eps": [
+          {
+            "method": "GET",
+            "path": "/users",
+            "desc": "Liste paginée des utilisateurs. Supporte filtres, tri et pagination cursor.",
+            "params": [
+              { "name": "filter[role]", "type": "string", "desc": "Filtre par rôle exact (`admin`, `customer`...)." },
+              { "name": "sort", "type": "string", "desc": "Champs séparés par virgule. Préfixe `-` pour DESC." },
+              { "name": "limit", "type": "number", "desc": "1–100 (défaut : 25)." },
+              { "name": "cursor", "type": "string", "desc": "Curseur opaque renvoyé par la requête précédente." }
+            ]
+          },
+          {
+            "method": "POST",
+            "path": "/users",
+            "desc": "Crée une nouvelle ressource. Body validé par Zod selon le schéma déclaré."
+          },
+          {
+            "method": "GET",
+            "path": "/users/:id",
+            "desc": "Récupère une ressource par son identifiant unique."
+          },
+          {
+            "method": "PATCH",
+            "path": "/users/:id",
+            "desc": "Mise à jour partielle. Les champs absents sont laissés tels quels."
+          },
+          {
+            "method": "DELETE",
+            "path": "/users/:id",
+            "desc": "Soft delete par défaut. Ajoute `?hard=true` pour supprimer définitivement (admin uniquement)."
+          }
+        ]
+      },
+      {
+        "group": "Fichiers et uploads",
+        "intro": "ZeroAPI génère deux endpoints pour gérer les fichiers via signed URLs vers un bucket S3-compatible (R2, Backblaze, AWS).",
+        "eps": [
+          {
+            "method": "POST",
+            "path": "/files/sign",
+            "desc": "Demande une URL signée d'upload. Renvoie l'URL et le `key` final.",
+            "params": [
+              { "name": "filename", "type": "string", "required": true, "desc": "Nom original du fichier." },
+              { "name": "contentType", "type": "string", "required": true, "desc": "MIME type validé contre une whitelist." },
+              { "name": "size", "type": "number", "required": true, "desc": "Taille en octets — limite configurable." }
+            ]
+          },
+          {
+            "method": "POST",
+            "path": "/files/confirm",
+            "desc": "Confirme l'upload après PUT côté client. Crée la ligne de métadonnée en base."
+          }
+        ]
+      }
+    ],
+    "errors": [
+      { "code": 400, "name": "Bad Request", "desc": "Validation Zod en échec — voir le tableau `details`." },
+      { "code": 401, "name": "Unauthorized", "desc": "Token manquant, invalide ou expiré." },
+      { "code": 403, "name": "Forbidden", "desc": "Authentifié mais sans le rôle requis." },
+      { "code": 404, "name": "Not Found", "desc": "Ressource inexistante ou hors du tenant courant." },
+      { "code": 409, "name": "Conflict", "desc": "Contrainte d'unicité violée." },
+      { "code": 422, "name": "Unprocessable", "desc": "Format valide mais sémantique refusée (ex : transition d'état impossible)." },
+      { "code": 429, "name": "Too Many Requests", "desc": "Rate limit dépassé. Voir headers `RateLimit-*`." },
+      { "code": 500, "name": "Server Error", "desc": "Erreur interne. Tracée et notifiée à l'équipe." }
+    ]
+  }
+}
