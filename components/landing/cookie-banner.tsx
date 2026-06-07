@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 
 const STORAGE_KEY = "zeroapi-cookie-consent";
 
 export function CookieBanner() {
+  const t = useTranslations("landing.cookies");
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -31,18 +33,15 @@ export function CookieBanner() {
   return (
     <div className="cookie-banner" role="dialog" aria-labelledby="cookie-banner-title">
       <p id="cookie-banner-title">
-        <strong>🍪 Cookies.</strong> On utilise des cookies essentiels pour faire
-        marcher le site (session, thème) et des cookies analytiques anonymes pour
-        comprendre comment ZeroAPI est utilisé. Tu peux refuser sans casser quoi que ce
-        soit. Détails dans notre{" "}
-        <Link href="/cookies">politique cookies</Link>.
+        <strong>{t("title")}</strong> {t("text")}{" "}
+        <Link href="/cookies">{t("policyLink")}</Link>.
       </p>
       <div className="actions">
         <button type="button" className="decline" onClick={() => setConsent("declined")}>
-          Refuser
+          {t("refuse")}
         </button>
         <button type="button" className="accept" onClick={() => setConsent("accepted")}>
-          Accepter
+          {t("accept")}
         </button>
       </div>
     </div>

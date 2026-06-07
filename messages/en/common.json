@@ -1,0 +1,35 @@
+{
+  "meta": {
+    "title": "ZeroAPI — Talk, your backend writes itself",
+    "description": "ZeroAPI generates complete backends from a conversation. You talk to Kia, the AI builds the spec live, then generates Hono.js code, tests, OpenAPI docs and an SDK — ready to deploy."
+  },
+  "actions": {
+    "start": "Get started",
+    "startFree": "Start for free",
+    "login": "Log in",
+    "register": "Sign up",
+    "logout": "Log out",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "loading": "Loading…",
+    "retry": "Try again",
+    "copy": "Copy",
+    "copied": "Copied",
+    "search": "Search"
+  },
+  "language": {
+    "label": "Language",
+    "fr": "Français",
+    "en": "English"
+  },
+  "theme": {
+    "label": "Theme",
+    "light": "Light",
+    "dark": "Dark"
+  }
+}

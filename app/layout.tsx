@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Instrument_Serif, JetBrains_Mono, Space_Grotesk } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages, getTranslations } from "next-intl/server";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "sonner";
 import "./globals.css";
@@ -26,30 +28,37 @@ const mono = JetBrains_Mono({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "ZeroAPI — Discute, ton backend s'écrit",
-  description:
-    "ZeroAPI génère des backends complets à partir d'une conversation. Tu parles à Kia, l'IA construit la spec en direct, puis génère code Hono.js, tests, docs OpenAPI et SDK — prêts à déployer.",
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_APP_URL ??
-      (process.env.NODE_ENV === "production"
-        ? (() => {
-            throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
-          })()
-        : "http://localhost:3000"),
-  ),
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("common.meta");
+  return {
+    title: t("title"),
+    description: t("description"),
+    metadataBase: new URL(
+      process.env.NEXT_PUBLIC_APP_URL ??
+        (process.env.NODE_ENV === "production"
+          ? (() => {
+              throw new Error("NEXT_PUBLIC_APP_URL must be set in production");
+            })()
+          : "http://localhost:3000"),
+    ),
+  };
+}
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
     <html
-      lang="fr"
+      lang={locale}
       className={`${sans.variable} ${serif.variable} ${mono.variable}`}
       suppressHydrationWarning
     >
       <body>
-        <ThemeProvider>{children}</ThemeProvider>
-        <Toaster position="top-right" richColors closeButton />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider>{children}</ThemeProvider>
+          <Toaster position="top-right" richColors closeButton />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

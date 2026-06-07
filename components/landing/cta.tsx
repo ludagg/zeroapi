@@ -1,23 +1,23 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 export function CTA() {
+  const t = useTranslations("landing.cta");
+  const tc = useTranslations("common.actions");
   return (
     <section id="cta" style={{ paddingBottom: 40 }}>
       <div className="wrap">
         <Reveal as="div" className="cta-final">
           <h2 className="display">
-            Ton prochain backend
+            {t("headlineLead")}
             <br />
-            commence par <em>une phrase</em>.
+            {t("headlineRest")} <em>{t("headlineAccent")}</em>
           </h2>
-          <p>
-            Ouvre une conversation avec Kia et lance ta première génération en moins de
-            60 secondes. Aucune carte requise.
-          </p>
+          <p>{t("sub")}</p>
           <div className="hero-ctas">
             <Link href="/register" className="btn btn-accent btn-lg">
-              Démarrer gratuitement
+              {tc("startFree")}
               <svg
                 className="arrow"
                 width="14"
@@ -33,7 +33,7 @@ export function CTA() {
               </svg>
             </Link>
             <a href="mailto:bonjour@zeroapi.app" className="btn btn-ghost btn-lg">
-              Parler à un humain
+              {t("talkToHuman")}
             </a>
           </div>
         </Reveal>

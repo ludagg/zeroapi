@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Reveal } from "@/components/landing/reveal";
 
 const ENDPOINTS = [
@@ -25,6 +26,7 @@ const RESPONSE = `{
 }`;
 
 export function Playground() {
+  const t = useTranslations("landing.playground");
   const [active, setActive] = useState(0);
   const [elapsed, setElapsed] = useState(42);
 
@@ -42,18 +44,12 @@ export function Playground() {
         <div className="demo-wrap">
           <Reveal as="div" className="demo-copy">
             <span className="kicker">
-              <span className="dot" /> Playground
+              <span className="dot" /> {t("kicker")}
             </span>
             <h2 className="display">
-              <em>Teste</em> avant
-              <br />
-              de déployer.
+              <em>{t("headlineLead")}</em> {t("headlineRest")}
             </h2>
-            <p>
-              Un client HTTP intégré, directement dans ZeroAPI. Choisis un endpoint,
-              ajuste les paramètres, envoie une vraie requête — et lis la réponse, les
-              en-têtes et le temps de réponse sans quitter le navigateur.
-            </p>
+            <p>{t("sub")}</p>
             <ul>
               <li>
                 <svg
@@ -66,7 +62,7 @@ export function Playground() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Tous les endpoints détectés depuis ta spec, prêts à l&apos;emploi.</span>
+                <span>{t("bullet1")}</span>
               </li>
               <li>
                 <svg
@@ -79,7 +75,7 @@ export function Playground() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Params, body JSON et en-têtes éditables — auth gérée pour toi.</span>
+                <span>{t("bullet2")}</span>
               </li>
               <li>
                 <svg
@@ -92,7 +88,7 @@ export function Playground() {
                 >
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Status, latence et payload formatés, comme dans Postman.</span>
+                <span>{t("bullet3")}</span>
               </li>
             </ul>
           </Reveal>
@@ -127,7 +123,7 @@ export function Playground() {
                 <span className="pg-url">
                   api-reservations.zeroapi.app{ENDPOINTS[active].path}
                 </span>
-                <span className="pg-send">Envoyer</span>
+                <span className="pg-send">{t("send")}</span>
               </div>
               <div className="pg-response">
                 <div className="pg-response-head">
