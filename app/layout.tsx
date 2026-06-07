@@ -27,9 +27,9 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "ZeroAPI — Génère ton backend en langage naturel",
+  title: "ZeroAPI — Discute, ton backend s'écrit",
   description:
-    "ZeroAPI transforme une description en français en backend complet : code, tests, docs OpenAPI et déploiement.",
+    "ZeroAPI génère des backends complets à partir d'une conversation. Tu parles à Kia, l'IA construit la spec en direct, puis génère code Hono.js, tests, docs OpenAPI et SDK — prêts à déployer.",
   metadataBase: new URL(
     process.env.NEXT_PUBLIC_APP_URL ??
       (process.env.NODE_ENV === "production"

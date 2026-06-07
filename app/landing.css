@@ -1200,11 +1200,16 @@ html[data-theme="dark"] .landing .job-status.running {
 /* ----- PRICING ----- */
 .landing .plans {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
   align-items: stretch;
 }
-@media (max-width: 900px) {
+@media (max-width: 1080px) {
+  .landing .plans {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 560px) {
   .landing .plans {
     grid-template-columns: 1fr;
   }
@@ -3285,4 +3290,543 @@ html[data-theme="dark"] .tpl-card-tag {
 .tpl-card-use:hover {
   transform: translateY(-1px);
   box-shadow: 0 6px 16px var(--accent-glow);
+}
+
+/* ============================================================
+   CONVERSATIONAL HERO — chat with Kia + live spec panel
+   ============================================================ */
+.landing .chat-hero {
+  display: grid;
+  grid-template-columns: 1fr 264px;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  text-align: left;
+}
+@media (max-width: 760px) {
+  .landing .chat-hero {
+    grid-template-columns: 1fr;
+  }
+}
+.landing .chat-hero-main {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  box-shadow: var(--shadow-lg);
+  padding: 16px 16px 12px;
+  display: flex;
+  flex-direction: column;
+}
+.landing .chat-hero-main::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: 17px;
+  padding: 1px;
+  background: linear-gradient(180deg, var(--accent), transparent 60%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: 0.5;
+  pointer-events: none;
+}
+.landing .chat-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 240px;
+  padding: 4px 2px 8px;
+}
+.landing .chat-row {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+.landing .chat-row.user {
+  justify-content: flex-end;
+}
+.landing .chat-avatar {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono), monospace;
+  font-weight: 600;
+  font-size: 12px;
+}
+html[data-theme="dark"] .landing .chat-avatar {
+  color: var(--accent);
+}
+.landing .chat-bubble {
+  max-width: 82%;
+  padding: 10px 13px;
+  border-radius: 13px;
+  font-size: 14.5px;
+  line-height: 1.5;
+  animation: specIn 0.3s ease both;
+}
+.landing .chat-bubble.kia {
+  background: var(--bg-2);
+  color: var(--ink-2);
+  border-bottom-left-radius: 4px;
+}
+.landing .chat-bubble.kia strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.landing .chat-bubble.user {
+  background: var(--ink);
+  color: var(--bg);
+  border-bottom-right-radius: 4px;
+}
+.landing .chat-composer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: auto;
+  padding: 10px 4px 2px;
+  border-top: 1px dashed var(--line);
+}
+.landing .chat-composer-text {
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--muted-2);
+  display: inline-flex;
+  align-items: center;
+}
+.landing .chat-composer .submit {
+  height: 32px;
+  padding: 0 13px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border: 0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: default;
+}
+.landing .chat-composer .submit svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* live spec panel */
+.landing .chat-spec {
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+.landing .chat-spec-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.landing .chat-spec-title {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.landing .chat-spec-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--warn-ink);
+}
+.landing .chat-spec-state .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--warn);
+}
+.landing .chat-spec-state.ready {
+  color: var(--accent-ink);
+}
+html[data-theme="dark"] .landing .chat-spec-state.ready {
+  color: var(--accent);
+}
+.landing .chat-spec-state.ready .dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
+}
+.landing .chat-spec-resources {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  flex: 1;
+}
+.landing .chat-spec-resources li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--ink-2);
+  animation: specIn 0.4s ease both;
+}
+.landing .chat-spec-resources li.chat-spec-empty {
+  color: var(--muted-2);
+}
+.landing .chat-spec-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 2px;
+  background: var(--accent);
+}
+.landing .chat-spec-foot {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line);
+}
+.landing .chat-spec-foot div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.landing .chat-spec-foot b {
+  font-family: var(--font-mono), monospace;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.landing .chat-spec-foot span {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+}
+@keyframes specIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================
+   MARKETPLACE
+   ============================================================ */
+.landing .mkt-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+@media (max-width: 900px) {
+  .landing .mkt-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 560px) {
+  .landing .mkt-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.landing .mkt-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: transform 0.25s ease, border-color 0.25s, box-shadow 0.25s;
+}
+.landing .mkt-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--line-2);
+  box-shadow: var(--shadow-md);
+}
+.landing .mkt-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+.landing .mkt-emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.landing .mkt-badge {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 4px 9px;
+}
+.landing .mkt-badge.official {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  border-color: transparent;
+}
+html[data-theme="dark"] .landing .mkt-badge.official {
+  color: var(--accent);
+}
+.landing .mkt-title {
+  font-size: 16.5px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  margin: 0;
+}
+.landing .mkt-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.landing .mkt-cat {
+  font-size: 12px;
+  color: var(--ink-2);
+  background: var(--bg-2);
+  border-radius: 6px;
+  padding: 3px 9px;
+}
+.landing .mkt-uses {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.landing .mkt-uses svg {
+  width: 12px;
+  height: 12px;
+}
+.landing .mkt-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.landing .mkt-author {
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+  color: var(--muted-2);
+}
+.landing .mkt-use {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-ink);
+}
+html[data-theme="dark"] .landing .mkt-use {
+  color: var(--accent);
+}
+.landing .mkt-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 22px;
+  padding: 18px 22px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+.landing .mkt-publish {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.landing .mkt-publish p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  max-width: 360px;
+}
+.landing .mkt-publish-toggle {
+  display: inline-flex;
+  padding: 4px;
+  gap: 4px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+}
+.landing .mkt-pub-opt {
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 5px 12px;
+  border-radius: 100px;
+}
+.landing .mkt-pub-opt.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* ============================================================
+   PLAYGROUND CONSOLE (inside .demo-window)
+   ============================================================ */
+.landing .pg-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.landing .pg-endpoints {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.landing .pg-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+}
+.landing .pg-endpoint:hover {
+  background: var(--bg-2);
+}
+.landing .pg-endpoint.active {
+  background: var(--bg-2);
+  border-color: var(--line);
+}
+.landing .pg-method {
+  font-family: var(--font-mono), monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  padding: 3px 7px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+.landing .pg-method.get {
+  background: #e5f0ff;
+  color: #1554b5;
+}
+html[data-theme="dark"] .landing .pg-method.get {
+  background: #0e2036;
+  color: #6fa8ff;
+}
+.landing .pg-method.post {
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+html[data-theme="dark"] .landing .pg-method.post {
+  color: var(--accent);
+}
+.landing .pg-method.put,
+.landing .pg-method.patch {
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+}
+.landing .pg-method.delete {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+.landing .pg-path {
+  font-family: var(--font-mono), monospace;
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.landing .pg-request {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+}
+.landing .pg-url {
+  flex: 1;
+  font-family: var(--font-mono), monospace;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.landing .pg-send {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-radius: 7px;
+  padding: 6px 13px;
+  flex-shrink: 0;
+}
+.landing .pg-response {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.landing .pg-response-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line);
+  font-family: var(--font-mono), monospace;
+  font-size: 11.5px;
+}
+.landing .pg-status {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+html[data-theme="dark"] .landing .pg-status {
+  color: var(--accent);
+}
+.landing .pg-time,
+.landing .pg-type {
+  color: var(--muted);
+}
+.landing .pg-type {
+  margin-left: auto;
+}
+.landing .pg-json {
+  margin: 0;
+  padding: 12px;
+  background: var(--bg-3);
+  font-family: var(--font-mono), monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--ink-2);
+  overflow-x: auto;
+  white-space: pre;
 }

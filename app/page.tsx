@@ -3,6 +3,8 @@ import { LandingNav } from "@/components/landing/nav";
 import { Hero } from "@/components/landing/hero";
 import { HowItWorks } from "@/components/landing/how-it-works";
 import { Features } from "@/components/landing/features";
+import { Marketplace } from "@/components/landing/marketplace";
+import { Playground } from "@/components/landing/playground";
 import { Demo } from "@/components/landing/demo";
 import { VideoScreencast } from "@/components/landing/video-screencast";
 import { Integrations } from "@/components/landing/integrations";
@@ -22,6 +24,8 @@ export default function HomePage() {
         <HowItWorks />
         <VideoScreencast />
         <Features />
+        <Marketplace />
+        <Playground />
         <Demo />
         <Integrations />
         <Comparison />

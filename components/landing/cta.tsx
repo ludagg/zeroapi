@@ -9,9 +9,12 @@ export function CTA() {
           <h2 className="display">
             Ton prochain backend
             <br />
-            <em>écrit lui-même</em>.
+            commence par <em>une phrase</em>.
           </h2>
-          <p>Lance ta première génération en moins de 60 secondes. Aucune carte requise.</p>
+          <p>
+            Ouvre une conversation avec Kia et lance ta première génération en moins de
+            60 secondes. Aucune carte requise.
+          </p>
           <div className="hero-ctas">
             <Link href="/register" className="btn btn-accent btn-lg">
               Démarrer gratuitement

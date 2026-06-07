@@ -6,19 +6,31 @@ import { Reveal } from "@/components/landing/reveal";
 const ITEMS = [
   {
     q: "Qu'est-ce que ZeroAPI exactement ?",
-    a: "ZeroAPI est un générateur de backends asynchrone. Tu décris ton API en langage naturel ; on produit une spec structurée, puis on génère le code Hono.js correspondant — routes, modèles, validations, tests, docs OpenAPI. Le résultat est un projet TypeScript complet, prêt à déployer ou à éditer dans ton IDE.",
+    a: "ZeroAPI génère des backends complets à partir d'une conversation. Tu discutes avec Kia, notre architecte d'API : elle pose des questions, construit une spec structurée en direct, puis on génère le code Hono.js correspondant — routes, modèles, validations, tests Vitest, docs OpenAPI et SDK TypeScript. Le résultat est un projet complet, prêt à déployer ou à éditer dans ton IDE.",
   },
   {
-    q: "Pourquoi asynchrone ? Comment ça marche concrètement ?",
-    a: "Générer un backend sérieux prend du temps : raisonnement IA, génération de code, exécution des tests, build. Plutôt que de te faire attendre 2 à 5 minutes devant un spinner, ZeroAPI met le job en file et te libère immédiatement. Tu peux fermer ton navigateur, couper ta connexion, partir manger. Quand le job est terminé, tu reçois une notification (email, push web, ou webhook Slack/Discord) avec un lien direct vers ton API. Particulièrement utile sur connexions lentes ou instables.",
+    q: "Pourquoi une conversation plutôt qu'un simple prompt ?",
+    a: "Un backend sérieux a des détails qui comptent : rôles, relations, règles métier, cas limites. Au lieu de deviner à partir d'une seule phrase, Kia te pose les bonnes questions et affine la spec ressource par ressource — tu la vois se construire à mesure que tu réponds. Tu peux écrire en français, anglais ou pidgin, et modifier la spec en continuant simplement à parler.",
+  },
+  {
+    q: "C'est quoi la génération asynchrone ?",
+    a: "Quand tu lances la génération, on met le job en file et on te libère immédiatement. Tu peux fermer ton navigateur, couper ta connexion, partir manger — le job continue côté serveur. Quand c'est prêt, tu reçois une notification (email, push web, ou webhook Slack/Discord) avec un lien direct vers ton API. Particulièrement utile sur connexions lentes ou instables.",
+  },
+  {
+    q: "Le playground et la marketplace, ça sert à quoi ?",
+    a: "Le playground est un client HTTP intégré : tu testes chaque endpoint de ton API (params, body, en-têtes, auth) directement dans le navigateur et tu vois la réponse, le status et la latence. La marketplace te laisse partir d'un template — officiel ou créé par la communauté — au lieu d'une page blanche, et publier les tiens en privé (ton équipe) ou en public.",
+  },
+  {
+    q: "Quelle IA fait la génération ?",
+    a: "Plusieurs. ZeroAPI route les requêtes entre Claude, Mistral et Gemini selon ton plan, avec bascule automatique si un fournisseur tombe. Les plans gratuits utilisent Mistral et Gemini ; Claude premium est réservé aux plans Pro et au-dessus. Tu n'es jamais bloqué sur un seul modèle.",
   },
   {
     q: "Puis-je exporter et modifier le code généré ?",
-    a: "Oui, à 100 %. Le code généré est à toi — même sur le plan gratuit. Tu obtiens un repo Git avec un projet Hono.js standard, sans dépendance propriétaire ZeroAPI. Tu peux le cloner, l'éditer, le déployer où tu veux. Aucun vendor lock-in.",
+    a: "Oui, à 100 %. Le code est à toi — même sur le plan gratuit. Tu obtiens un repo Git avec un projet Hono.js standard, sans dépendance propriétaire ZeroAPI, plus les exports Dev Mode (OpenAPI, SDK, Postman, Prisma, ZIP). Tu peux le cloner, l'éditer, le déployer où tu veux. Aucun vendor lock-in.",
   },
   {
     q: "Quelles garanties de sécurité ?",
-    a: "Chaque API générée intègre : authentification JWT et OAuth, RBAC, rate limiting, validation Zod sur toutes les entrées, échappement contre XSS et SQL injection, en-têtes Helmet, CORS configuré, et tests de sécurité automatiques. La spec passe par une revue statique avant génération. Sur les plans payants, audit log et SSO SAML sont disponibles.",
+    a: "Chaque API générée intègre : authentification JWT et OAuth, RBAC, rate limiting, validation Zod sur toutes les entrées, échappement contre XSS et SQL injection, en-têtes Helmet, CORS configuré, et tests automatiques. La spec passe par une validation stricte avant génération. Sur les plans payants, audit log et SSO sont disponibles.",
   },
   {
     q: "Support et communauté ?",
