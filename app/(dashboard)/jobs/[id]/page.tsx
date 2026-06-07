@@ -31,7 +31,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { computeSecurity, GRADE_TONE, type SecurityGrade } from "@/lib/security-grade";
 import { coolifyConfigured } from "@/lib/coolify";
 import type { DeployPlatform, DeploymentStatus, JobStatus } from "@prisma/client";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +59,7 @@ export default async function JobDetailPage({
   params: { id: string };
   searchParams?: { tab?: string };
 }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },

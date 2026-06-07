@@ -11,7 +11,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { extractAuthMode, extractVersion, pickEmoji } from "@/lib/job-helpers";
 import type { JobStatus } from "@prisma/client";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function DashboardPage({
 }: {
   searchParams?: { status?: string };
 }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const filterParam = searchParams?.status?.toLowerCase() ?? "all";
   const statusFilter = VALID_STATUSES[filterParam] ?? "all";
@@ -234,7 +234,7 @@ export default async function DashboardPage({
   );
 }
 
-function greetingFor(d: Date, t: ReturnType<typeof useTranslations<"dashboard">>): string {
+function greetingFor(d: Date, t: Awaited<ReturnType<typeof getTranslations<"dashboard">>>): string {
   const h = d.getHours();
   if (h < 6) return t("home.greeting.night");
   if (h < 12) return t("home.greeting.morning");

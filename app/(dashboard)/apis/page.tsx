@@ -8,7 +8,7 @@ import {
 } from "@/components/playground/playground-console";
 import { buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { readSpec } from "@/lib/job-helpers";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +23,7 @@ function extractPathParams(path: string): string[] {
 }
 
 export default async function PlaygroundPage() {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
 
   const jobs = await prisma.job.findMany({

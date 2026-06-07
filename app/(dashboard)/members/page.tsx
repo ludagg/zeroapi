@@ -6,11 +6,12 @@ import { InviteButton } from "@/components/members/invite-button";
 import { RemoveButton } from "@/components/members/remove-button";
 import { formatRelativeTime } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
 
   const owner = await prisma.user.findUnique({

@@ -12,7 +12,7 @@ import { SecurityCard, TestsCard } from "@/components/api-detail/security-test-c
 import { buildDeployConfigs, buildOpenApiSpec, listEndpointsFromOpenApi } from "@/lib/api-detail";
 import { extractAuthMode, extractVersion, readSpec } from "@/lib/job-helpers";
 import type { Job, JobStatus } from "@prisma/client";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -26,7 +26,7 @@ const STATUS_PILL_CLASS: Record<JobStatus, string> = {
 };
 
 export default async function ApiDetailPage({ params }: { params: { id: string } }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const job = await prisma.job.findFirst({
     where: { id: params.id, userId: user.id },

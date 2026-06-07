@@ -9,12 +9,12 @@ import { NotificationsCard } from "@/components/settings/notifications-card";
 import { ApiKeysCard } from "@/components/settings/api-keys-card";
 import { PublishedTemplatesCard } from "@/components/settings/published-templates-card";
 import { DangerCard } from "@/components/settings/danger-card";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
   const [account, apiKeys, publishedTemplates] = await Promise.all([
     prisma.user.findUnique({

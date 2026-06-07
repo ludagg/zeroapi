@@ -8,6 +8,7 @@ import { DeploymentsFilter } from "@/components/deployments/deployments-filter";
 import { ExternalUrlLink } from "@/components/deployments/external-url-link";
 import { formatRelativeTime } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +39,7 @@ export default async function DeploymentsPage({
 }: {
   searchParams: { status?: string };
 }) {
-  const t = useTranslations("dashboard");
+  const t = await getTranslations("dashboard");
   const user = await requireUser();
 
   const all = await prisma.deployment.findMany({
