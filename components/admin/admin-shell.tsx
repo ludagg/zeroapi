@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import { BrandMark } from "@/components/brand-mark";
 import Link from "next/link";
 import { Briefcase, Home, KeyRound, Menu, Network, Users } from "lucide-react";
@@ -17,6 +18,7 @@ export function AdminShell({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useTranslations("admin");
 
   return (
     <div className="grid min-h-screen grid-cols-1 bg-bg-2 lg:grid-cols-[240px_1fr]">
@@ -27,7 +29,7 @@ export function AdminShell({
         onClose={() => setOpen(false)}
         side="left"
         width={280}
-        label="Menu admin"
+        label={t("nav.openMenuAdmin")}
         className="bg-bg"
       >
         <AdminSidebar
@@ -42,7 +44,7 @@ export function AdminShell({
           <div className="flex min-w-0 items-center gap-3">
             <button
               type="button"
-              aria-label="Ouvrir le menu"
+              aria-label={t("nav.openMenu")}
               onClick={() => setOpen(true)}
               className="grid h-[34px] w-[34px] flex-shrink-0 place-items-center rounded-[9px] border border-line bg-surface text-ink-2 transition hover:border-line-2 lg:hidden"
             >
@@ -51,7 +53,7 @@ export function AdminShell({
             <div className="flex min-w-0 items-center gap-2 text-[13px]">
               <span className="text-muted">Admin</span>
               <span className="text-muted-2">/</span>
-              <span className="truncate font-medium">Console</span>
+              <span className="truncate font-medium">{t("nav.consoleBreadcrumb")}</span>
             </div>
           </div>
           <ThemeToggle />
@@ -72,6 +74,7 @@ function AdminSidebar({
   onNavigate?: () => void;
 }) {
   const isDrawer = variant === "drawer";
+  const t = useTranslations("admin");
 
   return (
     <aside
@@ -97,45 +100,45 @@ function AdminSidebar({
 
       <nav className="flex flex-col gap-0.5">
         <AdminLink href="/admin" icon={<Home className="h-4 w-4" />} onNavigate={onNavigate}>
-          Vue d&apos;ensemble
+          {t("nav.overview")}
         </AdminLink>
         <AdminLink
           href="/admin/users"
           icon={<Users className="h-4 w-4" />}
           onNavigate={onNavigate}
         >
-          Utilisateurs
+          {t("nav.users")}
         </AdminLink>
         <AdminLink
           href="/admin/jobs"
           icon={<Briefcase className="h-4 w-4" />}
           onNavigate={onNavigate}
         >
-          Jobs
+          {t("nav.jobs")}
         </AdminLink>
 
         <div className="px-2 pb-1 pt-3 font-mono text-[10px] uppercase tracking-[0.12em] text-muted-2">
-          Plateforme
+          {t("nav.platform")}
         </div>
         <AdminLink
           href="/admin/settings/ai-providers"
           icon={<KeyRound className="h-4 w-4" />}
           onNavigate={onNavigate}
         >
-          AI Providers
+          {t("nav.aiProviders")}
         </AdminLink>
         <AdminLink
           href="/admin/settings/llm-routing"
           icon={<Network className="h-4 w-4" />}
           onNavigate={onNavigate}
         >
-          LLM Routing
+          {t("nav.llmRouting")}
         </AdminLink>
       </nav>
 
       <div className="mt-auto border-t border-line pt-3">
         <div className="px-2 text-[12px] text-muted">
-          Connecté·e en tant que
+          {t("nav.loggedInAs")}
           <div className="mt-0.5 font-medium text-ink">{user.name ?? user.email}</div>
         </div>
         <Link
@@ -143,7 +146,7 @@ function AdminSidebar({
           onClick={onNavigate}
           className="mt-3 block rounded-[7px] px-2 py-1.5 text-[13px] text-muted transition hover:bg-bg-2 hover:text-ink"
         >
-          ← Quitter l&apos;admin
+          {t("nav.leaveAdmin")}
         </Link>
       </div>
     </aside>

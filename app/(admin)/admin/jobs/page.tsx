@@ -1,7 +1,8 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { prisma } from "@/lib/prisma";
 import { formatRelativeTime } from "@/lib/utils";
-import type { JobStatus } from "@prisma/client";
+import type { Job, JobStatus, User } from "@prisma/client";
 
 const STATUS_CLASS: Record<JobStatus, string> = {
   DRAFT: "text-muted-2 border border-dashed border-line-2",
@@ -12,14 +13,7 @@ const STATUS_CLASS: Record<JobStatus, string> = {
   FAILED: "bg-danger-soft text-danger",
 };
 
-const STATUS_LABEL: Record<JobStatus, string> = {
-  DRAFT: "BROUILLON",
-  PENDING: "EN FILE",
-  RUNNING: "EN COURS",
-  READY: "PRÊT",
-  DEPLOYED: "EN LIGNE",
-  FAILED: "ÉCHEC",
-};
+type JobWithUser = Job & { user: Pick<User, "email" | "name"> };
 
 export default async function AdminJobsPage() {
   const jobs = await prisma.job.findMany({
@@ -28,24 +22,30 @@ export default async function AdminJobsPage() {
     include: { user: { select: { email: true, name: true } } },
   });
 
+  return <AdminJobsContent jobs={jobs} />;
+}
+
+function AdminJobsContent({ jobs }: { jobs: JobWithUser[] }) {
+  const t = useTranslations("admin");
+
   return (
     <>
       <header className="mb-6">
         <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
-          <em className="italic">Jobs</em>.
+          <em className="italic">{t("jobs.title")}</em>.
         </h1>
-        <p className="mt-2 text-muted">{jobs.length} jobs récents · tous comptes confondus</p>
+        <p className="mt-2 text-muted">{t("jobs.subtitle", { count: jobs.length })}</p>
       </header>
 
       <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
         <table className="w-full text-[13.5px]">
           <thead className="bg-bg-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Nom</th>
-              <th className="px-4 py-3 text-left font-medium">Propriétaire</th>
-              <th className="px-4 py-3 text-left font-medium">Statut</th>
-              <th className="px-4 py-3 text-left font-medium">Endpoints</th>
-              <th className="px-4 py-3 text-left font-medium">Créé</th>
+              <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.name")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.owner")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.status")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.endpoints")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("jobs.cols.createdAt")}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +67,7 @@ export default async function AdminJobsPage() {
                       STATUS_CLASS[j.status]
                     }
                   >
-                    {STATUS_LABEL[j.status]}
+                    {t(`jobs.status.${j.status}`)}
                   </span>
                 </td>
                 <td className="px-4 py-3 font-mono text-[12px]">{j.endpoints ?? "—"}</td>
@@ -77,7 +77,7 @@ export default async function AdminJobsPage() {
             {jobs.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-muted">
-                  Aucun job.
+                  {t("jobs.empty")}
                 </td>
               </tr>
             )}

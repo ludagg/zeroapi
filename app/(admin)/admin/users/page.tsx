@@ -1,5 +1,6 @@
 import { headers } from "next/headers";
 import { Search } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { Plan, Prisma } from "@prisma/client";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,18 @@ const PAGE_SIZE = 100;
 
 type Props = {
   searchParams?: { q?: string; plan?: string };
+};
+
+type UserRow = {
+  id: string;
+  email: string;
+  name: string | null;
+  role: "USER" | "ADMIN";
+  plan: Plan;
+  generationsUsed: number;
+  generationsLimit: number;
+  createdAt: Date;
+  _count: { jobs: number };
 };
 
 export default async function AdminUsersPage({ searchParams }: Props) {
@@ -58,16 +71,45 @@ export default async function AdminUsersPage({ searchParams }: Props) {
   ]);
 
   return (
+    <AdminUsersContent
+      users={users}
+      total={total}
+      meId={meId}
+      rawQuery={rawQuery}
+      planFilter={planFilter}
+    />
+  );
+}
+
+function AdminUsersContent({
+  users,
+  total,
+  meId,
+  rawQuery,
+  planFilter,
+}: {
+  users: UserRow[];
+  total: number;
+  meId: string;
+  rawQuery: string;
+  planFilter: Plan | null;
+}) {
+  const t = useTranslations("admin");
+
+  const subtitle =
+    (total > 1
+      ? t("users.subtitlePlural", { count: formatNumber(total) })
+      : t("users.subtitle", { count: formatNumber(total) })) +
+    (users.length < total ? t("users.subtitleShown", { shown: users.length }) : "") +
+    (rawQuery || planFilter ? t("users.subtitleFiltered") : "");
+
+  return (
     <>
       <header className="mb-6">
         <h1 className="font-serif text-[44px] leading-none tracking-[-0.01em]">
-          <em className="italic">Utilisateurs</em>.
+          <em className="italic">{t("users.title")}</em>.
         </h1>
-        <p className="mt-2 text-muted">
-          {formatNumber(total)} compte{total > 1 ? "s" : ""}
-          {users.length < total ? ` · ${users.length} affichés` : ""}
-          {rawQuery || planFilter ? " · filtré" : ""}
-        </p>
+        <p className="mt-2 text-muted">{subtitle}</p>
       </header>
 
       <form method="get" className="mb-4 flex flex-wrap items-center gap-2">
@@ -77,7 +119,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             type="search"
             name="q"
             defaultValue={rawQuery}
-            placeholder="Rechercher par email ou nom…"
+            placeholder={t("users.searchPlaceholder")}
             className="input-base h-10 w-full pl-9 text-[13px]"
           />
         </label>
@@ -86,7 +128,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           defaultValue={planFilter ?? ""}
           className="input-base h-10 px-2 font-mono text-[12px]"
         >
-          <option value="">Tous les plans</option>
+          <option value="">{t("users.allPlans")}</option>
           {PLAN_ORDER.map((p) => (
             <option key={p} value={p}>
               {p}
@@ -97,14 +139,14 @@ export default async function AdminUsersPage({ searchParams }: Props) {
           type="submit"
           className="inline-flex h-10 items-center gap-1.5 rounded-[9px] bg-ink px-3 text-[12.5px] font-medium text-bg transition hover:-translate-y-px"
         >
-          Filtrer
+          {t("users.filter")}
         </button>
         {(rawQuery || planFilter) && (
           <a
             href="/admin/users"
             className="inline-flex h-10 items-center rounded-[9px] border border-line bg-surface px-3 text-[12.5px] font-medium text-ink-2 transition hover:border-line-2"
           >
-            Réinitialiser
+            {t("users.reset")}
           </a>
         )}
       </form>
@@ -113,12 +155,12 @@ export default async function AdminUsersPage({ searchParams }: Props) {
         <table className="w-full text-[13.5px]">
           <thead className="bg-bg-2 font-mono text-[10.5px] uppercase tracking-[0.08em] text-muted">
             <tr>
-              <th className="px-4 py-3 text-left font-medium">Utilisateur</th>
-              <th className="px-4 py-3 text-left font-medium">Rôle</th>
-              <th className="px-4 py-3 text-left font-medium">Plan</th>
-              <th className="px-4 py-3 text-left font-medium">Gen.</th>
-              <th className="px-4 py-3 text-left font-medium">Jobs</th>
-              <th className="px-4 py-3 text-left font-medium">Inscrit</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.user")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.role")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.plan")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.gen")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.jobs")}</th>
+              <th className="px-4 py-3 text-left font-medium">{t("users.cols.registeredAt")}</th>
               <th className="w-12 px-4 py-3" />
             </tr>
           </thead>
@@ -130,7 +172,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
                     <span className="font-medium">{u.name ?? "—"}</span>
                     {u.id === meId && (
                       <span className="rounded-[5px] border border-line bg-bg-2 px-1.5 py-0.5 font-mono text-[9.5px] uppercase tracking-[0.05em] text-muted">
-                        toi
+                        {t("users.you")}
                       </span>
                     )}
                   </div>
@@ -171,7 +213,7 @@ export default async function AdminUsersPage({ searchParams }: Props) {
             {users.length === 0 && (
               <tr>
                 <td colSpan={7} className="px-4 py-10 text-center text-muted">
-                  Aucun utilisateur.
+                  {t("users.empty")}
                 </td>
               </tr>
             )}
