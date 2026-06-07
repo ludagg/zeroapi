@@ -25,6 +25,7 @@ import {
   parseDeploymentLogs,
   type DeploymentLogEntry,
 } from "@/lib/deployment-logs";
+import { logActivity } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -256,6 +257,14 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
       url: app.publicUrl,
       deploymentUuid: app.deploymentUuid,
     });
+    await logActivity({
+      type: "deployment.triggered",
+      kind: "ACTIVITY",
+      message: `Déploiement lancé : ${job.name}`,
+      userId: user.id,
+      metadata: { jobId: job.id, url: app.publicUrl },
+      notify: null,
+    });
     return NextResponse.json({
       url: app.publicUrl,
       status: "DEPLOYING",
@@ -333,6 +342,14 @@ export async function GET(_req: Request, { params }: { params: { id: string } })
       }),
       prisma.job.update({ where: { id: job.id }, data: { status: "DEPLOYED" } }),
     ]);
+    await logActivity({
+      type: "job.deployed",
+      kind: "ACTIVITY",
+      message: `API en ligne : ${job.name}`,
+      userId: job.userId,
+      metadata: { jobId: job.id, url: dep.url },
+      notify: "productActivity",
+    });
     return NextResponse.json({ status: "ONLINE", url: dep.url, logs });
   }
 

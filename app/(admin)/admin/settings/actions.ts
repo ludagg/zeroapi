@@ -18,8 +18,9 @@ import {
   type RoutingTask,
 } from "@/lib/llm-routing-config";
 import { testProviderConnection, type ProviderTestResult } from "@/lib/provider-test";
+import { headerMeta, logActivity } from "@/lib/activity";
 
-async function assertAdmin(): Promise<void> {
+async function assertAdmin(): Promise<string> {
   const session = await auth.api.getSession({ headers: headers() });
   if (!session) throw new Error("Non authentifié.");
   const me = await prisma.user.findUnique({
@@ -27,6 +28,26 @@ async function assertAdmin(): Promise<void> {
     select: { role: true },
   });
   if (me?.role !== "ADMIN") throw new Error("Accès refusé.");
+  return session.user.id;
+}
+
+async function audit(
+  actorId: string,
+  type: string,
+  message: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  const meta = headerMeta(headers());
+  await logActivity({
+    type,
+    kind: "ACTIVITY",
+    message,
+    userId: actorId,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    metadata,
+    notify: "productActivity",
+  });
 }
 
 const SaveSchema = z.object({
@@ -43,9 +64,13 @@ export async function saveProvider(input: {
   apiKey: string;
   model: string;
 }): Promise<void> {
-  await assertAdmin();
+  const me = await assertAdmin();
   const parsed = SaveSchema.parse(input);
   await saveProviderConfig(parsed);
+  await audit(me, "admin.provider.save", `Clé enregistrée pour ${parsed.provider}`, {
+    provider: parsed.provider,
+    model: parsed.model,
+  });
   revalidatePath("/admin/settings/ai-providers");
   revalidatePath("/admin/settings/llm-routing");
 }
@@ -54,9 +79,15 @@ export async function setProviderEnabled(input: {
   provider: string;
   enabled: boolean;
 }): Promise<void> {
-  await assertAdmin();
+  const me = await assertAdmin();
   if (!isProviderId(input.provider)) throw new Error("Provider inconnu.");
   await toggleProviderEnabled(input.provider, Boolean(input.enabled));
+  await audit(
+    me,
+    "admin.provider.toggle",
+    `Provider ${input.provider} ${input.enabled ? "activé" : "désactivé"}`,
+    { provider: input.provider, enabled: Boolean(input.enabled) },
+  );
   revalidatePath("/admin/settings/ai-providers");
   revalidatePath("/admin/settings/llm-routing");
 }
@@ -87,7 +118,7 @@ const RoutingPayload = z.object({
 export async function saveRouting(payload: {
   entries: Array<{ plan: Plan; task: string; provider: string }>;
 }): Promise<void> {
-  await assertAdmin();
+  const me = await assertAdmin();
   const parsed = RoutingPayload.parse(payload);
 
   // Refuse les providers non-activés pour éviter une matrice cassée.
@@ -114,5 +145,8 @@ export async function saveRouting(payload: {
     })),
   );
 
+  await audit(me, "admin.routing.save", "Matrice de routage LLM mise à jour", {
+    entries: parsed.entries.length,
+  });
   revalidatePath("/admin/settings/llm-routing");
 }

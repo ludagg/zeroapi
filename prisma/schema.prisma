@@ -290,6 +290,58 @@ model LLMRoutingConfig {
   @@unique([plan, task])
 }
 
+// ============ PLATFORM SETTINGS ============
+
+/// Generic key/value store for platform-wide settings configurable from the
+/// admin UI (e.g. the Telegram alert bot). Secret values (bot token) are
+/// stored encrypted via lib/crypto-secrets.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_setting")
+}
+
+// ============ ACTIVITY & SECURITY LOG ============
+
+/// Unified audit/activity trail. Captures both product activity
+/// (signups, jobs, deployments, admin actions) and security events
+/// (failed logins, rate-limit breaches, suspicious path scans).
+/// userId is intentionally loose (no FK) so anonymous attacks can be logged.
+model ActivityLog {
+  id         String           @id @default(cuid())
+  kind       ActivityKind     @default(ACTIVITY)
+  type       String
+  severity   ActivitySeverity @default(INFO)
+  message    String?
+  userId     String?
+  actorEmail String?
+  ip         String?
+  userAgent  String?
+  path       String?
+  method     String?
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+
+  @@index([createdAt(sort: Desc)])
+  @@index([kind, createdAt(sort: Desc)])
+  @@index([type])
+  @@index([userId])
+  @@map("activity_log")
+}
+
+enum ActivityKind {
+  ACTIVITY
+  SECURITY
+}
+
+enum ActivitySeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
 enum UserRole {
   USER
   ADMIN

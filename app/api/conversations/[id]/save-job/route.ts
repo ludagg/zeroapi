@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/session";
 import { countEndpoints } from "@/lib/spec";
 import { readSpec } from "@/lib/conversation-helpers";
+import { logActivity, requestMeta } from "@/lib/activity";
 
 export const dynamic = "force-dynamic";
 
@@ -154,6 +155,21 @@ export async function POST(req: Request, { params }: { params: { id: string } })
       template: body.template,
     });
     return created;
+  });
+
+  const meta = requestMeta(req);
+  await logActivity({
+    type: "job.created",
+    kind: "ACTIVITY",
+    message: `Job créé : ${job.name}`,
+    userId: user.id,
+    actorEmail: user.email,
+    ip: meta.ip,
+    userAgent: meta.userAgent,
+    path: meta.path,
+    method: meta.method,
+    metadata: { jobId: job.id, visibility, endpoints: job.endpoints },
+    notify: "productActivity",
   });
 
   return NextResponse.json({ jobId: job.id, visibility });
