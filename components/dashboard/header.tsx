@@ -69,7 +69,7 @@ export function DashboardHeader({
         </button>
         <ThemeToggle className="hidden sm:grid" />
         <Link
-          href="/generate"
+          href="/conversations"
           className="inline-flex h-9 items-center gap-2 rounded-[9px] bg-accent px-3 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)] sm:px-3.5"
         >
           <Plus className="h-3.5 w-3.5" strokeWidth={2.6} />

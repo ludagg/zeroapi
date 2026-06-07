@@ -87,7 +87,7 @@ export function CommandPalette({
             </Command.Empty>
 
             <Command.Group heading={t("commandPalette.groupActions")} className="cmdk-group">
-              <Item onSelect={() => go("/generate")} icon={<Plus />} keywords={["nouvelle", "api", "new"]}>
+              <Item onSelect={() => go("/conversations")} icon={<Plus />} keywords={["nouvelle", "api", "new"]}>
                 {t("commandPalette.newApi")}
               </Item>
               <Item

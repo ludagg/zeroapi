@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { MessagesSquare, Plus } from "lucide-react";
+import { MessagesSquare } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { DashboardHeader } from "@/components/dashboard/header";
@@ -59,13 +58,6 @@ export default async function ConversationsPage() {
                   : t("conversations.total", { count: cards.length })}
               </p>
             </div>
-            <Link
-              href="/generate"
-              className="inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-line bg-surface px-3.5 text-[13px] font-medium text-ink-2 transition hover:-translate-y-px hover:border-line-2"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              {t("conversations.newAdvanced")}
-            </Link>
           </header>
 
           <NewConversationBox />
@@ -90,9 +82,6 @@ export default async function ConversationsPage() {
               <p className="mt-2 text-muted">
                 {t("conversations.empty.subtitle")}
               </p>
-              <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
-                {t("conversations.empty.cta")}
-              </Link>
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
