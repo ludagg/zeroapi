@@ -5,15 +5,17 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight, Check, Mail } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
-const schema = z.object({ email: z.string().email("Adresse email invalide") });
-type Values = z.infer<typeof schema>;
-
 export function ForgotForm() {
+  const t = useTranslations("auth");
   const [sent, setSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const schema = z.object({ email: z.string().email(t("shared.emailInvalid")) });
+  type Values = z.infer<typeof schema>;
 
   const {
     register,
@@ -30,7 +32,7 @@ export function ForgotForm() {
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message ?? "Envoi impossible.");
+      toast.error(error.message ?? t("forgot.errorFallback"));
       return;
     }
     setSent(true);
@@ -40,7 +42,7 @@ export function ForgotForm() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="forgot-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Adresse email
+          {t("shared.emailLabel")}
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -48,7 +50,7 @@ export function ForgotForm() {
             id="forgot-email"
             type="email"
             autoComplete="email"
-            placeholder="aminata@exemple.ci"
+            placeholder={t("shared.emailPlaceholder")}
             className="input-base pl-10"
             disabled={sent}
             {...register("email")}
@@ -71,13 +73,13 @@ export function ForgotForm() {
         {sent ? (
           <>
             <Check className="h-4 w-4" strokeWidth={3} />
-            Lien envoyé
+            {t("forgot.sent")}
           </>
         ) : submitting ? (
-          "Envoi…"
+          t("forgot.submitting")
         ) : (
           <>
-            Envoyer le lien
+            {t("forgot.submit")}
             <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
           </>
         )}

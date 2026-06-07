@@ -8,20 +8,22 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from "lucide-react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { signIn } from "@/lib/auth-client";
 
-const schema = z.object({
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(1, "Mot de passe requis"),
-  remember: z.boolean().default(true),
-});
-
-type Values = z.infer<typeof schema>;
-
 export function LoginForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+
+  const schema = z.object({
+    email: z.string().email(t("shared.emailInvalid")),
+    password: z.string().min(1, t("shared.passwordRequired")),
+    remember: z.boolean().default(true),
+  });
+
+  type Values = z.infer<typeof schema>;
 
   const {
     register,
@@ -43,7 +45,7 @@ export function LoginForm() {
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message ?? "Identifiants incorrects.");
+      toast.error(error.message ?? t("login.errorFallback"));
       return;
     }
     router.push("/dashboard");
@@ -54,7 +56,7 @@ export function LoginForm() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="login-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Adresse email
+          {t("shared.emailLabel")}
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -62,7 +64,7 @@ export function LoginForm() {
             id="login-email"
             type="email"
             autoComplete="email"
-            placeholder="aminata@exemple.ci"
+            placeholder={t("shared.emailPlaceholder")}
             className="input-base pl-10"
             {...register("email")}
           />
@@ -75,10 +77,10 @@ export function LoginForm() {
       <div className="mb-4">
         <div className="mb-2 flex items-center justify-between">
           <label htmlFor="login-pwd" className="text-[13px] font-medium text-ink-2">
-            Mot de passe
+            {t("shared.passwordLabel")}
           </label>
           <Link href="/forgot-password" className="font-mono text-[12px] text-muted transition hover:text-ink">
-            Oublié&nbsp;?
+            {t("login.forgotPassword")}
           </Link>
         </div>
         <div className="relative">
@@ -87,14 +89,14 @@ export function LoginForm() {
             id="login-pwd"
             type={showPwd ? "text" : "password"}
             autoComplete="current-password"
-            placeholder="••••••••••"
+            placeholder={t("shared.passwordPlaceholder")}
             className="input-base pl-10 pr-11"
             {...register("password")}
           />
           <button
             type="button"
             onClick={() => setShowPwd((s) => !s)}
-            aria-label={showPwd ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+            aria-label={showPwd ? t("shared.passwordHide") : t("shared.passwordShow")}
             className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
             {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -120,7 +122,7 @@ export function LoginForm() {
             <path d="M20 6L9 17l-5-5" />
           </svg>
         </span>
-        <span>Garder ma session active sur cet appareil</span>
+        <span>{t("login.rememberMe")}</span>
       </label>
 
       <button
@@ -128,7 +130,7 @@ export function LoginForm() {
         disabled={submitting}
         className="btn-primary group h-[46px] w-full disabled:opacity-70"
       >
-        {submitting ? "Connexion…" : "Se connecter"}
+        {submitting ? t("login.submitting") : t("login.submit")}
         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
       </button>
     </form>

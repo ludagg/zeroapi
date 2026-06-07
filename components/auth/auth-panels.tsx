@@ -1,6 +1,8 @@
 import { Check, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function LoginPanel() {
+  const t = useTranslations("auth");
   return (
     <div className="w-full animate-fade-in">
       <div className="mb-7 rounded-[14px] border border-white/[0.08] bg-white/[0.03] p-4 font-mono text-[12px]">
@@ -19,7 +21,7 @@ export function LoginPanel() {
             api-reservations <span className="text-[#5C5F58]">v1.2</span>
           </span>
           <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] tracking-[0.04em] text-accent-ink">
-            PRÊT
+            {t("panels.login.statusReady")}
           </span>
         </div>
         <div className="flex items-center gap-2.5 border-t border-white/[0.05] py-2 text-[#D7D8D2]">
@@ -28,7 +30,7 @@ export function LoginPanel() {
             chat-rooms-api <span className="text-[#5C5F58]">v2.0</span>
           </span>
           <span className="rounded-full bg-[rgba(255,204,102,0.1)] px-2 py-0.5 text-[10px] tracking-[0.04em] text-[#FFCC66]">
-            EN COURS
+            {t("panels.login.statusInProgress")}
           </span>
         </div>
         <div className="flex items-center gap-2.5 border-t border-white/[0.05] py-2 text-[#D7D8D2] opacity-55">
@@ -37,13 +39,13 @@ export function LoginPanel() {
             e-commerce-momo <span className="text-[#5C5F58]">v1</span>
           </span>
           <span className="rounded-full border border-dashed border-white/15 px-2 py-0.5 text-[10px] tracking-[0.04em] text-[#8C8F87]">
-            EN FILE
+            {t("panels.login.statusQueued")}
           </span>
         </div>
       </div>
 
       <p className="mb-8 font-serif text-[32px] leading-[1.15] tracking-[-0.01em]">
-        «&nbsp;Je décris ce qu&apos;il me faut, je vais boire un café, je{" "}
+        {t("panels.login.quoteBefore")}{" "}
         <span
           className="px-0.5"
           style={{
@@ -51,9 +53,11 @@ export function LoginPanel() {
               "linear-gradient(transparent 62%, var(--accent-glow) 62%, var(--accent-glow) 90%, transparent 90%)",
           }}
         >
-          déploie
+          {t("panels.login.quoteEm")}
         </span>
-        . <em className="italic">C&apos;est tout.</em>&nbsp;»
+        {t("panels.login.quoteAfter")}
+        <em className="italic">{t("panels.login.quoteCit")}</em>
+        {t("panels.login.quoteEnd")}
       </p>
 
       <div className="flex items-center gap-3 border-t border-white/[0.08] pt-6">
@@ -62,42 +66,25 @@ export function LoginPanel() {
         </div>
         <div>
           <div className="text-[14px] font-medium">Kossi Dossou</div>
-          <div className="mt-0.5 text-[12px] text-[#8C8F87]">CTO, Sahara Logistics · Lomé</div>
+          <div className="mt-0.5 text-[12px] text-[#8C8F87]">{t("panels.login.authorRole")}</div>
         </div>
       </div>
     </div>
   );
 }
 
-const FEATURES = [
-  {
-    title: "3 générations gratuites / mois",
-    desc: "— API complète Hono.js, tests inclus, sans carte bancaire.",
-  },
-  {
-    title: "Export Git complet",
-    desc: "— clone, édite et déploie ton code où tu veux. Aucun vendor lock-in.",
-  },
-  {
-    title: "Docs OpenAPI 3.1",
-    desc: " interactives, générées automatiquement et toujours à jour.",
-  },
-  {
-    title: "Communauté Discord",
-    desc: " francophone — 2 800+ développeur·euse·s, support communautaire 7j/7.",
-  },
-];
-
 export function RegisterPanel() {
+  const t = useTranslations("auth");
+  const features = t.raw("panels.register.features") as Array<{ title: string; desc: string }>;
   return (
     <div className="w-full animate-fade-in">
       <p className="mb-7 font-serif text-[28px] leading-[1.15] tracking-[-0.01em]">
-        Ce que tu obtiens
+        {t("panels.register.headingLine1")}
         <br />
-        en <em className="italic">30 secondes</em>.
+        {t("panels.register.headingLine2Before")} <em className="italic">{t("panels.register.headingLine2Em")}</em>.
       </p>
       <ul className="flex flex-col gap-3.5">
-        {FEATURES.map((f) => (
+        {features.map((f) => (
           <li key={f.title} className="flex items-start gap-3.5 text-[14px] text-white/85">
             <Check className="mt-1 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={3} />
             <span>
@@ -112,10 +99,11 @@ export function RegisterPanel() {
 }
 
 export function ForgotPanel() {
+  const t = useTranslations("auth");
   return (
     <div className="w-full animate-fade-in">
       <p className="font-serif text-[32px] leading-[1.15] tracking-[-0.01em]">
-        Ton compte est{" "}
+        {t("panels.forgot.headingPart1")}{" "}
         <span
           className="px-0.5"
           style={{
@@ -123,31 +111,33 @@ export function ForgotPanel() {
               "linear-gradient(transparent 62%, var(--accent-glow) 62%, var(--accent-glow) 90%, transparent 90%)",
           }}
         >
-          protégé
+          {t("panels.forgot.headingEm1")}
         </span>
-        .<br />
-        On vérifie <em className="italic">toujours</em>.
+        {t("panels.forgot.headingPart2")}
+        <br />
+        {t("panels.forgot.headingPart3")} <em className="italic">{t("panels.forgot.headingEm2")}</em>
+        {t("panels.forgot.headingPart4")}
       </p>
       <ul className="mt-8 flex flex-col gap-3.5 text-[14px] text-white/85">
         <li className="flex items-start gap-3.5">
           <Check className="mt-1 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={2.5} />
           <span>
-            Le lien expire dans <b className="font-medium text-[#F5F6F2]">30 minutes</b>. Une seule
-            utilisation.
+            {t("panels.forgot.sec0Before")} <b className="font-medium text-[#F5F6F2]">{t("panels.forgot.sec0Bold")}</b>
+            {t("panels.forgot.sec0After")}
           </span>
         </li>
         <li className="flex items-start gap-3.5">
           <Check className="mt-1 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={2.5} />
           <span>
-            Tu reçois une <b className="font-medium text-[#F5F6F2]">alerte email</b> à chaque
-            tentative de réinitialisation.
+            {t("panels.forgot.sec1Before")} <b className="font-medium text-[#F5F6F2]">{t("panels.forgot.sec1Bold")}</b>{" "}
+            {t("panels.forgot.sec1After")}
           </span>
         </li>
         <li className="flex items-start gap-3.5">
           <Loader2 className="mt-1 h-4 w-4 flex-shrink-0 text-accent" strokeWidth={2.5} />
           <span>
-            Active la <b className="font-medium text-[#F5F6F2]">2FA</b> depuis tes paramètres pour
-            une protection supplémentaire.
+            {t("panels.forgot.sec2Before")} <b className="font-medium text-[#F5F6F2]">{t("panels.forgot.sec2Bold")}</b>{" "}
+            {t("panels.forgot.sec2After")}
           </span>
         </li>
       </ul>

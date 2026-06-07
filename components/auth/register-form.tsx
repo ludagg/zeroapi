@@ -8,19 +8,9 @@ import { z } from "zod";
 import { ArrowRight, Eye, EyeOff, Lock, Mail, User } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { signUp } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
-
-const schema = z.object({
-  name: z.string().min(2, "Nom trop court"),
-  email: z.string().email("Adresse email invalide"),
-  password: z.string().min(10, "Au moins 10 caractères"),
-  terms: z.literal(true, {
-    errorMap: () => ({ message: "Tu dois accepter les conditions" }),
-  }),
-});
-
-type Values = z.infer<typeof schema>;
 
 function scorePwd(v: string): number {
   let s = 0;
@@ -31,15 +21,27 @@ function scorePwd(v: string): number {
   return Math.min(s, 4);
 }
 
-const STRENGTH_LABELS = ["—", "faible", "moyen", "bon", "excellent"];
-
 export function RegisterForm() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [showPwd, setShowPwd] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [pwd, setPwd] = useState("");
 
   const strength = useMemo(() => (pwd ? scorePwd(pwd) : 0), [pwd]);
+
+  const strengthLevels = t.raw("register.strengthLevels") as string[];
+
+  const schema = z.object({
+    name: z.string().min(2, t("register.nameMinLength")),
+    email: z.string().email(t("shared.emailInvalid")),
+    password: z.string().min(10, t("shared.passwordMinLength")),
+    terms: z.literal(true, {
+      errorMap: () => ({ message: t("register.termsRequired") }),
+    }),
+  });
+
+  type Values = z.infer<typeof schema>;
 
   const {
     register,
@@ -58,10 +60,10 @@ export function RegisterForm() {
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message ?? "Création impossible.");
+      toast.error(error.message ?? t("register.errorFallback"));
       return;
     }
-    toast.success("Compte créé. On t'envoie un code de vérification.");
+    toast.success(t("register.successToast"));
     router.push("/dashboard");
     router.refresh();
   }
@@ -70,14 +72,14 @@ export function RegisterForm() {
     <form onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="mb-4">
         <label htmlFor="signup-name" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Nom complet
+          {t("register.nameLabel")}
         </label>
         <div className="relative">
           <User className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
           <input
             id="signup-name"
             autoComplete="name"
-            placeholder="Aminata Diallo"
+            placeholder={t("register.namePlaceholder")}
             className="input-base pl-10"
             {...register("name")}
           />
@@ -87,7 +89,7 @@ export function RegisterForm() {
 
       <div className="mb-4">
         <label htmlFor="signup-email" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Adresse email professionnelle
+          {t("register.emailLabel")}
         </label>
         <div className="relative">
           <Mail className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -95,7 +97,7 @@ export function RegisterForm() {
             id="signup-email"
             type="email"
             autoComplete="email"
-            placeholder="aminata@startup.ci"
+            placeholder={t("register.emailPlaceholder")}
             className="input-base pl-10"
             {...register("email")}
           />
@@ -105,7 +107,7 @@ export function RegisterForm() {
 
       <div className="mb-4">
         <label htmlFor="signup-pwd" className="mb-2 block text-[13px] font-medium text-ink-2">
-          Mot de passe
+          {t("shared.passwordLabel")}
         </label>
         <div className="relative">
           <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted" />
@@ -113,7 +115,7 @@ export function RegisterForm() {
             id="signup-pwd"
             type={showPwd ? "text" : "password"}
             autoComplete="new-password"
-            placeholder="Au moins 10 caractères"
+            placeholder={t("register.passwordPlaceholder")}
             className="input-base pl-10 pr-11"
             {...register("password", {
               onChange: (e) => setPwd(e.target.value),
@@ -122,7 +124,7 @@ export function RegisterForm() {
           <button
             type="button"
             onClick={() => setShowPwd((s) => !s)}
-            aria-label={showPwd ? "Masquer" : "Afficher"}
+            aria-label={showPwd ? t("shared.passwordHide") : t("shared.passwordShow")}
             className="absolute right-2 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-[7px] text-muted transition hover:bg-bg-2 hover:text-ink"
           >
             {showPwd ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -143,7 +145,7 @@ export function RegisterForm() {
           ))}
         </div>
         <p className="mt-1.5 font-mono text-[11px] text-muted">
-          Force : <b className="font-medium text-ink">{STRENGTH_LABELS[strength]}</b>
+          {t("register.strengthLabel")} <b className="font-medium text-ink">{strengthLevels[strength]}</b>
         </p>
         {errors.password && (
           <p className="mt-1.5 text-[12px] text-danger">{errors.password.message}</p>
@@ -166,13 +168,13 @@ export function RegisterForm() {
           </svg>
         </span>
         <span>
-          J&apos;accepte les{" "}
+          {t("register.termsAccept")}{" "}
           <Link href="#" className="border-b border-line-2 text-ink hover:border-accent">
-            conditions d&apos;utilisation
+            {t("register.termsLink")}
           </Link>{" "}
-          et la{" "}
+          {t("register.termsAnd")}{" "}
           <Link href="#" className="border-b border-line-2 text-ink hover:border-accent">
-            politique de confidentialité
+            {t("register.privacyLink")}
           </Link>
         </span>
       </label>
@@ -183,7 +185,7 @@ export function RegisterForm() {
         disabled={submitting}
         className="btn-primary-accent group h-[46px] w-full disabled:opacity-70"
       >
-        {submitting ? "Création…" : "Créer mon compte"}
+        {submitting ? t("register.submitting") : t("register.submit")}
         <ArrowRight className="h-3.5 w-3.5 transition group-hover:translate-x-0.5" />
       </button>
     </form>

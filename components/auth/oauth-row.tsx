@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { signIn } from "@/lib/auth-client";
 
 function GoogleIcon() {
@@ -44,6 +45,7 @@ export function OAuthRow({
   google?: boolean;
   github?: boolean;
 }) {
+  const t = useTranslations("auth");
   const [loading, setLoading] = useState<"google" | "github" | null>(null);
 
   if (!google && !github) return null;
@@ -53,7 +55,7 @@ export function OAuthRow({
     try {
       await signIn.social({ provider, callbackURL });
     } catch (err) {
-      toast.error("Connexion impossible. Réessaie dans un instant.");
+      toast.error(t("oauth.errorFallback"));
       setLoading(null);
     }
   }
@@ -91,11 +93,12 @@ export function OAuthRow({
   );
 }
 
-export function AuthDivider({ children = "OU AVEC EMAIL" }: { children?: string }) {
+export function AuthDivider({ children }: { children?: string }) {
+  const t = useTranslations("auth");
   return (
     <div className="mb-[22px] flex items-center gap-3 font-mono text-[11px] tracking-[0.1em] text-muted">
       <span className="h-px flex-1 bg-line" />
-      {children}
+      {children ?? t("oauth.divider")}
       <span className="h-px flex-1 bg-line" />
     </div>
   );
