@@ -4,7 +4,7 @@ import { ZeroApiPromo } from "./compositions/ZeroApiPromo";
 import { fontsReady } from "./fonts";
 
 const FPS = 30;
-const DURATION = 1530; // 51s
+const DURATION = 1740; // 58s
 
 /**
  * Set to a filename in public/ to add a royalty-free music bed
