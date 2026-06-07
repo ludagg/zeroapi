@@ -28,7 +28,6 @@ export const Scene2Conversation: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: COLORS.bg,
         padding: stacked ? "70px 56px" : "84px 96px",
         opacity: 1 - exit,
         transform: `scale(${interpolate(intro, [0, 1], [0.98, 1]) * interpolate(exit, [0, 1], [1, 0.98])})`,

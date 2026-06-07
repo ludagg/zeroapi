@@ -21,7 +21,6 @@ export const Scene5Outro: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: COLORS.bg,
         alignItems: "center",
         justifyContent: "center",
         flexDirection: "column",

@@ -28,7 +28,6 @@ export const Scene1Intro: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: COLORS.bg,
         alignItems: "center",
         justifyContent: "center",
         flexDirection: "column",
@@ -73,6 +72,7 @@ export const Scene1Intro: React.FC = () => {
                   fontStyle: w.kia ? "italic" : "normal",
                   color: w.kia ? COLORS.accentInk : COLORS.ink,
                   fontSize: w.kia ? "1.08em" : undefined,
+                  textShadow: w.kia ? "0 0 34px rgba(16,240,131,0.45)" : undefined,
                 }}
               >
                 {w.t}

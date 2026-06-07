@@ -15,7 +15,6 @@ export const Scene4ValueProps: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: COLORS.bg,
         justifyContent: "center",
         padding: stacked ? "0 64px" : "0 140px",
         opacity: 1 - exit,

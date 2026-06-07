@@ -1,5 +1,6 @@
 import { AbsoluteFill, Audio, interpolate, Series, staticFile } from "remotion";
 import { COLORS } from "../theme";
+import { Backdrop } from "../components/Backdrop";
 import { Grain } from "../components/Grain";
 import { Scene1Intro } from "../scenes/Scene1Intro";
 import { Scene2Conversation } from "../scenes/Scene2Conversation";
@@ -24,6 +25,8 @@ const SCENES = [
 export const ZeroApiPromo: React.FC<PromoProps> = ({ audioSrc }) => {
   return (
     <AbsoluteFill style={{ background: COLORS.bg }}>
+      <Backdrop />
+
       <Series>
         {SCENES.map(({ dur, El }, i) => (
           <Series.Sequence key={i} durationInFrames={dur}>

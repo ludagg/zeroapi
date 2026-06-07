@@ -21,7 +21,6 @@ export const Scene3Generation: React.FC = () => {
   return (
     <AbsoluteFill
       style={{
-        background: COLORS.bg,
         padding: stacked ? "70px 56px" : "80px 96px",
         alignItems: "center",
         gap: stacked ? 34 : 44,
