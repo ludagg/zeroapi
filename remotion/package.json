@@ -1,0 +1,27 @@
+{
+  "name": "zeroapi-promo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Pub motion-graphics ZeroAPI — built with Remotion",
+  "scripts": {
+    "studio": "remotion studio src/index.ts",
+    "render": "remotion render src/index.ts ZeroApiPromoLandscape out/zeroapi-promo.mp4 --codec=h264 --crf=18",
+    "render:vertical": "remotion render src/index.ts ZeroApiPromoVertical out/zeroapi-promo-vertical.mp4 --codec=h264 --crf=18",
+    "render:square": "remotion render src/index.ts ZeroApiPromoSquare out/zeroapi-promo-square.mp4 --codec=h264 --crf=18",
+    "render:all": "npm run render && npm run render:vertical && npm run render:square",
+    "browser": "remotion browser ensure",
+    "upgrade": "remotion upgrade"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.380",
+    "@remotion/fonts": "4.0.380",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "remotion": "4.0.380"
+  },
+  "devDependencies": {
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "typescript": "5.7.2"
+  }
+}
