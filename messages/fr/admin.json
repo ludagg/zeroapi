@@ -6,6 +6,9 @@
     "platform": "Plateforme",
     "aiProviders": "AI Providers",
     "llmRouting": "LLM Routing",
+    "security": "Sécurité & activité",
+    "telegram": "Bot Telegram",
+    "monitoring": "Supervision",
     "loggedInAs": "Connecté·e en tant que",
     "leaveAdmin": "← Quitter l'admin",
     "openMenu": "Ouvrir le menu",
@@ -27,6 +30,14 @@
       "runningJobs": { "label": "Jobs en cours", "hint": "génération active" },
       "deployments": { "label": "Déploiements", "hint": "lifetime" },
       "failures": { "label": "Échecs", "hint": "à investiguer" }
+    },
+    "analytics": {
+      "title": "30 derniers jours",
+      "signups": "Inscriptions",
+      "jobs": "Jobs créés",
+      "deployments": "Déploiements",
+      "security": "Événements de sécurité",
+      "empty": "Aucune donnée sur la période."
     }
   },
   "jobs": {
@@ -37,7 +48,16 @@
       "owner": "Propriétaire",
       "status": "Statut",
       "endpoints": "Endpoints",
-      "createdAt": "Créé"
+      "createdAt": "Créé",
+      "actions": "Actions"
+    },
+    "actions": {
+      "view": "Voir le job",
+      "delete": "Supprimer",
+      "confirmDelete": "Supprimer définitivement le job « {name} » ?\n\nCette action supprime aussi son déploiement, sa base et ses logs. Irréversible.",
+      "toastDeleted": "Job supprimé.",
+      "toastError": "Action impossible.",
+      "openActions": "Ouvrir les actions"
     },
     "empty": "Aucun job.",
     "status": {
@@ -155,5 +175,73 @@
     "toastSaved": "Matrice de routage sauvegardée.",
     "toastSaveError": "Sauvegarde impossible.",
     "toastNoProvider": "Active au moins un provider dans AI Providers avant de sauvegarder."
+  },
+  "security": {
+    "title": "Sécurité & ",
+    "titleEm": "activité",
+    "subtitle": "Journal unifié de l'activité produit et des événements de sécurité.",
+    "tabs": {
+      "all": "Tout",
+      "activity": "Activité",
+      "security": "Sécurité"
+    },
+    "cols": {
+      "time": "Quand",
+      "event": "Événement",
+      "severity": "Niveau",
+      "actor": "Acteur",
+      "ip": "IP",
+      "path": "Chemin"
+    },
+    "severity": {
+      "INFO": "Info",
+      "WARNING": "Alerte",
+      "CRITICAL": "Critique"
+    },
+    "empty": "Aucun événement.",
+    "prev": "← Précédent",
+    "next": "Suivant →",
+    "showingRange": "{from}–{to} sur {total}",
+    "legend": "Les événements de sécurité (connexions échouées, brute-force, scans, rate-limit) sont aussi poussés vers Telegram s'il est activé."
+  },
+  "telegram": {
+    "title": "Bot ",
+    "titleEm": "Telegram",
+    "subtitle": "Alertes admin en temps réel : activité produit et attaques. Le token est chiffré AES-256-GCM avant stockage.",
+    "statusEnabled": "Activé",
+    "statusDisabled": "Désactivé",
+    "sourceDb": "configuré dans l'admin",
+    "sourceEnv": "configuré via variables d'environnement",
+    "sourceNone": "non configuré",
+    "enabledLabel": "Activer les alertes Telegram",
+    "tokenLabel": "Token du bot",
+    "tokenPlaceholderKeep": "Laisse vide pour conserver le token actuel",
+    "tokenPlaceholderNew": "123456:ABC-DEF…",
+    "tokenHelp": "Crée un bot via @BotFather pour obtenir un token.",
+    "currentToken": "Token actuel : ",
+    "noToken": "Aucun token enregistré",
+    "chatIdLabel": "Chat ID admin",
+    "chatIdPlaceholder": "Ex. 123456789 ou -1001234567890",
+    "chatIdHelp": "Écris à @userinfobot (ou ajoute le bot à ton groupe) pour récupérer le chat ID.",
+    "triggersTitle": "Déclencheurs d'alerte",
+    "triggers": {
+      "failedLogin": "Connexions échouées / brute-force",
+      "rateLimit": "Rate-limit dépassé (IP abusive)",
+      "pathScan": "Scan / chemins suspects",
+      "productActivity": "Activité produit (inscriptions, jobs, déploiements, actions admin)"
+    },
+    "saveBtn": "Sauvegarder",
+    "testBtn": "Envoyer un test",
+    "testingBtn": "Envoi…",
+    "savingBtn": "Sauvegarde…",
+    "toastSaved": "Configuration Telegram sauvegardée.",
+    "toastSaveError": "Sauvegarde impossible.",
+    "toastTestOk": "Message de test envoyé ✓",
+    "toastTestFail": "Échec du test : {reason}",
+    "toastTestNeedsConfig": "Renseigne le token et le chat ID avant de tester.",
+    "howtoTitle": "Mise en route",
+    "howto1": "Crée un bot avec @BotFather et copie son token.",
+    "howto2": "Récupère ton chat ID via @userinfobot.",
+    "howto3": "Colle les deux ci-dessous, active, puis envoie un test."
   }
 }
