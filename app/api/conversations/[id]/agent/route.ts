@@ -12,6 +12,9 @@ import type { OperationType } from "@/lib/operations/types";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+// Building a multi-resource API is a multi-step LLM loop — give it room before
+// the platform's default function timeout cuts it off mid-build.
+export const maxDuration = 60;
 
 /**
  * Inline modification endpoint — the chat path for an EXISTING spec.
@@ -139,25 +142,42 @@ export async function POST(req: Request, { params }: { params: { id: string } })
               meta,
             }),
           );
-        } else if (result.error) {
-          controller.enqueue(enc({ type: "error", error: `L'agent Kia a échoué — ${result.error}` }));
         } else if (!result.changed) {
-          const note =
-            result.assistantText?.trim() || "Aucun changement à appliquer — précise ta demande.";
-          const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
-          await prisma.conversation
-            .update({
-              where: { id: conv.id },
-              data: { messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue },
-            })
-            .catch(() => undefined);
-          controller.enqueue(
-            enc({ type: "done", status: "noop", operations: result.operations, assistant: note, meta }),
-          );
+          // Nothing landed. A provider error with zero applied operations is a
+          // genuine failure (surface it); otherwise it's a plain no-op.
+          if (result.error) {
+            controller.enqueue(enc({ type: "error", error: `L'agent Kia a échoué — ${result.error}` }));
+          } else {
+            const note =
+              result.assistantText?.trim() || "Aucun changement à appliquer — précise ta demande.";
+            const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
+            await prisma.conversation
+              .update({
+                where: { id: conv.id },
+                data: { messages: [...baseHistory, assistantMsg] as unknown as Prisma.InputJsonValue },
+              })
+              .catch(() => undefined);
+            controller.enqueue(
+              enc({ type: "done", status: "noop", operations: result.operations, assistant: note, meta }),
+            );
+          }
         } else {
-          // Applied — keep Kia's prose (may include a follow-up question) + the ops.
+          // Applied — possibly only PARTIALLY: a provider error (rate limit /
+          // token cap) or the step cap can halt the loop mid-build. Persist
+          // whatever landed so the user never loses the tables they just watched
+          // appear; if it stopped early, invite them to resume instead of failing.
           const summary = summarizeAppliedOperations(result.operations);
-          const note = result.assistantText?.trim() || summary;
+          const stoppedEarly =
+            Boolean(result.error) ||
+            result.finishReason === "tool-calls" ||
+            result.finishReason === "length";
+          let note = result.assistantText?.trim() || summary;
+          if (stoppedEarly) {
+            const reason = result.error
+              ? `le fournisseur a renvoyé une erreur (${result.error})`
+              : "je me suis arrêté avant d'avoir tout posé";
+            note = `${summary}\n\n⚠️ Je n'ai pas terminé — ${reason}. Tout ce qui précède est bien enregistré : dis « continue » pour reprendre là où je me suis arrêté.`;
+          }
           const assistantMsg: ChatMessage = { role: "assistant", content: note, ts: Date.now(), meta };
           const committed = commitSnapshot(
             parseHistory(conv.specHistory),
@@ -190,6 +210,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
             enc({
               type: "done",
               status: "applied",
+              incomplete: stoppedEarly,
               operations: result.operations,
               spec: result.spec,
               assistant: note,

@@ -12,8 +12,6 @@ import {
 } from "@/lib/spec";
 import { generateAndParseSpec } from "@/lib/spec-generation";
 import { triggerGenerateJob } from "@/lib/jobs";
-import { rateLimit } from "@/lib/rate-limit";
-import { logActivity, requestMeta } from "@/lib/activity";
 
 const RequestSchema = z.discriminatedUnion("mode", [
   z.object({
@@ -46,29 +44,6 @@ export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: headers() });
   if (!session) {
     return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
-  }
-
-  // Per-IP abuse guard on the LLM-backed endpoint (cost + DoS protection).
-  const meta = requestMeta(req);
-  if (meta.ip) {
-    const rl = await rateLimit(`generate:${meta.ip}`, 30, 60);
-    if (!rl.allowed) {
-      await logActivity({
-        type: "ratelimit.exceeded",
-        kind: "SECURITY",
-        severity: "WARNING",
-        message: `Rate-limit dépassé sur /api/generate (${rl.count} requêtes)`,
-        userId: session.user.id,
-        ip: meta.ip,
-        userAgent: meta.userAgent,
-        path: meta.path,
-        method: meta.method,
-      });
-      return NextResponse.json(
-        { error: "Trop de requêtes. Réessaie dans un instant." },
-        { status: 429, headers: { "retry-after": String(rl.resetSec) } },
-      );
-    }
   }
 
   let payload: z.infer<typeof RequestSchema>;

@@ -31,7 +31,7 @@ export interface KiaAgentParams {
   messages: Array<{ role: "user" | "assistant"; content: string }>;
   /** Display name used in the prompt (defaults to spec.name). */
   apiName?: string;
-  /** Hard cap on agent steps (anti-infinite-loop). Default 48 — high enough to
+  /** Hard cap on agent steps (anti-infinite-loop). Default 64 — high enough to
    *  build a complete multi-resource API in one turn. */
   maxSteps?: number;
   /** Operation types the user has explicitly approved (enables `confirmed`). */
@@ -193,8 +193,9 @@ export async function runKiaAgent(params: KiaAgentParams): Promise<KiaAgentResul
     apiName = spec.name,
     // High enough to build a COMPLETE multi-resource API (resources + fields +
     // relations + auth + roles + permissions + features) in a single turn without
-    // being cut off mid-build.
-    maxSteps = 48,
+    // being cut off mid-build. If a large API still hits the cap, the loop stops
+    // cleanly, the partial spec is persisted, and the user can say "continue".
+    maxSteps = 64,
     approvedConfirmations,
     temperature = 0.2,
     logger,
