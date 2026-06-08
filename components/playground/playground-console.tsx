@@ -331,7 +331,7 @@ export function PlaygroundConsole({ apis }: { apis: PlaygroundApi[] }) {
             {t("playground.empty.subtitle")}
           </p>
           <Link
-            href="/generate"
+            href="/conversations"
             className="mt-5 inline-flex h-9 items-center gap-1.5 rounded-[9px] bg-accent px-3.5 text-[13px] font-medium text-accent-ink transition hover:-translate-y-px hover:shadow-[0_6px_18px_var(--accent-glow)]"
           >
             {t("playground.empty.cta")}

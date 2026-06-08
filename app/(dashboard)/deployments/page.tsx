@@ -169,7 +169,7 @@ function EmptyState() {
       <p className="mt-2 text-muted">
         {t("deployments.empty.subtitle")}
       </p>
-      <Link href="/generate" className="btn-primary-accent mt-5 inline-flex">
+      <Link href="/conversations" className="btn-primary-accent mt-5 inline-flex">
         {t("deployments.empty.cta")}
       </Link>
     </div>
