@@ -43,7 +43,7 @@ export function NewConversationBox() {
     }
   }
 
-  function useTemplate(template: Template) {
+  function applyTemplate(template: Template) {
     setTemplatesOpen(false);
     setValue(template.prompt);
     setTimeout(() => {
@@ -124,7 +124,7 @@ export function NewConversationBox() {
                     <button
                       key={tmpl.id}
                       type="button"
-                      onClick={() => useTemplate(tmpl)}
+                      onClick={() => applyTemplate(tmpl)}
                       className="flex w-full items-start gap-3 border-b border-line px-3.5 py-3 text-left transition hover:bg-bg-2 last:border-b-0"
                     >
                       <span className="mt-0.5 text-[18px] leading-none">{tmpl.emoji}</span>

@@ -33,7 +33,7 @@ export function MarketplaceBrowser({
   const officialShown = pool.filter((tmpl) => tmpl.isOfficial);
   const communityShown = pool.filter((tmpl) => !tmpl.isOfficial);
 
-  async function useTemplate(id: string) {
+  async function applyTemplate(id: string) {
     if (usingId) return;
     setUsingId(id);
     try {
@@ -97,7 +97,7 @@ export function MarketplaceBrowser({
               icon={<BadgeCheck className="h-4 w-4 text-accent-ink" />}
             >
               {officialShown.map((tmpl) => (
-                <Card key={tmpl.id} tmpl={tmpl} using={usingId === tmpl.id} disabled={usingId !== null} onUse={() => useTemplate(tmpl.id)} />
+                <Card key={tmpl.id} tmpl={tmpl} using={usingId === tmpl.id} disabled={usingId !== null} onUse={() => applyTemplate(tmpl.id)} />
               ))}
             </Section>
           )}
@@ -109,7 +109,7 @@ export function MarketplaceBrowser({
               icon={<Users className="h-4 w-4 text-ink-2" />}
             >
               {communityShown.map((tmpl) => (
-                <Card key={tmpl.id} tmpl={tmpl} using={usingId === tmpl.id} disabled={usingId !== null} onUse={() => useTemplate(tmpl.id)} />
+                <Card key={tmpl.id} tmpl={tmpl} using={usingId === tmpl.id} disabled={usingId !== null} onUse={() => applyTemplate(tmpl.id)} />
               ))}
             </Section>
           )}

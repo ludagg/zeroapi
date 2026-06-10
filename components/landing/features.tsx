@@ -36,7 +36,7 @@ export function Features() {
             <p>{t("core.body")}</p>
             <div className="mini-code">
               <span className="ln">
-                <span className="c">// auto-généré</span>
+                <span className="c">{"// auto-généré"}</span>
               </span>
               <span className="ln">
                 <span className="k">app</span>.<span className="v">get</span>(
@@ -96,7 +96,7 @@ export function Features() {
                 <span className="s">&quot;admin&quot;</span>));
               </span>
               <span className="ln">
-                <span className="c">// CSRF, XSS, SQLi → vérifiés ✓</span>
+                <span className="c">{"// CSRF, XSS, SQLi → vérifiés ✓"}</span>
               </span>
             </div>
           </Reveal>

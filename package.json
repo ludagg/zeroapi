@@ -19,7 +19,9 @@
     "test:operations": "tsx scripts/test-operations.ts",
     "test:ops020": "tsx scripts/test-ops-runtime020.ts",
     "test:kia": "tsx scripts/test-kia-agent.ts",
-    "test:graph": "tsx scripts/test-spec-graph.ts"
+    "test:graph": "tsx scripts/test-spec-graph.ts",
+    "test:normalize": "tsx scripts/test-spec-normalize.ts",
+    "test:all": "pnpm test:pipeline && pnpm test:operations && pnpm test:ops020 && pnpm test:normalize && pnpm test:graph && pnpm test:kia && pnpm test:env-vars && pnpm test:crypto"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",
