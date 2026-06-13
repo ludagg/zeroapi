@@ -1,0 +1,23 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install -g pnpm
+      - run: pnpm install --frozen-lockfile
+        # generates the Prisma client via the postinstall hook
+      - name: Typecheck
+        run: pnpm typecheck
+      - name: Pipeline smoke test (parseSpec → createRuntime → bundle)
+        run: pnpm test:pipeline
