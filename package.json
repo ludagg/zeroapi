@@ -19,7 +19,8 @@
     "test:operations": "tsx scripts/test-operations.ts",
     "test:ops020": "tsx scripts/test-ops-runtime020.ts",
     "test:kia": "tsx scripts/test-kia-agent.ts",
-    "test:graph": "tsx scripts/test-spec-graph.ts"
+    "test:graph": "tsx scripts/test-spec-graph.ts",
+    "doc:runtime": "tsx scripts/sync-runtime-doc.ts"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.81",

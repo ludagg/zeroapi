@@ -54,7 +54,7 @@
     }
   ],
   "docTitle": "Complete documentation",
-  "docSubtitle": "The full reference for @ludagg/zeroapi-runtime — spec DSL, querying, auth, RBAC, webhooks, persistence and the createRuntime API.",
-  "docNote": "The technical reference below is maintained in English, in sync with the package README.",
+  "docSubtitle": "The full, example-driven guide to @ludagg/zeroapi-runtime — two end-to-end tutorials plus every feature shown as spec in → request → real JSON response: querying, auth, RBAC, multi-tenant, webhooks, transactions, persistence and the createRuntime API.",
+  "docNote": "The technical reference below is maintained in English. Every example is runnable and the responses are the runtime's real output.",
   "onThisPage": "On this page"
 }
