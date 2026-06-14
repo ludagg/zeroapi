@@ -1,0 +1,60 @@
+{
+  "meta": {
+    "title": "ZeroAPI Runtime — generate a full backend from one JSON spec",
+    "description": "@ludagg/zeroapi-runtime turns a single declarative spec into a complete, production-ready Hono backend: CRUD, auth, RBAC, relations, webhooks, OpenAPI. Runs on Node, Bun, Deno and Cloudflare Workers. 1075 tests, MIT."
+  },
+  "eyebrow": "Open source · MIT · npm",
+  "title": "The engine behind ZeroAPI:",
+  "titleAccent": "one spec,",
+  "titleRest": "a whole backend.",
+  "subtitle": "@ludagg/zeroapi-runtime turns a single declarative JSON spec into a complete, production-ready API — CRUD, validation, auth, RBAC, relations, webhooks and OpenAPI docs. The spec is the source of truth, so the contract and the implementation can never drift apart.",
+  "installLabel": "Install",
+  "ctaTry": "Try it in the app",
+  "ctaNpm": "View on npm",
+  "ctaGithub": "GitHub",
+  "stats": [
+    { "value": "1075", "label": "tests passing" },
+    { "value": "0", "label": "drift between spec & API" },
+    { "value": "4", "label": "runtimes (Node · Bun · Deno · CF)" },
+    { "value": "MIT", "label": "open-source license" }
+  ],
+  "highlightsTitle": "Everything ships in the box",
+  "highlights": [
+    {
+      "title": "Spec-driven CRUD",
+      "body": "Full REST for every resource, auto-pluralised, with Zod validation generated from your field definitions and applied on every write."
+    },
+    {
+      "title": "SQL pushdown",
+      "body": "Filtering, search, sorting and pagination compile to a single SQL query in Prisma mode — the database never ships the whole table to Node."
+    },
+    {
+      "title": "Auth & RBAC",
+      "body": "Revocable JWT user system, hashed API keys, OAuth (Google/GitHub), role hierarchy with inheritance and row-level ownership."
+    },
+    {
+      "title": "Multi-tenant",
+      "body": "Declare tenant isolation by column ↔ JWT claim; the runtime scopes reads, forces writes to the tenant, and 404s cross-tenant access."
+    },
+    {
+      "title": "Durable webhooks",
+      "body": "Outbound HMAC-signed events that survive restarts with no double-delivery across replicas, and signing secrets encrypted at rest."
+    },
+    {
+      "title": "Relations & transactions",
+      "body": "manyToOne / oneToMany / manyToMany with nested includes and atomic cascades, plus spec-level ACID operations that roll back on failure."
+    },
+    {
+      "title": "OpenAPI & SDK",
+      "body": "An OpenAPI 3.0.3 document, a Scalar docs UI, a Postman collection and a typed TypeScript client — all generated from the spec."
+    },
+    {
+      "title": "Production-ready",
+      "body": "Helmet headers, rate limiting, a real /ready DB probe, graceful shutdown and deploy configs for Railway, Render, Vercel and Fly.io."
+    }
+  ],
+  "docTitle": "Complete documentation",
+  "docSubtitle": "The full, example-driven guide to @ludagg/zeroapi-runtime — two end-to-end tutorials plus every feature shown as spec in → request → real JSON response: querying, auth, RBAC, multi-tenant, webhooks, transactions, persistence and the createRuntime API.",
+  "docNote": "The technical reference below is maintained in English. Every example is runnable and the responses are the runtime's real output.",
+  "onThisPage": "On this page"
+}

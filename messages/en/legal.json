@@ -1003,6 +1003,18 @@
           "HTTP error codes and JSON"
         ],
         "cta": "View the reference"
+      },
+      {
+        "href": "/runtime",
+        "title": "Runtime engine",
+        "desc": "The open-source engine that turns one spec into a full backend — complete reference.",
+        "items": [
+          "The Spec DSL and field types",
+          "Auth, RBAC and multi-tenant scope",
+          "Webhooks, transactions, aggregates",
+          "createRuntime API and deployment"
+        ],
+        "cta": "Read the runtime docs"
       }
     ]
   },

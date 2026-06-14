@@ -15,6 +15,7 @@ export const NAMESPACES = [
   "legal",
   "dashboard",
   "admin",
+  "runtime",
 ] as const;
 
 export function isLocale(value: unknown): value is Locale {

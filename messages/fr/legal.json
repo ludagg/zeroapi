@@ -1003,6 +1003,18 @@
           "Codes erreur HTTP et JSON"
         ],
         "cta": "Voir la référence"
+      },
+      {
+        "href": "/runtime",
+        "title": "Moteur runtime",
+        "desc": "Le moteur open-source qui transforme une spec en backend complet — référence complète.",
+        "items": [
+          "Le DSL de spec et les types de champs",
+          "Auth, RBAC et scope multi-tenant",
+          "Webhooks, transactions, agrégats",
+          "API createRuntime et déploiement"
+        ],
+        "cta": "Lire la doc du runtime"
       }
     ]
   },

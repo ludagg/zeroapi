@@ -406,7 +406,7 @@ Le ZIP exportable est assemblé dans `workers/zip-bundle.ts` avec JSZip
 ├── tsconfig.json        ← strict
 ├── .env.example         ← dérivé de validateEnv(spec) + requiredEnv
 ├── .gitignore
-├── src/server.ts        ← boot @hono/node-server → createRuntime(spec)
+├── index.ts             ← boot @hono/node-server → createRuntime(spec)
 ├── spec.json            ← la spec validée
 ├── openapi.json         ← result.openApiSpec
 ├── prisma/schema.prisma ← result.prismaSchema

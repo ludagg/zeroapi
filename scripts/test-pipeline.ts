@@ -72,7 +72,7 @@ async function main() {
     "README.md",
     "package.json",
     ".env.example",
-    "src/server.ts",
+    "index.ts",
     "spec.json",
     "prisma/schema.prisma",
     "tests/api.test.ts",

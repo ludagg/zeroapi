@@ -43,6 +43,9 @@ export function LandingFooter() {
                 <Link href="/docs/api">{t("apiRef")}</Link>
               </li>
               <li>
+                <Link href="/runtime">{t("runtime")}</Link>
+              </li>
+              <li>
                 <Link href="/templates">{t("templates")}</Link>
               </li>
               <li>
